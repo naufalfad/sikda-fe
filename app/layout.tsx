@@ -9,8 +9,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Kesehatan App",
-  description: "Sistem Pendaftaran Pasien",
+  title: "SIKDA - Sistem Informasi Kesehatan Daerah",
+  description: "Sistem Informasi Manajemen Fasilitas Kesehatan dan Monitoring Terpadu Dinas Kesehatan Daerah",
 };
 
 export default function RootLayout({

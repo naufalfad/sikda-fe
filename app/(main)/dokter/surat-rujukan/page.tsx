@@ -222,7 +222,7 @@ function SuratRujukanContent() {
           <div>
             {/* Kop Surat */}
             <div className="border-b-4 border-double border-gray-900 pb-4 mb-6 text-center">
-              <h1 className="text-2xl font-extrabold text-gray-900 tracking-wide uppercase">Puskesmas / Klinik SIMPUS Prima</h1>
+              <h1 className="text-2xl font-extrabold text-gray-900 tracking-wide uppercase">Puskesmas / Fasilitas Kesehatan SIKDA</h1>
               <p className="text-sm text-gray-700">Jl. Jendral Sudirman No. 123, Jakarta Pusat</p>
               <p className="text-sm text-gray-700">Telp: (021) 1234567 | Email: info@klinikprima.com</p>
             </div>

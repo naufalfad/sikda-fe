@@ -51,6 +51,27 @@ export interface ResepData {
   details: ResepDetail[];
 }
 
+export interface StokFaskesItem {
+  id: string;
+  faskesId: string;
+  namaFaskes?: string;
+  obatId: string;
+  kodeObat: string;
+  namaObat: string;
+  kategori: string;
+  sediaan: string;
+  harga: number;
+  gambarUrl?: string;
+  stok: number;
+  stokMinimum: number;
+  noBatch: string;
+  tanggalExpired?: string;
+  sisaHariExpired?: number | null;
+  statusExpired: 'AMAN' | 'WASPADA' | 'SEGERA_KADALUWARSA' | 'KADALUWARSA';
+  statusStok: 'AMAN' | 'KRITIS' | 'HABIS';
+  prioritasFEFO: number;
+}
+
 export const farmasiService = {
   getAntrian: async (): Promise<ResepData[]> => {
     const response = await api.get('/farmasi/antrian');
@@ -64,6 +85,22 @@ export const farmasiService = {
 
   prosesResep: async (id: string) => {
     const response = await api.post(`/farmasi/resep/${id}/proses`);
+    return response.data;
+  },
+
+  getStokFaskes: async (): Promise<{ data: StokFaskesItem[]; ringkasan: any }> => {
+    const response = await api.get('/farmasi/stok');
+    return response.data;
+  },
+
+  tambahStokMasuk: async (payload: {
+    obatId: string;
+    jumlahMasuk: number;
+    noBatch?: string;
+    tanggalExpired?: string;
+    stokMinimum?: number;
+  }) => {
+    const response = await api.post('/farmasi/stok/masuk', payload);
     return response.data;
   }
 };

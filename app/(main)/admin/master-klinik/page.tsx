@@ -94,12 +94,21 @@ export default function MasterKlinikPage() {
                     <div>
                       <div className="font-medium text-gray-900">{poli.namaPoli}</div>
                       <div className="text-xs text-gray-500">Kode: {poli.kodePoli}</div>
+                      {poli.faskes ? (
+                        <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          {poli.faskes.namaFaskes}
+                        </div>
+                      ) : (
+                        <div className="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-600">
+                          Poli Bersama
+                        </div>
+                      )}
                       {poli.ihsLocationId ? (
-                        <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-medium bg-green-100 text-green-800 border border-green-200">
+                        <div className="mt-1 ml-1 inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-medium bg-green-100 text-green-800 border border-green-200">
                           IHS: {poli.ihsLocationId}
                         </div>
                       ) : (
-                        <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+                        <div className="mt-1 ml-1 inline-flex items-center px-2 py-0.5 rounded-none text-[10px] font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
                           Belum terdaftar di IHS
                         </div>
                       )}

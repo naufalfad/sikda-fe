@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, ClipboardList, Activity, HeartPulse, AlertTriangle, AlertOctagon, Send, Clock, Plus, Syringe } from 'lucide-react';
+import { asetRuanganService } from '../../../../services/asetRuangan.service';
 
 // Mock Data
 const MOCK_QUEUE = [
@@ -13,6 +14,13 @@ const MOCK_QUEUE = [
 export default function UGDDashboard() {
   const [activeTab, setActiveTab] = useState<'triage' | 'pemeriksaan' | 'observasi' | 'keputusan'>('triage');
   const [selectedPatient, setSelectedPatient] = useState<any>(MOCK_QUEUE[0]);
+  const [inapRooms, setInapRooms] = useState<any[]>([]);
+
+  useEffect(() => {
+    asetRuanganService.getRuangans({ kategoriRuangan: 'RAWAT_INAP' })
+      .then(setInapRooms)
+      .catch(() => {});
+  }, []);
 
   // Helper for Triage Colors
   const getTriageColor = (color: string) => {
@@ -337,11 +345,19 @@ export default function UGDDashboard() {
                     <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
                       <label className="block text-sm font-bold text-blue-800 mb-2">Permintaan Kamar Rawat Inap</label>
                       <select className="w-full border-gray-300 p-3 text-sm rounded-none text-black mb-2">
-                        <option>Pilih Ruangan...</option>
-                        <option>ICU / HCU</option>
-                        <option>Ruang Rawat Dewasa (Kelas 1)</option>
-                        <option>Ruang Rawat Dewasa (Kelas 2)</option>
-                        <option>Ruang Isolasi</option>
+                        <option value="">Pilih Ruangan Rawat Inap...</option>
+                        {inapRooms.length > 0 ? (
+                          inapRooms.map(r => (
+                            <option key={r.id} value={r.id}>
+                              {r.namaRuangan} ({r.gedung || 'Utama'} - {r.lantai || 'Lt 1'}) - {r._count?.tempatTidurs || 0} Bed
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option>Ruang Rawat Inap Melati (Dewasa)</option>
+                            <option>Ruang Rawat Inap Mawar (Isolasi)</option>
+                          </>
+                        )}
                       </select>
                       <textarea rows={2} className="w-full border-gray-300 p-3 text-sm rounded-none text-black placeholder:text-gray-400" placeholder="Catatan instruksi untuk perawat bangsal..."></textarea>
                     </div>

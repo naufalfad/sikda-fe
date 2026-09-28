@@ -13,53 +13,60 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white flex flex-col font-sans">
       
       {/* TOP BAR */}
-      <div className="bg-blue-500 text-white text-[11px] font-medium flex justify-between items-center z-50 relative h-10">
+      <div className="bg-slate-900 text-white text-[11px] font-medium flex justify-between items-center z-50 relative h-10 border-b border-slate-800">
         <div className="flex items-center gap-6 md:gap-10 h-full pl-6 md:pl-72 lg:pl-80">
           <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5 opacity-80" />
-            <span>Address : 8901 Maromora, Canada</span>
+            <MapPin className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-slate-300">Dinas Kesehatan Kabupaten / Kota</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Phone className="w-3.5 h-3.5 opacity-80" />
-            <span>Call us : +61 300 8444 322</span>
+          <div className="flex items-center gap-2 hidden sm:flex">
+            <Phone className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-slate-300">Call Center: (021) 555-1234</span>
           </div>
           <div className="flex items-center gap-2 hidden md:flex">
-            <Mail className="w-3.5 h-3.5 opacity-80" />
-            <span>Email : dummy@example.com</span>
+            <Mail className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-slate-300">kontak@sikda-kesehatan.go.id</span>
           </div>
         </div>
-        <Link 
-          href="/login" 
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 h-full px-6 transition-colors font-bold"
-        >
-          <LogIn className="w-4 h-4" /> Log In / Sign Up
-        </Link>
+        <div className="flex items-center h-full">
+          <Link 
+            href="/login?portal=faskes" 
+            className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 h-full px-4 sm:px-6 transition-colors font-bold text-[11px] uppercase tracking-wider text-white"
+          >
+            <LogIn className="w-3.5 h-3.5" /> Portal Faskes
+          </Link>
+          <Link 
+            href="/login?portal=dinkes" 
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 h-full px-4 sm:px-6 transition-colors font-bold text-[11px] uppercase tracking-wider text-white border-l border-emerald-500"
+          >
+            <Activity className="w-3.5 h-3.5" /> Command Center Dinkes
+          </Link>
+        </div>
       </div>
 
       {/* MAIN NAVBAR - WITH DROOPING LOGO */}
-      <nav className="bg-white/90 backdrop-blur-sm h-20 flex items-center justify-end md:justify-between z-40 relative shadow-sm px-6">
+      <nav className="bg-white/95 backdrop-blur-sm h-20 flex items-center justify-end md:justify-between z-40 relative shadow-sm px-6">
         
         {/* HANGING LOGO CONTAINER */}
         <div className="absolute top-0 left-6 md:left-24 lg:left-32 bg-white px-8 pb-8 pt-6 shadow-md z-50 flex flex-col items-center justify-center border-t-0">
           <div className="relative mb-2">
             <HeartPulse className="w-12 h-12 text-blue-500" />
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-yellow-400 rounded-full" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-500 rounded-full" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></div>
           </div>
-          <span className="text-xl font-black tracking-widest uppercase text-slate-800 leading-none">SIMPUS</span>
-          <span className="text-[9px] font-bold tracking-[0.2em] text-slate-400 uppercase mt-1">HOSPITAL</span>
+          <span className="text-xl font-black tracking-widest uppercase text-slate-800 leading-none">SIKDA</span>
+          <span className="text-[9px] font-bold tracking-[0.2em] text-slate-400 uppercase mt-1">KESEHATAN DAERAH</span>
         </div>
 
         <div className="w-[200px] md:w-[300px]"></div> {/* Spacer for absolute logo */}
 
         {/* LINKS */}
-        <div className="hidden lg:flex items-center gap-8 pr-4">
+        <div className="hidden lg:flex items-center gap-7 pr-4">
           <Link href="#" className="text-[11px] font-black text-slate-900 uppercase tracking-widest">BERANDA</Link>
-          <Link href="#" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">TENTANG KAMI</Link>
-          <Link href="#" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">LAYANAN</Link>
-          <Link href="#" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">DOKTER</Link>
-          <Link href="#" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">GALERI</Link>
-          <Link href="#" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">ARTIKEL</Link>
-          <Link href="#" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">KONTAK</Link>
+          <Link href="#portal-gateway" className="text-[11px] font-bold text-slate-600 hover:text-slate-900 uppercase tracking-widest transition-colors">PORTAL AKSES</Link>
+          <Link href="#services" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">LAYANAN POLIKLINIK</Link>
+          <Link href="/login?portal=faskes" className="text-[11px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors">PORTAL FASKES</Link>
+          <Link href="/login?portal=dinkes" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors">DASHBOARD DINKES</Link>
+          <Link href="/booking" className="text-[11px] font-bold text-slate-500 hover:text-blue-500 uppercase tracking-widest transition-colors">DAFTAR ONLINE</Link>
           <button className="text-blue-500 hover:text-blue-700 transition-colors ml-2">
             <Search className="w-4 h-4" />
           </button>
@@ -67,62 +74,155 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO SECTION */}
-      <main className="relative flex-1 flex flex-col min-h-[500px] xl:min-h-[650px] z-10 bg-slate-100">
+      <main className="relative flex-1 flex flex-col min-h-[520px] xl:min-h-[640px] z-10 bg-slate-900">
         {/* Background Image */}
         <div 
-          className="absolute inset-0 z-0 bg-cover bg-[position:50%_20%] bg-no-repeat"
+          className="absolute inset-0 z-0 bg-cover bg-[position:50%_20%] bg-no-repeat opacity-30"
           style={{ backgroundImage: "url('/doctor_hero_bg.png')" }}
         ></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-white/40 via-transparent to-transparent z-0 pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-900/90 to-transparent z-0 pointer-events-none"></div>
 
-
-
-        <div className="relative z-10 max-w-7xl mx-auto w-full px-6 pt-24 pb-48 flex flex-col justify-center h-full">
-          <div className="max-w-xl pl-6 md:pl-20">
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-6 pt-20 pb-36 flex flex-col justify-center h-full">
+          <div className="max-w-2xl pl-6 md:pl-20">
             {/* ANGLED BADGES */}
             <div className="flex items-center mb-6 drop-shadow-md">
               <div 
-                className="bg-white text-blue-500 font-black px-6 py-2 uppercase tracking-widest text-sm"
+                className="bg-blue-600 text-white font-black px-6 py-2 uppercase tracking-widest text-xs"
                 style={{ clipPath: 'polygon(0 0, 95% 0, 100% 100%, 0% 100%)' }}
               >
-                LAYANAN
+                SIKDA TERPADU
               </div>
               <div 
-                className="bg-blue-500 text-white font-black px-6 py-2 uppercase tracking-widest text-sm -ml-2 pl-8"
+                className="bg-emerald-600 text-white font-black px-6 py-2 uppercase tracking-widest text-xs -ml-2 pl-8"
                 style={{ clipPath: 'polygon(5% 0, 100% 0, 100% 100%, 0% 100%)' }}
               >
-                PUSKESMAS
+                KABUPATEN
               </div>
             </div>
 
             {/* HEADLINE */}
-            <h1 className="text-4xl md:text-5xl lg:text-5xl font-black text-slate-900 leading-[1.1] mb-6 tracking-tight">
-              SISTEM MANAJEMEN PUSKESMAS
+            <h1 className="text-3xl md:text-5xl lg:text-5xl font-black text-white leading-[1.15] mb-6 tracking-tight">
+              SISTEM INFORMASI <br className="hidden sm:inline"/>KESEHATAN DAERAH
             </h1>
             
             {/* SUBTITLE */}
-            <p className="text-slate-700 mb-10 text-sm leading-relaxed font-medium pr-10">
-              Platform digital Puskesmas yang terintegrasi pelayanan, manajemen, pelaporan, dan integrasi SATUSEHAT secara komprehensif.
+            <p className="text-slate-300 mb-8 text-sm md:text-base leading-relaxed font-medium pr-6">
+              Satu ekosistem digital terpadu untuk pelayanan klinis fasilitas kesehatan (Puskesmas & Klinik) dan pusat komando pengawasan eksekutif Dinas Kesehatan Kabupaten.
             </p>
             
-            {/* BUTTONS (Rounded-none per previous instruction, though image shows pill) */}
-            <div className="flex items-center gap-4">
+            {/* HERO DUAL PORTAL BUTTONS */}
+            <div className="flex flex-wrap items-center gap-4">
               <Link 
-                href="#services" 
-                className="bg-blue-500 hover:bg-blue-600 text-white font-bold text-[10px] uppercase tracking-widest px-8 py-3 rounded-none transition-colors shadow-md"
+                href="/login?portal=faskes" 
+                className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest px-6 py-3.5 shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
               >
-                BACA SELENGKAPNYA
+                <LogIn className="w-4 h-4" /> Masuk Portal Faskes
               </Link>
               <Link 
-                href="/booking" 
-                className="bg-transparent border border-blue-500 text-slate-700 hover:bg-blue-50 font-bold text-[10px] uppercase tracking-widest px-8 py-3 rounded-none transition-colors"
+                href="/login?portal=dinkes" 
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest px-6 py-3.5 shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
               >
-                DAFTAR ONLINE
+                <Activity className="w-4 h-4" /> Command Center Dinkes
               </Link>
             </div>
           </div>
         </div>
       </main>
+
+      {/* SECTION: DUAL PORTAL ACCESS GATEWAY */}
+      <section id="portal-gateway" className="relative z-20 -mt-20 max-w-7xl mx-auto px-6 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+          {/* Card 1: Portal Pelayanan Faskes */}
+          <div className="bg-white p-8 md:p-10 border-t-4 border-t-blue-600 shadow-2xl rounded-none flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-6">
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 font-black text-[11px] uppercase tracking-wider border border-blue-200">
+                  Pelayanan Fasilitas Kesehatan
+                </span>
+                <span className="text-xs font-bold text-slate-400">Puskesmas / Klinik</span>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">
+                Portal Pelayanan Faskes
+              </h3>
+              <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                Akses khusus tenaga operasional medis dan administrasi untuk pelayanan pasien, rekam medis elektronik (RME), farmasi, dan loket.
+              </p>
+
+              <div className="space-y-3 mb-8 text-xs text-slate-700 font-medium border-t border-slate-100 pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Pendaftaran Pasien, Antrean Poliklinik & Bridging BPJS / SATUSEHAT</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Input Rekam Medis (RME), Diagnosa ICD-10 & Prosedur Tindakan ICD-9</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Pelayanan Resep Farmasi, Laboratorium, Radiologi & Kasir</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Pengelolaan Sarana Ruangan, Bed Rawat Inap & Aset Alkes Puskesmas</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/login?portal=faskes"
+              className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest text-center shadow-md hover:shadow-lg transition-colors flex items-center justify-center gap-2 group-hover:bg-blue-700"
+            >
+              Masuk Portal Layanan Faskes <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+          {/* Card 2: Command Center Dinas Kesehatan */}
+          <div className="bg-white p-8 md:p-10 border-t-4 border-t-emerald-600 shadow-2xl rounded-none flex flex-col justify-between group hover:-translate-y-1 transition-all duration-300">
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-6">
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-800 font-black text-[11px] uppercase tracking-wider border border-emerald-200">
+                  Pusat Komando Wilayah
+                </span>
+                <span className="text-xs font-bold text-slate-400">Pemerintah Kabupaten</span>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">
+                Command Center Dinas Kesehatan
+              </h3>
+              <p className="text-slate-600 text-sm leading-relaxed mb-6">
+                Akses eksekutif Kepala Dinas & jajaran untuk memantau indikator makro, kesiapan sarpras, dan ketimpangan tenaga medis antar-faskes.
+              </p>
+
+              <div className="space-y-3 mb-8 text-xs text-slate-700 font-medium border-t border-slate-100 pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Analisis Beban Kerja & Rasio Dokter per Pasien Se-Kabupaten</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Monitoring BOR Keterisian Kamar & Kesiapan Bed IGD 24 Jam</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Deteksi Dini Kelangkaan Stok Obat & Logistik Farmasi Daerah</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 font-bold">✓</div>
+                  <span>Pengawasan Alkes Kritis Rusak & Penerbitan SK Mutasi Nakes</span>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/login?portal=dinkes"
+              className="w-full py-4 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest text-center shadow-md hover:shadow-lg transition-colors flex items-center justify-center gap-2 group-hover:bg-emerald-700"
+            >
+              Masuk Command Center Dinkes <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+
+        </div>
+      </section>
 
 
 
@@ -136,7 +236,7 @@ export default function LandingPage() {
             <h2 className="text-4xl font-black text-slate-900 uppercase tracking-widest mb-6">Mengapa Memilih Kami?</h2>
             <div className="w-24 h-1.5 bg-blue-500 mx-auto mb-8"></div>
             <p className="text-slate-600 max-w-2xl mx-auto text-base leading-relaxed">
-              Puskesmas ONE didukung oleh ekosistem digital terintegrasi untuk memberikan pelayanan kesehatan yang lebih cepat, akurat, dan sepenuhnya bebas kertas.
+              SIKDA Terpadu didukung oleh ekosistem digital terintegrasi untuk memberikan pelayanan kesehatan yang lebih cepat, akurat, dan sepenuhnya bebas kertas.
             </p>
           </div>
 
@@ -332,12 +432,12 @@ export default function LandingPage() {
             <div className="flex items-center gap-2 mb-6 text-white">
               <HeartPulse className="w-8 h-8 text-blue-500" />
               <div>
-                <span className="text-xl font-black tracking-widest uppercase leading-none block">SIMPUS</span>
-                <span className="text-[9px] font-bold tracking-[0.2em] text-blue-400 uppercase">HOSPITAL</span>
+                <span className="text-xl font-black tracking-widest uppercase leading-none block">SIKDA</span>
+                <span className="text-[9px] font-bold tracking-[0.2em] text-blue-400 uppercase">KESEHATAN DAERAH</span>
               </div>
             </div>
             <p className="text-xs leading-relaxed mb-6">
-              Sistem Informasi Manajemen Puskesmas terpadu untuk pelayanan kesehatan yang cepat, tepat, dan transparan bagi seluruh lapisan masyarakat.
+              Sistem Informasi Kesehatan Daerah terpadu untuk pelayanan kesehatan faskes dan pengawasan dinas kesehatan yang akurat, transparan, dan terintegrasi.
             </p>
           </div>
 
@@ -367,7 +467,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-blue-500" />
-                <p>info@simpushospital.com</p>
+                <p>info@sikda-kesehatan.go.id</p>
               </div>
             </div>
           </div>
@@ -375,7 +475,7 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-7xl mx-auto pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest">
-          <p>© 2026 SIMPUS Hospital. Seluruh Hak Cipta Dilindungi.</p>
+          <p>© 2026 SIKDA Kesehatan Daerah. Seluruh Hak Cipta Dilindungi.</p>
           <div className="flex gap-4 mt-4 md:mt-0">
             <Link href="#" className="hover:text-white transition-colors">Kebijakan Privasi</Link>
             <Link href="#" className="hover:text-white transition-colors">Syarat & Ketentuan</Link>

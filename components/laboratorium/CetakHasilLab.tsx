@@ -47,7 +47,7 @@ export const CetakHasilLab = forwardRef<HTMLDivElement, CetakHasilLabProps>(({ d
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wider mb-1">Laboratorium Klinik</p>
-              <h1 className="text-4xl font-serif italic font-black">SIMPUS Care</h1>
+              <h1 className="text-4xl font-serif italic font-black">SIKDA Laboratorium</h1>
             </div>
           </div>
 
@@ -198,7 +198,7 @@ export const CetakHasilLab = forwardRef<HTMLDivElement, CetakHasilLabProps>(({ d
 
       {/* FOOTER HALAMAN */}
       <div className="absolute bottom-10 w-full px-12 text-center text-[8pt] text-gray-500">
-        <p>Dokumen ini dicetak secara otomatis oleh sistem Rekam Medis Elektronik (RME) SIMPUS.</p>
+        <p>Dokumen ini dicetak secara otomatis oleh sistem Rekam Medis Elektronik (RME) SIKDA.</p>
       </div>
 
     </div>

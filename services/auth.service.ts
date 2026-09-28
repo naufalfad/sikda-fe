@@ -10,7 +10,10 @@ export const authService = {
       if (error.response && error.response.data) {
         throw new Error(error.response.data.message || 'Login gagal');
       }
-      throw new Error('Terjadi kesalahan pada server');
+      if (error.code === 'ERR_NETWORK' || !error.response) {
+        throw new Error('Tidak dapat terhubung ke server backend (http://localhost:5000). Pastikan server backend sedang berjalan.');
+      }
+      throw new Error(error.message || 'Terjadi kesalahan pada server');
     }
   },
   

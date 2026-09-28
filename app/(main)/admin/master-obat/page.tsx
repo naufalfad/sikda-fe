@@ -27,7 +27,6 @@ export default function MasterObatPage() {
     kategori: 'Obat Bebas',
     sediaan: 'Tablet',
     harga: 0,
-    stok: 0,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -62,7 +61,6 @@ export default function MasterObatPage() {
         kategori: obat.kategori,
         sediaan: obat.sediaan,
         harga: obat.harga,
-        stok: obat.stok,
       });
       setPreviewUrl(obat.gambarUrl || null);
     } else {
@@ -73,7 +71,6 @@ export default function MasterObatPage() {
         kategori: 'Obat Bebas',
         sediaan: 'Tablet',
         harga: 0,
-        stok: 0,
       });
       setPreviewUrl(null);
     }
@@ -92,7 +89,6 @@ export default function MasterObatPage() {
     payload.append('kategori', formData.kategori);
     payload.append('sediaan', formData.sediaan);
     payload.append('harga', formData.harga.toString());
-    payload.append('stok', formData.stok.toString());
     if (imageFile) {
       payload.append('gambar', imageFile);
     }
@@ -239,7 +235,7 @@ export default function MasterObatPage() {
                 <th className="px-6 py-4 font-semibold w-16">Gambar</th>
                 <th className="px-6 py-4 font-semibold">Obat & Kategori</th>
                 <th className="px-6 py-4 font-semibold">Sediaan</th>
-                <th className="px-6 py-4 font-semibold">Stok & Satuan</th>
+                <th className="px-6 py-4 font-semibold">Stok di Faskes</th>
                 <th className="px-6 py-4 font-semibold">Harga</th>
                 <th className="px-6 py-4 font-semibold text-center w-32">Aksi</th>
               </tr>
@@ -276,7 +272,7 @@ export default function MasterObatPage() {
                     </td>
                     <td className="px-6 py-4 text-gray-600">{obat.sediaan || '-'}</td>
                     <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900">{obat.stok}</div>
+                      <div className="font-bold text-gray-900 font-mono">{obat.stok ?? 0} {obat.sediaan || 'Unit'}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-mono text-gray-900 font-medium">Rp {obat.harga.toLocaleString('id-ID')}</div>
@@ -331,20 +327,14 @@ export default function MasterObatPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Harga (Rp) <span className="font-normal text-gray-500">- Input Manual</span></label>
-                  <input required type="number" value={formData.harga} onChange={e => setFormData({...formData, harga: parseInt(e.target.value) || 0})} className="w-full border border-gray-300 p-2.5 text-sm outline-none focus:ring-1 focus:ring-pink-500 rounded-none" />
-                  {kfaReferencePrice !== null && (
-                    <div className="mt-1 text-[10px] text-pink-600 font-medium">
-                      Harga Dasar E-Katalog: Rp {kfaReferencePrice.toLocaleString('id-ID')}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Stok Awal</label>
-                  <input required type="number" value={formData.stok} onChange={e => setFormData({...formData, stok: parseInt(e.target.value) || 0})} className="w-full border border-gray-300 p-2.5 text-sm outline-none focus:ring-1 focus:ring-pink-500 rounded-none" />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Harga (Rp) <span className="font-normal text-gray-500">- Input Manual</span></label>
+                <input required type="number" value={formData.harga} onChange={e => setFormData({...formData, harga: parseInt(e.target.value) || 0})} className="w-full border border-gray-300 p-2.5 text-sm outline-none focus:ring-1 focus:ring-pink-500 rounded-none" />
+                {kfaReferencePrice !== null && (
+                  <div className="mt-1 text-[10px] text-pink-600 font-medium">
+                    Harga Dasar E-Katalog: Rp {kfaReferencePrice.toLocaleString('id-ID')}
+                  </div>
+                )}
               </div>
 
               <div>

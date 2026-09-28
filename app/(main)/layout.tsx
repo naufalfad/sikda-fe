@@ -23,7 +23,8 @@ import {
   Wallet,
   HeartPulse,
   AlertCircle,
-  Radio
+  Radio,
+  BedDouble
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -36,7 +37,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [role, setRole] = useState<'ADMINISTRASI' | 'PERAWAT' | 'DOKTER' | 'ADMIN' | 'APOTEKER' | 'LABORATORIUM' | 'RADIOLOGI' | 'KASIR' | 'PETUGAS_UKM'>('ADMINISTRASI');
+  const [role, setRole] = useState<'ADMINISTRASI' | 'PERAWAT' | 'DOKTER' | 'ADMIN' | 'APOTEKER' | 'LABORATORIUM' | 'RADIOLOGI' | 'KASIR' | 'PETUGAS_UKM' | 'DINKES_ADMIN' | 'DINKES_MONITORING'>('ADMINISTRASI');
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, checkSession, logout } = useAuthStore();
@@ -85,7 +86,7 @@ export default function DashboardLayout({
         <div className="h-16 flex items-center px-6 border-b border-gray-200 min-w-[16rem] flex-shrink-0 justify-between">
           <div className="flex items-center">
             <Stethoscope className="w-8 h-8 text-blue-600 flex-shrink-0 transition-transform md:group-hover:scale-110 duration-300" />
-            <span className="text-xl font-bold text-gray-900 tracking-tight ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300">SIMPUS</span>
+            <span className="text-xl font-bold text-gray-900 tracking-tight ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300">SIKDA</span>
           </div>
           <button className="md:hidden text-gray-400 hover:text-gray-600 p-1" onClick={closeMobileMenu}>
             <X className="w-6 h-6" />
@@ -145,6 +146,11 @@ export default function DashboardLayout({
               <Link href="/admin/master-klinik" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-klinik' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Stethoscope className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/master-klinik' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Klinik & Poli</span>
+              </Link>
+
+              <Link href="/admin/aset-ruangan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname.startsWith('/admin/aset-ruangan') ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Package className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname.startsWith('/admin/aset-ruangan') ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Aset & Ruangan</span>
               </Link>
 
               <Link href="/admin/master-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -362,6 +368,44 @@ export default function DashboardLayout({
             </div>
           )}
 
+          {/* Menu Khusus DINAS KESEHATAN */}
+          {(role === 'DINKES_ADMIN' || role === 'DINKES_MONITORING') && (
+            <div className="space-y-1">
+              <div className="px-6 py-2 text-xs font-bold uppercase tracking-wider text-emerald-600 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity">
+                Dinas Kesehatan
+              </div>
+              <Link href="/dinkes" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Eksekutif</span>
+              </Link>
+
+              <Link href="/dinkes/workload" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/workload' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/workload' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Beban Kerja & Nakes</span>
+              </Link>
+
+              <Link href="/dinkes/beds" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/beds' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <BedDouble className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/beds' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Monitoring BOR & Bed</span>
+              </Link>
+
+              <Link href="/dinkes/assets" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/assets' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <Package className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/assets' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Aset & Alkes Daerah</span>
+              </Link>
+
+              <Link href="/dinkes/medicines" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/medicines' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <Pill className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/medicines' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Stok Obat Faskes</span>
+              </Link>
+
+              <Link href="/dinkes/faskes" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/faskes' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <Building className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/faskes' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Faskes Kab.</span>
+              </Link>
+            </div>
+          )}
+
           <div className="mt-8 pt-4 border-t border-gray-100">
             <Link href="#" className="flex items-center px-6 py-3 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors">
               <Settings className="w-7 h-7 text-gray-400 md:group-hover:text-blue-600 flex-shrink-0 transition-colors" />
@@ -382,16 +426,34 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-10 sticky top-0 print:hidden">
-          <div className="flex-1 flex items-center">
+          <div className="flex-1 flex items-center gap-3">
             
             {/* Hamburger Menu (Mobile/Tablet Only) */}
             <button 
-              className="md:hidden mr-4 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              className="md:hidden mr-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
             >
               <Menu className="w-6 h-6" />
             </button>
 
+            {/* Active Faskes / Dinkes Context Indicator */}
+            {user?.faskes?.namaFaskes ? (
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 px-3 py-1.5 text-xs font-semibold rounded-lg">
+                <Building className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span className="truncate max-w-[180px] sm:max-w-xs">{user.faskes.namaFaskes}</span>
+                <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] bg-blue-100 text-blue-700 rounded uppercase font-bold tracking-wider">
+                  {user.faskes.tipeFaskes || 'PUSKESMAS'}
+                </span>
+              </div>
+            ) : (role === 'DINKES_ADMIN' || role === 'DINKES_MONITORING') ? (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 text-xs font-semibold rounded-lg">
+                <Building className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span className="truncate">Dinas Kesehatan Kabupaten</span>
+                <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] bg-emerald-100 text-emerald-700 rounded uppercase font-bold tracking-wider">
+                  DINKES
+                </span>
+              </div>
+            ) : null}
 
           </div>
           
@@ -402,7 +464,7 @@ export default function DashboardLayout({
             </button>
             <div className="flex items-center sm:border-l sm:border-gray-200 sm:pl-4 cursor-pointer hover:bg-gray-50 p-1 sm:p-2 rounded-md transition-colors">
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
-                {role === 'ADMINISTRASI' ? 'A' : role === 'PERAWAT' ? 'P' : role === 'APOTEKER' ? 'F' : role === 'LABORATORIUM' ? 'L' : role === 'KASIR' ? 'K' : 'D'}
+                {role === 'ADMINISTRASI' ? 'A' : role === 'PERAWAT' ? 'P' : role === 'APOTEKER' ? 'F' : role === 'LABORATORIUM' ? 'L' : role === 'KASIR' ? 'K' : role === 'DOKTER' ? 'D' : role === 'RADIOLOGI' ? 'R' : 'DK'}
               </div>
               <div className="ml-3 hidden sm:block text-sm text-left">
                 <p className="font-bold text-gray-900 leading-none">

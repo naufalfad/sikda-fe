@@ -65,7 +65,7 @@ export default function ProsesResepPage() {
     setError('');
     
     try {
-      // 1. Simpan/proses transaksi obat secara lokal di database SIMPUS
+      // 1. Simpan/proses transaksi obat secara lokal di database SIKDA
       await farmasiService.prosesResep(id as string);
 
       // 2. Hubungkan ke SatuSehat Store untuk pengiriman QuestionnaireResponse & MedicationDispense

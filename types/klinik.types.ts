@@ -1,5 +1,12 @@
 export interface Poliklinik {
   id: string;
+  faskesId?: string | null;
+  faskes?: {
+    id: string;
+    kodeFaskes: string;
+    namaFaskes: string;
+    tipeFaskes?: string;
+  } | null;
   kodePoli: string;
   namaPoli: string;
   deskripsi?: string | null;
