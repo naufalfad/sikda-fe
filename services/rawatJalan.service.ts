@@ -98,9 +98,9 @@ export const rawatJalanService = {
     return response.data;
   },
 
-  /** GET /master/obat — Cari obat */
-  searchObat: async (search: string): Promise<ApiResponse<MasterObat[]>> => {
-    const response = await api.get('/master/obat', { params: { search } });
+  /** GET /farmasi/stok — Cari obat dari inventaris logistik faskes dokter yang bertugas */
+  searchObat: async (search: string): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/farmasi/stok', { params: { search, hanyaObat: 'true' } });
     return response.data;
   },
 

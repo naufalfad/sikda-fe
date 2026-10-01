@@ -66,10 +66,18 @@ export default function DischargePlanning() {
   }, [activeMenu]);
 
   const addToCart = (obat: any) => {
-    const exists = cart.find(c => c.obatId === obat.id);
-    if (exists) return;
+    const targetObatId = obat.obatId || obat.id;
+    const exists = cart.find(c => c.obatId === targetObatId);
+    if (exists) {
+      Swal.fire('Sudah Ditambahkan', 'Obat ini sudah ada dalam keranjang resep.', 'info');
+      return;
+    }
+    if (obat.stok !== undefined && obat.stok <= 0) {
+      Swal.fire('Stok Habis', `Stok ${obat.namaObat} sedang kosong di gudang farmasi faskes ini.`, 'warning');
+      return;
+    }
     setCart([...cart, {
-      obatId: obat.id,
+      obatId: targetObatId,
       namaObat: obat.namaObat,
       stok: obat.stok,
       harga: obat.harga,
@@ -87,6 +95,12 @@ export default function DischargePlanning() {
     const invalid = cart.find(c => !c.signa);
     if (invalid) {
       Swal.fire('Incomplete', 'Semua obat harus memiliki Aturan Pakai (Signa)', 'warning');
+      return;
+    }
+
+    const overStock = cart.find(c => c.stok !== undefined && c.stok !== null && c.qty > c.stok);
+    if (overStock) {
+      Swal.fire('Melebihi Stok', `Jumlah peresepan ${overStock.namaObat} (${overStock.qty}) melebihi stok yang tersedia di gudang farmasi faskes (${overStock.stok}).`, 'warning');
       return;
     }
 
@@ -275,16 +289,26 @@ export default function DischargePlanning() {
                       
                       <div className="mt-auto flex items-center justify-between">
                         <div>
-                          <div className="text-sm font-extrabold text-gray-900">Rp {obat.harga.toLocaleString('id-ID')}</div>
-                          <div className={`text-xs font-bold ${obat.stok > 10 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            Sisa Stok: {obat.stok}
+                          <div className="text-sm font-extrabold text-gray-900">Rp {Number(obat.harga || 0).toLocaleString('id-ID')}</div>
+                          <div className={`text-xs font-bold ${obat.stok > 10 ? 'text-emerald-600' : obat.stok > 0 ? 'text-amber-600' : 'text-rose-600'}`}>
+                            {obat.stok !== undefined ? (obat.stok > 0 ? `Sisa Stok: ${obat.stok} ${obat.sediaan || ''}` : 'Stok Habis (0)') : 'Stok Tersedia'}
                           </div>
+                          {obat.noBatch && obat.noBatch !== '-' && (
+                            <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                              Batch: {obat.noBatch}
+                            </div>
+                          )}
                         </div>
                         <button 
+                          disabled={obat.stok !== undefined && obat.stok <= 0}
                           onClick={() => addToCart(obat)}
-                          className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-none text-sm font-bold transition-colors"
+                          className={`px-3 py-1.5 rounded-none text-sm font-bold transition-colors ${
+                            obat.stok !== undefined && obat.stok <= 0
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                              : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border border-blue-200'
+                          }`}
                         >
-                          + Keranjang
+                          {obat.stok !== undefined && obat.stok <= 0 ? 'Habis' : '+ Keranjang'}
                         </button>
                       </div>
                     </div>

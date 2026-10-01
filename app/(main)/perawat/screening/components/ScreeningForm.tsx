@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -27,6 +27,18 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const { createScreening, isSubmitting, error: storeError, clearError } = useScreeningStore();
 
+  const calculatedAge = (() => {
+    if (!kunjungan?.pasien?.tanggalLahir) return 30;
+    const birth = new Date(kunjungan.pasien.tanggalLahir);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return Math.max(0, age);
+  })();
+
   const {
     register,
     handleSubmit,
@@ -40,6 +52,7 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
     defaultValues: {
       nomorRegistrasi: kunjungan.noAntrian || '1',
       jenisKedatangan: 'Poli',
+      usia: calculatedAge,
       golonganDarah: kunjungan.pasien?.golonganDarah || '',
       rhesus: kunjungan.pasien?.rhesus === '+' || kunjungan.pasien?.rhesus === 'Positif (+)' ? '+' : (kunjungan.pasien?.rhesus === '-' || kunjungan.pasien?.rhesus === 'Negatif (-)' ? '-' : ''),
       statusKehamilan: kunjungan.pasien?.jenisKelamin === 'L' ? 'Tidak Berlaku' : '',
@@ -64,6 +77,12 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
 
   const jenisKedatangan = watch('jenisKedatangan');
   const usia = watch('usia');
+
+  useEffect(() => {
+    if (kunjungan?.pasien?.tanggalLahir) {
+      setValue('usia', calculatedAge);
+    }
+  }, [kunjungan?.pasien?.tanggalLahir, calculatedAge, setValue]);
 
   // Conditional Logic for Steps
   const shouldSkipTriage = false;
@@ -122,7 +141,7 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
       kunjunganId: kunjungan.id,
       // Step 1: Umum & Vital
       jenisKedatangan: data.jenisKedatangan,
-      usia: data.usia,
+      usia: data.usia ?? calculatedAge,
       keluhanUtama: toTitleCase(data.keluhanUtama),
       lamaKeluhan: toTitleCase(data.lamaKeluhan),
       riwayatPenyakitSekarang: toTitleCase(data.riwayatPenyakitSekarang),

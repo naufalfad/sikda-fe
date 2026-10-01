@@ -25,7 +25,9 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           {...props}
         >
-          <option value="" disabled hidden>Pilih opsi</option>
+          {!options.some((opt) => opt.value === '') && (
+            <option value="" disabled hidden>Pilih opsi</option>
+          )}
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

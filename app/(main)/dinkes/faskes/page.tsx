@@ -14,7 +14,9 @@ import {
   MapPin, 
   Phone, 
   Mail, 
-  CheckCircle2 
+  CheckCircle2,
+  FileText,
+  ChevronRight
 } from 'lucide-react';
 import { dinkesService, FaskesItem } from '../../../../services/dinkes.service';
 
@@ -267,19 +269,28 @@ export default function DinkesMasterFaskesPage() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
-                <button
-                  onClick={() => openEditModal(faskes)}
-                  className="flex-1 py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+              <div className="space-y-2 pt-3 border-t border-slate-100">
+                <Link
+                  href={`/dinkes/faskes/${faskes.id}`}
+                  className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-xs hover:shadow"
                 >
-                  <Edit3 className="w-3.5 h-3.5" /> Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(faskes)}
-                  className="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Hapus
-                </button>
+                  <FileText className="w-3.5 h-3.5" /> Lihat Detail Faskes
+                  <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-70" />
+                </Link>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEditModal(faskes)}
+                    className="flex-1 py-1.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors border border-slate-200"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(faskes)}
+                    className="py-1.5 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors border border-rose-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Hapus
+                  </button>
+                </div>
               </div>
             </div>
           ))

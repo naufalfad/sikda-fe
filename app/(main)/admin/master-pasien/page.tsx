@@ -8,7 +8,7 @@ import Link from 'next/link';
 export default function MasterPasienAdminPage() {
   const { pasiens, isLoading, fetchPasiens, deletePasien, syncPasienIHS } = usePasienStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [syncingId, setSyncingId] = useState<number | null>(null);
+  const [syncingId, setSyncingId] = useState<string | number | null>(null);
   const [expandedMotherId, setExpandedMotherId] = useState<number | string | null>(null);
 
   const toggleExpandMother = (id: number | string) => {
@@ -19,7 +19,7 @@ export default function MasterPasienAdminPage() {
     fetchPasiens();
   }, [fetchPasiens]);
 
-  const handleDelete = async (id: number, nama: string) => {
+  const handleDelete = async (id: string | number, nama: string) => {
     if (window.confirm(`Apakah Anda yakin ingin menghapus data pasien ${nama}?`)) {
       try {
         await deletePasien(id);
@@ -30,7 +30,7 @@ export default function MasterPasienAdminPage() {
     }
   };
 
-  const handleSyncIHS = async (id: number, nik: string | null) => {
+  const handleSyncIHS = async (id: string | number, nik: string | null) => {
     if (!nik) {
       alert('NIK pasien kosong, tidak bisa sinkronisasi dengan SATUSEHAT');
       return;
@@ -147,6 +147,11 @@ export default function MasterPasienAdminPage() {
                         <td className="py-4 px-6">
                           <div className="font-semibold text-gray-900 flex items-center gap-2">
                             {p.namaLengkap}
+                            {p.faskes && (
+                              <span className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-none border border-emerald-200 flex-shrink-0">
+                                {p.faskes.namaFaskes}
+                              </span>
+                            )}
                             {p.dataBayi && (
                               <span className="bg-sky-100 text-sky-700 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-sm border border-sky-200 flex-shrink-0">
                                 Bayi

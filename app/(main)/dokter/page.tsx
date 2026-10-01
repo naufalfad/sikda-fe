@@ -265,14 +265,14 @@ export default function DokterDashboardPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             {item.statusKunjungan === 'MENUNGGU_DOKTER' ? (
                               <Link 
-                                href={`/dokter/rawat-jalan/pemeriksaan/${item.id}`}
+                                href={`/dokter/rawat-jalan?kunjunganId=${item.id}`}
                                 className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white font-medium text-xs rounded-none hover:bg-indigo-700 transition-colors shadow-sm"
                               >
                                 Mulai Pemeriksaan
                               </Link>
                             ) : (
                               <Link 
-                                href={`/dokter/rawat-jalan/pemeriksaan/${item.id}`}
+                                href={`/dokter/rawat-jalan?kunjunganId=${item.id}`}
                                 className="inline-flex items-center px-4 py-2 bg-white text-indigo-600 font-medium text-xs rounded-none border border-indigo-200 hover:bg-indigo-50 transition-colors"
                               >
                                 Lanjut / Detail

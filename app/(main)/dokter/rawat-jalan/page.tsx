@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Stethoscope, User, FileText, Activity, Syringe, Pill, 
   ClipboardList, CheckCircle2, Clock, Users, Search, Loader2, RefreshCw, TestTubes, Printer,
   FileDown, AlertTriangle, Radio
 } from 'lucide-react';
-import { icd9Service } from '@/services/icd9.service';
 import { laboratoriumService } from '@/services/laboratorium.service';
+import { kunjunganService } from '@/services/kunjungan.service';
 import { useRawatJalanStore } from '@/store/rawatJalan.store';
 import { SOAPPayload } from '@/types/rawatJalan.types';
 import { AVAILABLE_LAB_TESTS, fillDokterDummyDataHelper } from './rawatJalan.constants';
@@ -33,7 +34,9 @@ import SoapTabBar from './components/SoapTabBar';
 import { useReactToPrint } from 'react-to-print';
 import { CetakHasilLab } from '@/components/laboratorium/CetakHasilLab';
 
-export default function DokterRawatJalanPage() {
+function DokterRawatJalanContent() {
+  const searchParams = useSearchParams();
+  const kunjunganIdParam = searchParams.get('kunjunganId');
   const [activeTab, setActiveTab] = useState('SOAP_S');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -51,9 +54,6 @@ export default function DokterRawatJalanPage() {
   // Removed separate ICD10 states since TabAsesmen handles it now
   
   // Tindakan (ICD-9) - Tab Tindakan/Prosedur
-  const [icd9Query, setIcd9Query] = useState('');
-  const [icd9Results, setIcd9Results] = useState<any[]>([]);
-  const [isSearchingICD9, setIsSearchingICD9] = useState(false);
   const [selectedProsedur, setSelectedProsedur] = useState<any[]>([]);
 
   // Resep State (Frontend Only)
@@ -136,6 +136,26 @@ export default function DokterRawatJalanPage() {
   useEffect(() => {
     fetchAntrian();
   }, [fetchAntrian]);
+
+  // Auto-select kunjungan jika ada parameter kunjunganId (dari Dashboard Dokter)
+  useEffect(() => {
+    if (kunjunganIdParam && (!selectedKunjungan || selectedKunjungan.id !== kunjunganIdParam)) {
+      if (antrian.length > 0) {
+        const found = antrian.find((k: any) => k.id === kunjunganIdParam);
+        if (found) {
+          pilihPasien(found);
+          return;
+        }
+      }
+
+      // Jika belum ditemukan di antrian lokal, ambil langsung via API
+      kunjunganService.getKunjunganById(kunjunganIdParam).then((k) => {
+        if (k) {
+          pilihPasien(k as any);
+        }
+      }).catch(console.error);
+    }
+  }, [kunjunganIdParam, antrian, selectedKunjungan, pilihPasien]);
 
   // Order Lab State
   const [labOrders, setLabOrders] = useState<string[]>([]);
@@ -295,26 +315,6 @@ export default function DokterRawatJalanPage() {
 
     // 3. Bypass untuk pasien yang sudah pernah DIPERIKSA, MENUNGGU_LAB, dll
     pilihPasien(kunjungan);
-  };
-
-  const handleSearchICD9 = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setIcd9Query(query);
-    if (query.length > 2) {
-      setIsSearchingICD9(true);
-      try {
-        const res = await icd9Service.search(query);
-        if (res.status === 'success') setIcd9Results(res.data);
-      } catch { /* ignore */ } finally { setIsSearchingICD9(false); }
-    } else { setIcd9Results([]); }
-  };
-
-  const handleSelectICD9 = (icd: any) => {
-    if (!selectedProsedur.find(p => p.kode_icd9 === icd.kode_icd9)) {
-      setSelectedProsedur([...selectedProsedur, { ...icd, pelaksana: 'Dokter' }]);
-    }
-    setIcd9Query('');
-    setIcd9Results([]);
   };
 
   const handleRemoveProsedur = (kode: string) => {
@@ -553,11 +553,6 @@ export default function DokterRawatJalanPage() {
                     {/* TAB: Tindakan ICD-9 */}
                     {activeTab === 'TINDAKAN' && (
                       <TabTindakan 
-                        isSearchingICD9={isSearchingICD9} 
-                        icd9Query={icd9Query} 
-                        handleSearchICD9={handleSearchICD9} 
-                        icd9Results={icd9Results} 
-                        handleSelectICD9={handleSelectICD9} 
                         selectedProsedur={selectedProsedur} 
                         setSelectedProsedur={setSelectedProsedur} 
                         handleRemoveProsedur={handleRemoveProsedur} 
@@ -628,5 +623,20 @@ export default function DokterRawatJalanPage() {
         printRef={printRef}
       />
     </div>
+  );
+}
+
+export default function DokterRawatJalanPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm font-medium text-gray-600">Memuat Modul Rawat Jalan...</p>
+        </div>
+      </div>
+    }>
+      <DokterRawatJalanContent />
+    </Suspense>
   );
 }

@@ -132,8 +132,17 @@ export default function RegistrationForm() {
         </div>
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Pendaftaran Berhasil!</h2>
         <p className="text-gray-600 mb-2 max-w-md mx-auto">
-          Data pasien telah berhasil disimpan dan disinkronisasi. Nomor antrean: <strong>{generatedNoAntrian || 'A-001'}</strong>
+          Data pasien telah berhasil disimpan. Nomor antrean: <strong>{generatedNoAntrian || 'A-001'}</strong>
         </p>
+
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 p-4 max-w-md mx-auto rounded-none text-xs my-4 text-left shadow-sm">
+          <p className="font-bold text-blue-950 mb-1 flex items-center gap-1.5">
+            🏥 Petunjuk Alur Pasien:
+          </p>
+          <p className="text-blue-800">
+            Arahkan pasien menuju <strong>Ruang Pemeriksaan Awal / Perawat (Screening & TTV)</strong> terlebih dahulu untuk pengukuran tanda-tanda vital sebelum dipanggil ke ruang dokter.
+          </p>
+        </div>
         
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button 

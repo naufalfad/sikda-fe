@@ -9,8 +9,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "SIKDA - Sistem Informasi Kesehatan Daerah",
-  description: "Sistem Informasi Manajemen Fasilitas Kesehatan dan Monitoring Terpadu Dinas Kesehatan Daerah",
+  title: "SIAP-KES - Sistem Integrasi Aset & Pelayanan Kesehatan Daerah",
+  description: "Sistem Integrasi Aset & Pelayanan Kesehatan Daerah untuk Manajemen Fasilitas Kesehatan dan Monitoring Terpadu",
 };
 
 export default function RootLayout({

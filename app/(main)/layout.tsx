@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  UserPlus, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  Bell, 
+import {
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  FileText,
+  Settings,
+  LogOut,
+  Bell,
   Search,
   Stethoscope,
   Menu,
@@ -24,7 +24,8 @@ import {
   HeartPulse,
   AlertCircle,
   Radio,
-  BedDouble
+  BedDouble,
+  Syringe
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -49,7 +50,7 @@ export default function DashboardLayout({
         router.push('/login');
         return;
       }
-      
+
       if (state.user?.role) {
         setRole(state.user.role as any);
       }
@@ -65,13 +66,13 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      
+
       {/* Sidebar Placeholder (Reserves horizontal space for the mini sidebar on desktop) */}
       <div className="w-20 flex-shrink-0 hidden md:block print:hidden"></div>
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-gray-900 bg-opacity-50 z-40 md:hidden transition-opacity print:hidden"
           onClick={closeMobileMenu}
         />
@@ -81,18 +82,18 @@ export default function DashboardLayout({
       <aside className={`fixed top-0 left-0 h-full bg-white border-r border-gray-200 z-50 flex flex-col transition-all duration-300 ease-in-out overflow-hidden shadow-sm md:hover:shadow-2xl group print:hidden
         ${isMobileMenuOpen ? 'w-64 translate-x-0' : '-translate-x-full w-64'} 
         md:translate-x-0 md:w-20 md:hover:w-64`}>
-        
+
         {/* Logo Area */}
         <div className="h-16 flex items-center px-6 border-b border-gray-200 min-w-[16rem] flex-shrink-0 justify-between">
           <div className="flex items-center">
             <Stethoscope className="w-8 h-8 text-blue-600 flex-shrink-0 transition-transform md:group-hover:scale-110 duration-300" />
-            <span className="text-xl font-bold text-gray-900 tracking-tight ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300">SIKDA</span>
+            <span className="text-xl font-black text-gray-900 tracking-tight ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300">SIAP-KES</span>
           </div>
           <button className="md:hidden text-gray-400 hover:text-gray-600 p-1" onClick={closeMobileMenu}>
             <X className="w-6 h-6" />
           </button>
         </div>
-        
+
         {/* Navigation Links */}
         <div className="flex-1 py-6 space-y-2 min-w-[16rem] overflow-y-auto overflow-x-hidden">
           {/* Menu Khusus Admin (Petugas Loket) */}
@@ -102,7 +103,7 @@ export default function DashboardLayout({
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Antrian</span>
               </Link>
-              
+
               <Link href="/administrasi/pendaftaran" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/pendaftaran' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <UserPlus className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi/pendaftaran' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Pendaftaran Pasien</span>
@@ -113,10 +114,10 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Data Pasien</span>
               </Link>
 
-              <Link href="/administrasi/monitoring-encounter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+              {/* <Link href="/administrasi/monitoring-encounter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Monitoring FHIR</span>
-              </Link>
+              </Link> */}
 
               <Link href="/administrasi/antrian-rujukan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/antrian-rujukan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi/antrian-rujukan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
@@ -138,11 +139,11 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Admin</span>
               </Link>
 
-              <Link href="/admin/perusahaan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+              {/* <Link href="/admin/perusahaan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Building className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Perusahaan</span>
-              </Link>
-              
+              </Link> */}
+
               <Link href="/admin/master-klinik" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-klinik' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Stethoscope className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/master-klinik' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Klinik & Poli</span>
@@ -178,15 +179,25 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Obat</span>
               </Link>
 
+              <Link href="/admin/master-vaksin" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-vaksin' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Syringe className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/master-vaksin' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Vaksin</span>
+              </Link>
+
+              <Link href="/apoteker/stok" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname.startsWith('/apoteker/stok') ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Package className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname.startsWith('/apoteker/stok') ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Logistik Obat & Vaksin</span>
+              </Link>
+
               <Link href="/admin/master-alergi" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-alergi' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <AlertCircle className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/master-alergi' ? 'text-red-600' : 'text-gray-400 md:group-hover:text-red-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Alergi</span>
               </Link>
 
-              <Link href="/administrasi/monitoring-encounter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+              {/* <Link href="/administrasi/monitoring-encounter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Monitoring FHIR</span>
-              </Link>
+              </Link> */}
             </>
           )}
 
@@ -223,23 +234,23 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Poli</span>
               </Link>
 
-              {(!user?.poliklinik?.namaPoli?.toUpperCase().includes('IGD') && 
-                !user?.poliklinik?.namaPoli?.toUpperCase().includes('UGD') && 
+              {(!user?.poliklinik?.namaPoli?.toUpperCase().includes('IGD') &&
+                !user?.poliklinik?.namaPoli?.toUpperCase().includes('UGD') &&
                 !user?.poliklinik?.namaPoli?.toUpperCase().includes('INAP')) && (
-                <Link href="/dokter/rawat-jalan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
-                  <Stethoscope className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                  <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Rawat Jalan</span>
-                </Link>
-              )}
+                  <Link href="/dokter/rawat-jalan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                    <Stethoscope className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                    <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Rawat Jalan</span>
+                  </Link>
+                )}
 
-              {(user?.poliklinik?.namaPoli?.toUpperCase().includes('IGD') || 
+              {(user?.poliklinik?.namaPoli?.toUpperCase().includes('IGD') ||
                 user?.poliklinik?.namaPoli?.toUpperCase().includes('UGD')) && (
-                <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
-                  <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                  <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">UGD / Gawat Darurat</span>
-                </Link>
-              )}
-              
+                  <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                    <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                    <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">UGD / Gawat Darurat</span>
+                  </Link>
+                )}
+
               {(user?.poliklinik?.namaPoli?.toUpperCase().includes('INAP')) && (
                 <Link href="/dokter/rawatinap" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                   <Users className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
@@ -277,17 +288,17 @@ export default function DashboardLayout({
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/apoteker' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Apoteker</span>
               </Link>
-              
+
               <Link href="/apoteker/antrian" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/apoteker/antrian' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <ClipboardList className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/apoteker/antrian' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Antrian Resep</span>
               </Link>
-              
+
               <Link href="/apoteker/stok" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/apoteker/stok' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Package className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/apoteker/stok' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Stok Obat</span>
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Logistik Obat & Vaksin</span>
               </Link>
-              
+
               <Link href="#" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <History className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Riwayat Obat Keluar</span>
@@ -302,7 +313,7 @@ export default function DashboardLayout({
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/laboratorium' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Visual</span>
               </Link>
-              
+
               <Link href="/laboratorium/antrian" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/laboratorium/antrian' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <ClipboardList className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/laboratorium/antrian' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Antrean Uji Lab</span>
@@ -325,12 +336,12 @@ export default function DashboardLayout({
                 <Wallet className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/kasir' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Kasir</span>
               </Link>
-              
+
               <Link href="#" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/kasir/pendapatan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/kasir/pendapatan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Laporan Pendapatan</span>
               </Link>
-              
+
               <Link href="#" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/kasir/piutang' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <ClipboardList className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/kasir/piutang' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Piutang Pasien</span>
@@ -345,7 +356,7 @@ export default function DashboardLayout({
 
           {user?.role === 'PETUGAS_UKM' && (
             <div className="mt-8 pt-4 border-t border-gray-100">
-              
+
               <Link href="/ukm" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/ukm' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/ukm' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard UKM</span>
@@ -427,9 +438,9 @@ export default function DashboardLayout({
         {/* Topbar */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-10 sticky top-0 print:hidden">
           <div className="flex-1 flex items-center gap-3">
-            
+
             {/* Hamburger Menu (Mobile/Tablet Only) */}
-            <button 
+            <button
               className="md:hidden mr-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
             >
@@ -456,7 +467,7 @@ export default function DashboardLayout({
             ) : null}
 
           </div>
-          
+
           <div className="flex items-center space-x-2 sm:space-x-4">
             <button className="p-2 text-gray-400 hover:text-gray-500 relative transition-colors hidden sm:block">
               <Bell className="w-6 h-6" />

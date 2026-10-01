@@ -35,6 +35,18 @@ import {
   RiwayatMutasiAset 
 } from '../../../../types/asetRuangan.types';
 
+const getAsetImageUrl = (aset?: any) => {
+  if (aset?.gambarUrl) return aset.gambarUrl;
+  const name = ((aset?.namaAset || '') + ' ' + (aset?.kodeAset || '')).toLowerCase();
+  if (name.includes('tensi') || name.includes('tns')) return '/images/aset/tensimeter.jpg';
+  if (name.includes('dental') || name.includes('dnt') || name.includes('autoclave') || name.includes('strl')) return '/images/aset/dental.jpg';
+  if (name.includes('ekg')) return '/images/aset/ekg.jpg';
+  if (name.includes('aed') || name.includes('defibrillator') || name.includes('suct') || name.includes('pump')) return '/images/aset/defibrillator.jpg';
+  if (name.includes('kulk') || name.includes('vaksin')) return '/images/aset/kulkas.jpg';
+  if (name.includes('usg') || name.includes('cent') || name.includes('dop')) return '/images/aset/usg.jpg';
+  return '/images/aset/usg.jpg';
+};
+
 export default function AsetRuanganPage() {
   const [activeTab, setActiveTab] = useState<'ruangan' | 'bed' | 'aset' | 'pemeliharaan' | 'mutasi'>('ruangan');
   const [loading, setLoading] = useState(false);
@@ -73,7 +85,8 @@ export default function AsetRuanganPage() {
     ruanganId: '',
     nomorBed: '',
     kelasKamar: 'NON_KELAS_IGD',
-    statusBed: 'TERSEDIA' as const
+    statusBed: 'TERSEDIA' as const,
+    gambarUrl: ''
   });
 
   const [showAsetModal, setShowAsetModal] = useState(false);
@@ -86,6 +99,7 @@ export default function AsetRuanganPage() {
     merk: '',
     tipeModel: '',
     nomorSeri: '',
+    gambarUrl: '',
     tahunPerolehan: new Date().getFullYear(),
     sumberAnggaran: 'APBD',
     hargaPerolehan: 0,
@@ -640,24 +654,52 @@ export default function AsetRuanganPage() {
               return (
                 <div 
                   key={b.id}
-                  className={`p-4 rounded-xl border-2 transition shadow-sm flex flex-col justify-between ${statusColors[b.statusBed] || 'border-gray-200 bg-white'}`}
+                  className={`rounded-xl border-2 transition shadow-sm overflow-hidden flex flex-col justify-between ${statusColors[b.statusBed] || 'border-gray-200 bg-white'}`}
                 >
                   <div>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-xs font-semibold text-gray-500">{b.ruangan?.namaRuangan}</span>
-                        <h3 className="text-lg font-bold text-gray-900 mt-0.5">{b.nomorBed}</h3>
+                    {/* Bed Image Banner */}
+                    <div className="relative h-32 w-full bg-slate-100 overflow-hidden group">
+                      <img 
+                        src={b.gambarUrl || "/images/aset/bed.jpg"} 
+                        alt={b.nomorBed}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "/images/aset/bed.jpg";
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+                      
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 bg-black/60 backdrop-blur-xs text-white px-2 py-0.5 rounded text-[11px] font-mono font-bold shadow-xs">
+                        <Bed className="w-3.5 h-3.5 text-blue-300" />
+                        {b.nomorBed}
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${badgeColors[b.statusBed]}`}>
-                        {b.statusBed}
-                      </span>
+
+                      <div className="absolute top-2.5 right-2.5">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold shadow-xs ${badgeColors[b.statusBed]}`}>
+                          {b.statusBed}
+                        </span>
+                      </div>
+
+                      <div className="absolute bottom-2 left-2.5 right-2.5 text-white">
+                        <span className="text-[11px] font-medium text-slate-200 line-clamp-1">{b.ruangan?.namaRuangan}</span>
+                      </div>
                     </div>
 
-                    <div className="mt-3 text-xs text-gray-600 space-y-1">
-                      <p><span className="font-semibold">Kelas:</span> {b.kelasKamar.replace('_', ' ')}</p>
-                      {b.kunjunganAktif && (
-                        <p className="text-red-700 font-semibold">
-                          Pasien: {b.kunjunganAktif.pasien?.namaLengkap} ({b.kunjunganAktif.pasien?.noRM})
+                    <div className="p-3.5 text-xs text-gray-600 space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Kelas:</span>
+                        <span className="font-bold text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">
+                          {b.kelasKamar.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      {b.kunjunganAktif ? (
+                        <div className="bg-red-50 border border-red-200 p-2 rounded text-[11px] text-red-900 mt-1">
+                          <p className="font-bold truncate">👤 {b.kunjunganAktif.pasien?.namaLengkap}</p>
+                          <p className="text-[10px] text-red-600 font-mono">RM: {b.kunjunganAktif.pasien?.noRM}</p>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">
+                          <CheckCircle2 className="w-3 h-3" /> Siap digunakan pasien
                         </p>
                       )}
                     </div>
@@ -752,6 +794,7 @@ export default function AsetRuanganPage() {
                   merk: '',
                   tipeModel: '',
                   nomorSeri: '',
+                  gambarUrl: '',
                   tahunPerolehan: new Date().getFullYear(),
                   sumberAnggaran: 'APBD',
                   hargaPerolehan: 0,
@@ -774,11 +817,12 @@ export default function AsetRuanganPage() {
             <table className="w-full text-left text-sm text-gray-600">
               <thead className="bg-gray-50 text-gray-700 font-semibold border-b border-gray-200">
                 <tr>
+                  <th className="py-3 px-4 w-16 text-center">Foto</th>
                   <th className="py-3 px-4">Kode Aset</th>
-                  <th className="py-3 px-4">Nama Barang & Spesifikasi</th>
+                  <th className="py-3 px-4">Nama Barang &amp; Spesifikasi</th>
                   <th className="py-3 px-4">Lokasi Ruangan</th>
                   <th className="py-3 px-4">Kondisi Fisik</th>
-                  <th className="py-3 px-4">Tahun & Harga</th>
+                  <th className="py-3 px-4">Tahun &amp; Harga</th>
                   <th className="py-3 px-4">SATUSEHAT Device</th>
                   <th className="py-3 px-4 text-center">Aksi Cepat</th>
                 </tr>
@@ -786,6 +830,18 @@ export default function AsetRuanganPage() {
               <tbody className="divide-y divide-gray-200">
                 {asets.map((a) => (
                   <tr key={a.id} className="hover:bg-gray-50 transition">
+                    <td className="py-3 px-4 text-center">
+                      <div className="w-13 h-13 rounded-lg bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs mx-auto group">
+                        <img 
+                          src={getAsetImageUrl(a)} 
+                          alt={a.namaAset}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).src = "/images/aset/usg.jpg";
+                          }}
+                        />
+                      </div>
+                    </td>
                     <td className="py-3 px-4 font-mono font-bold text-gray-900">{a.kodeAset}</td>
                     <td className="py-3 px-4">
                       <p className="font-semibold text-gray-900">{a.namaAset}</p>
@@ -930,8 +986,22 @@ export default function AsetRuanganPage() {
                 {pemeliharaans.map((p) => (
                   <tr key={p.id} className="hover:bg-gray-50 transition">
                     <td className="py-3 px-4">
-                      <p className="font-semibold text-gray-900">{p.aset?.namaAset}</p>
-                      <p className="text-xs text-gray-500 font-mono">{p.aset?.kodeAset}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-lg bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs group">
+                          <img 
+                            src={getAsetImageUrl(p.aset)} 
+                            alt={p.aset?.namaAset}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "/images/aset/usg.jpg";
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{p.aset?.namaAset}</p>
+                          <p className="text-xs text-gray-500 font-mono">{p.aset?.kodeAset}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3 px-4">{p.aset?.ruangan?.namaRuangan || '-'}</td>
                     <td className="py-3 px-4">
@@ -1001,8 +1071,23 @@ export default function AsetRuanganPage() {
                     <td className="py-3 px-4 text-xs font-mono">
                       {new Date(m.tanggalMutasi).toLocaleString('id-ID')}
                     </td>
-                    <td className="py-3 px-4 font-semibold text-gray-900">
-                      {m.aset?.namaAset} ({m.aset?.kodeAset})
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded bg-gray-50 border border-gray-200 overflow-hidden shrink-0 shadow-2xs">
+                          <img 
+                            src={getAsetImageUrl(m.aset)} 
+                            alt={m.aset?.namaAset}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = "/images/aset/usg.jpg";
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-xs">{m.aset?.namaAset}</p>
+                          <p className="text-[10px] text-gray-500 font-mono">{m.aset?.kodeAset}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-red-700 font-medium">
                       {m.ruanganAsal?.namaRuangan}
@@ -1185,6 +1270,17 @@ export default function AsetRuanganPage() {
                   <option value="DIBERSIHKAN">Sedang Dibersihkan</option>
                   <option value="PERBAIKAN">Dalam Perbaikan</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Foto / URL Gambar Tempat Tidur (Opsional)</label>
+                <input
+                  type="text"
+                  value={bedForm.gambarUrl}
+                  onChange={(e) => setBedForm({ ...bedForm, gambarUrl: e.target.value })}
+                  className="w-full border p-2 rounded text-sm text-black"
+                  placeholder="Default: /images/aset/bed.jpg"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
@@ -1371,6 +1467,34 @@ export default function AsetRuanganPage() {
                     placeholder="Contoh: 466238007"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">URL Foto Aset / Alkes (Opsional)</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={asetForm.gambarUrl}
+                    onChange={(e) => setAsetForm({ ...asetForm, gambarUrl: e.target.value })}
+                    className="w-full border p-2 rounded text-sm text-black"
+                    placeholder="Contoh: /images/aset/usg.jpg atau URL gambar https://..."
+                  />
+                  {asetForm.gambarUrl && (
+                    <div className="w-10 h-10 rounded border overflow-hidden shrink-0">
+                      <img 
+                        src={asetForm.gambarUrl} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = "/images/aset/usg.jpg";
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Biarkan kosong untuk menggunakan template foto otomatis sesuai kategori/nama alat kesehatan.
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">

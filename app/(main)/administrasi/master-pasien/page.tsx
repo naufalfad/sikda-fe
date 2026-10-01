@@ -10,7 +10,7 @@ export default function MasterPasienAdministrasiPage() {
   const { pasiens, isLoading, fetchPasiens, deletePasien, syncPasienIHS } = usePasienStore();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
-  const [syncingId, setSyncingId] = useState<number | null>(null);
+  const [syncingId, setSyncingId] = useState<string | number | null>(null);
   const [expandedMotherId, setExpandedMotherId] = useState<number | string | null>(null);
 
   const toggleExpandMother = (id: number | string) => {
@@ -21,7 +21,7 @@ export default function MasterPasienAdministrasiPage() {
     fetchPasiens();
   }, [fetchPasiens]);
 
-  const handleSyncIHS = async (id: number, nik: string | null) => {
+  const handleSyncIHS = async (id: string | number, nik: string | null) => {
     if (!nik) {
       alert('NIK pasien kosong, tidak bisa sinkronisasi dengan SATUSEHAT');
       return;
@@ -136,6 +136,11 @@ export default function MasterPasienAdministrasiPage() {
                         <td className="py-4 px-6">
                           <div className="font-semibold text-slate-900 flex items-center gap-2">
                             {p.namaLengkap}
+                            {p.faskes && (
+                              <span className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-none border border-emerald-200 flex-shrink-0">
+                                {p.faskes.namaFaskes}
+                              </span>
+                            )}
                             {p.dataBayi && (
                               <span className="bg-indigo-50 text-indigo-700 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-none border border-indigo-200 flex-shrink-0">
                                 Bayi

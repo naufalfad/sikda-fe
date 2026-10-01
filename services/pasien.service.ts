@@ -35,7 +35,7 @@ export const pasienService = {
     }
   },
 
-  updatePasien: async (id: number, data: any) => {
+  updatePasien: async (id: string | number, data: any) => {
     try {
       const response = await api.put(`/pasien/${id}`, data);
       return response.data;
@@ -44,7 +44,7 @@ export const pasienService = {
     }
   },
 
-  deletePasien: async (id: number) => {
+  deletePasien: async (id: string | number) => {
     try {
       const response = await api.delete(`/pasien/${id}`);
       return response.data;

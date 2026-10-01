@@ -122,7 +122,7 @@ function CetakSuratRujukanContent() {
         <div>
           {/* Kop Surat */}
           <div className="border-b-4 border-double border-gray-900 pb-4 mb-6 text-center">
-            <h1 className="text-2xl font-extrabold text-gray-900 tracking-wide uppercase">Puskesmas / Fasilitas Kesehatan SIKDA</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-wide uppercase">Puskesmas / Fasilitas Kesehatan SIAP-KES</h1>
             <p className="text-sm text-gray-700">Jl. Jendral Sudirman No. 123, Jakarta Pusat</p>
             <p className="text-sm text-gray-700">Telp: (021) 1234567 | Email: info@klinikprima.com</p>
           </div>
@@ -244,7 +244,7 @@ function CetakSuratRujukanContent() {
             ) : (
               <div className="p-2 border border-gray-200 bg-gray-50 text-gray-600 rounded-none">
                 <p className="text-[10px] font-bold">DOKUMEN RUJUKAN INTERNAL</p>
-                <p className="text-[9px]">Sistem Informasi Kesehatan Daerah (SIKDA)</p>
+                <p className="text-[9px]">Sistem Integrasi Aset &amp; Pelayanan Kesehatan Daerah (SIAP-KES)</p>
               </div>
             )}
           </div>

@@ -17,6 +17,10 @@ export default function Step5Persetujuan({ register, errors, setValue, watch }: 
   const metodePersetujuan = watch('metodePersetujuan') || 'Tanda Tangan';
   const fotoWajah = watch('fotoWajah');
   
+  const statusPasien = watch('statusPasien');
+  const isConsentAlreadyGiven = statusPasien === 'Lama' || fotoWajah === 'PREVIOUS_CONSENT_VERIFIED' || (Boolean(fotoWajah) && !fotoWajah?.startsWith('data:image'));
+  const [showReverify, setShowReverify] = useState(false);
+  
   // State 2-Step Inner Wizard (Step 1: Foto Wajah -> Step 2: Bukti Persetujuan)
   const [innerStep, setInnerStep] = useState<1 | 2>(1);
 
@@ -27,15 +31,56 @@ export default function Step5Persetujuan({ register, errors, setValue, watch }: 
         <p className="text-sm text-gray-500 mt-1">Lengkapi verifikasi foto wajah dan bukti persetujuan pasien.</p>
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-none p-4 flex gap-3">
-        <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-800">
-          Dengan menyetujui formulir ini, data identitas dan medis Anda akan dikelola dalam 
-          Rekam Medis Elektronik (RME) yang aman.
-        </p>
-      </div>
+      {/* BANNER JIKA PASIEN LAMA SUDAH MEMILIKI PERSETUJUAN */}
+      {isConsentAlreadyGiven && !showReverify ? (
+        <div className="bg-emerald-50 border-2 border-emerald-400 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                Persetujuan Pasien Terverifikasi
+              </div>
+              <h3 className="text-base font-black text-emerald-950 mt-0.5">
+                Persetujuan RME & General Consent Telah Aktif Sebelumnya
+              </h3>
+              <p className="text-xs text-emerald-700 mt-1 max-w-xl">
+                Pasien telah menandatangani persetujuan medis pada pendaftaran sebelumnya. Sesuai kebijakan faskes, persetujuan cukup dilakukan sekali saja sehingga loket tidak perlu mengambil foto wajah atau meminta tanda tangan ulang.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowReverify(true)}
+            className="text-xs bg-white hover:bg-slate-50 text-slate-700 font-bold px-4 py-2 border border-slate-300 transition-colors whitespace-nowrap self-end sm:self-center"
+          >
+            Perbarui Foto / Persetujuan (Opsional)
+          </button>
+        </div>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-none p-4 flex gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-800">
+            Dengan menyetujui formulir ini, data identitas dan medis Anda akan dikelola dalam 
+            Rekam Medis Elektronik (RME) yang aman.
+          </p>
+        </div>
+      )}
 
-      <div className="space-y-4 pt-4">
+      {showReverify && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowReverify(false)}
+            className="text-xs text-blue-600 hover:underline font-semibold"
+          >
+            ← Gunakan Persetujuan Sebelumnya (Batal Perbarui)
+          </button>
+        </div>
+      )}
+
+      <div className="space-y-4 pt-2">
         <div className="bg-white border border-gray-200 rounded-none p-5 shadow-sm hover:border-blue-300 transition-colors">
           <Checkbox
             label="Persetujuan Pengobatan Umum (General Consent)"
@@ -73,7 +118,8 @@ export default function Step5Persetujuan({ register, errors, setValue, watch }: 
         </div>
       </div>
 
-      {/* === STEPPER BAR ALUR VERIFIKASI (Step 1 -> Step 2) === */}
+      {/* === STEPPER BAR ALUR VERIFIKASI (Step 1 -> Step 2) Hanya Ditampilkan Jika Belum Ada Persetujuan Atau Ingin Re-verify === */}
+      {(!isConsentAlreadyGiven || showReverify) && (
       <div className="pt-6 border-t border-gray-100 space-y-6">
         <div className="bg-slate-50 border border-slate-200 p-4">
           <div className="flex items-center justify-between max-w-xl mx-auto">
@@ -252,6 +298,7 @@ export default function Step5Persetujuan({ register, errors, setValue, watch }: 
           </div>
         )}
       </div>
+      )}
 
       {/* Metadata Sistem */}
       <div className="pt-6 mt-6 border-t border-gray-100">

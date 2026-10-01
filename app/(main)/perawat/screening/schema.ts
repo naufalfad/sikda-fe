@@ -16,7 +16,7 @@ export const screeningSchema = z.object({
   // STEP 1: UMUM
   nomorRegistrasi: z.string().min(1, 'Nomor Registrasi wajib diisi'),
   jenisKedatangan: z.enum(['IGD', 'Poli', 'Lainnya']),
-  usia: z.number().min(0, 'Usia tidak valid'),
+  usia: optionalNumber.default(0),
   
   // Keluhan Utama Lengkap
   keluhanUtama: z.string().min(1, 'Keluhan utama wajib diisi'),

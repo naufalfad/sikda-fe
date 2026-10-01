@@ -394,7 +394,14 @@ export default function Step1Umum({ register, errors, watch, setValue, isPoliGig
           Pemeriksaan Fisik (Antropometri)
         </h3>
         
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="col-span-2 md:col-span-1 bg-emerald-50/70 p-2 border border-emerald-200 text-center flex flex-col justify-center">
+            <label className="block text-xs font-bold text-emerald-800 uppercase">Usia Pasien</label>
+            <div className="mt-1 font-black text-lg text-emerald-900">
+              {watch('usia') !== undefined && watch('usia') !== null ? `${watch('usia')} Thn` : '-'}
+            </div>
+            <div className="text-[10px] text-emerald-700 font-semibold">Otomatis dari Tgl Lahir</div>
+          </div>
           <div className="col-span-2 md:col-span-1">
             <label className="block text-xs font-semibold text-gray-500 uppercase">Tinggi Badan (cm)</label>
             <input type="number" {...register('tinggiBadan', { valueAsNumber: true })} className="mt-1 w-full px-4 py-2 border border-gray-300 rounded-none placeholder-gray-400 text-gray-900" placeholder="160" />

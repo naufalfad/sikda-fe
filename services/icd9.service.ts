@@ -1,9 +1,9 @@
 import api from './api';
 
 export const icd9Service = {
-  // Mencari master ICD-9
-  async search(query: string) {
-    const response = await api.get(`/icd9/search?q=${query}`);
+  // Mencari master ICD-9 (mengembalikan seluruh master jika query kosong)
+  async search(query: string = '') {
+    const response = await api.get(`/icd9/search?q=${encodeURIComponent(query.trim())}`);
     return response.data;
   },
 

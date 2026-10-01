@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { UseFormRegister, FieldErrors, UseFormWatch, UseFormSetValue, UseFormReset } from 'react-hook-form';
-import { Search, ShieldCheck, Loader2, UserPlus, History, Baby, AlertTriangle } from 'lucide-react';
+import { Search, ShieldCheck, Loader2, UserPlus, History, Baby, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { RegistrationFormData } from '../schema';
 import { pasienService } from '@/services/pasien.service';
 import { satusehatService } from '@/services/satusehat.service';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Step1Props {
   register: UseFormRegister<RegistrationFormData>;
@@ -23,7 +23,26 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
   const [isSearching, setIsSearching] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [satusehatNotFound, setSatusehatNotFound] = useState(false);
+  const [detectedBooking, setDetectedBooking] = useState<any>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Auto check URL query params (e.g. from Loket dashboard "Proses" button)
+  useEffect(() => {
+    const nikParam = searchParams.get('nik');
+    const rmParam = searchParams.get('noRM');
+    const skenarioParam = searchParams.get('skenario');
+
+    if (skenarioParam === 'Lama' || nikParam || rmParam) {
+      setValue('statusPasien', 'Lama');
+      setValue('isBayi', false);
+      const query = nikParam || rmParam || '';
+      if (query) {
+        setSearchQuery(query);
+        handleSearchPasienLama(query);
+      }
+    }
+  }, [searchParams]);
 
   // By default, if nothing is selected, we assume 'Baru'
   const currentSkenario = isBayi ? 'Bayi' : (statusPasien === 'Lama' ? 'Lama' : 'Baru');
@@ -58,28 +77,35 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
     }
   };
 
-  const handleSearchPasienLama = async () => {
-    if (!searchQuery) return;
+  const handleSearchPasienLama = async (overrideQuery?: string) => {
+    const q = overrideQuery || searchQuery;
+    if (!q) return;
     setIsSearching(true);
     try {
-      const res = await pasienService.searchPasien(searchQuery);
+      const res = await pasienService.searchPasien(q);
       if (res.success && res.data) {
         const p = res.data;
-        setValue('namaLengkap', p.namaLengkap);
-        setValue('nik', p.nik);
-        setValue('noRekamMedis', p.noRM);
+        setValue('namaLengkap', p.namaLengkap || '', { shouldValidate: true });
+        setValue('nik', p.nik || '', { shouldValidate: true });
+        setValue('noRekamMedis', p.noRM || '', { shouldValidate: true });
         setValue('noIHS', p.noIHS || '');
-        setValue('tempatLahir', p.tempatLahir);
+        setValue('tempatLahir', p.tempatLahir || '', { shouldValidate: true });
         if (p.tanggalLahir) {
-          setValue('tanggalLahir', new Date(p.tanggalLahir).toISOString().split('T')[0]);
+          setValue('tanggalLahir', new Date(p.tanggalLahir).toISOString().split('T')[0], { shouldValidate: true });
         }
-        setValue('jenisKelamin', p.jenisKelamin);
-        setValue('agama', p.agama);
-        setValue('pekerjaan', p.pekerjaan || '');
-        setValue('statusPerkawinan', p.statusPerkawinan);
-        setValue('kewarganegaraan', p.kewarganegaraan);
+
+        // Normalisasi Jenis Kelamin (Laki-laki / Perempuan)
+        if (p.jenisKelamin) {
+          const normGender = p.jenisKelamin.toLowerCase().startsWith('p') ? 'Perempuan' : 'Laki-laki';
+          setValue('jenisKelamin', normGender, { shouldValidate: true });
+        }
         
-        // Missing fields
+        setValue('agama', p.agama || 'Islam', { shouldValidate: true });
+        setValue('pekerjaan', p.pekerjaan || '', { shouldValidate: true });
+        setValue('statusPerkawinan', p.statusPerkawinan || 'Belum Kawin', { shouldValidate: true });
+        setValue('kewarganegaraan', p.kewarganegaraan || 'WNI', { shouldValidate: true });
+        
+        // Nomor KK, Pendidikan, Golongan Darah, Rhesus
         setValue('noKk', p.noKk || '');
         setValue('pendidikan', p.pendidikan || '');
         setValue('golonganDarah', p.golonganDarah || '');
@@ -87,19 +113,19 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
         
         if (p.alamat) {
           const a = p.alamat;
-          setValue('alamatKtp', a.alamatKtp || '');
-          setValue('alamatDomisili', a.alamatDomisili || '');
-          setValue('rtRw', a.rtRw || '');
-          setValue('desaKelurahan', a.desaKelurahan || '');
-          setValue('kecamatan', a.kecamatan || '');
-          setValue('kabupatenKota', a.kabupatenKota || '');
-          setValue('provinsi', a.provinsi || '');
-          setValue('kodePos', a.kodePos || '');
+          setValue('alamatKtp', a.alamatKtp || '', { shouldValidate: true });
+          setValue('alamatDomisili', a.alamatDomisili || '', { shouldValidate: true });
+          setValue('rtRw', a.rtRw || '001/001', { shouldValidate: true });
+          setValue('desaKelurahan', a.desaKelurahan || '', { shouldValidate: true });
+          setValue('kecamatan', a.kecamatan || '', { shouldValidate: true });
+          setValue('kabupatenKota', a.kabupatenKota || '', { shouldValidate: true });
+          setValue('provinsi', a.provinsi || '', { shouldValidate: true });
+          setValue('kodePos', a.kodePos || '', { shouldValidate: true });
           setValue('titikGps', a.titikGps || '');
         }
 
         if (p.kontak) {
-          setValue('noHp', p.kontak.noHp || '');
+          setValue('noHp', p.kontak.noHp || '', { shouldValidate: true });
           setValue('email', p.kontak.email || '');
           setValue('kontakDarurat', p.kontak.kontakDarurat || '');
           setValue('hubunganKontakDarurat', p.kontak.hubunganKontakDarurat || '');
@@ -107,7 +133,7 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
         }
 
         if (p.penjamin) {
-          setValue('jenisPenjamin', p.penjamin.jenisPenjamin || 'Umum');
+          setValue('jenisPenjamin', p.penjamin.jenisPenjamin || 'Umum', { shouldValidate: true });
           setValue('noBpjs', p.penjamin.noBpjs || '');
           setValue('statusKepesertaan', p.penjamin.statusKepesertaan || '');
           setValue('faskesTingkat1', p.penjamin.faskesTingkat1 || '');
@@ -115,6 +141,29 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
           setValue('namaAsuransi', p.penjamin.namaAsuransi || '');
           setValue('nomorPolis', p.penjamin.nomorPolis || '');
           setValue('masaBerlakuAsuransi', p.penjamin.masaBerlakuAsuransi || '');
+        }
+
+        // Deteksi apakah pasien sudah pernah memiliki persetujuan medis sebelumnya
+        if (p.hasPersetujuanSebelumnya || p.fotoWajah || p.noRM) {
+          setValue('persetujuanPengobatan', true);
+          setValue('persetujuanRekamMedis', true);
+          setValue('persetujuanSatusehat', true);
+          setValue('fotoWajah', p.fotoWajah || 'PREVIOUS_CONSENT_VERIFIED');
+          setValue('metodePersetujuan', 'Tanda Tangan');
+          setValue('tandaTangan', p.persetujuanSebelumnya?.tandaTangan || 'PREVIOUS_CONSENT_VERIFIED');
+        }
+
+        // Deteksi apakah pasien memiliki Antrean Online aktif
+        if (p.bookingAktif) {
+          setDetectedBooking(p.bookingAktif);
+          if (p.bookingAktif.poliklinikId) setValue('poliTujuan', p.bookingAktif.poliklinikId, { shouldValidate: true });
+          if (p.bookingAktif.dokterId) setValue('dokterTujuan', p.bookingAktif.dokterId, { shouldValidate: true });
+          if (p.bookingAktif.noAntrian) setValue('noAntrian', p.bookingAktif.noAntrian);
+          if (p.bookingAktif.keluhan) setValue('diagnosaAwal', p.bookingAktif.keluhan);
+          setValue('jenisPelayanan', 'Rawat Jalan', { shouldValidate: true });
+          setValue('caraDatang', 'Datang sendiri', { shouldValidate: true });
+        } else {
+          setDetectedBooking(null);
         }
       } else {
         alert('Pasien tidak ditemukan');
@@ -244,7 +293,7 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
             </div>
             <button 
               type="button" 
-              onClick={handleSearchPasienLama}
+              onClick={() => handleSearchPasienLama()}
               disabled={isSearching}
               className="h-10 px-8 w-full md:w-auto bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 flex justify-center items-center gap-2 transition-colors rounded-none shadow-sm"
             >
@@ -290,6 +339,20 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
       <div>
         <h3 className="text-lg font-bold text-gray-900 mb-4">Data Identitas Utama</h3>
         
+        {detectedBooking && (
+          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-300 rounded-none flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-emerald-900 text-sm">
+                Pasien Terdaftar Antrean Online (Kode Booking: {detectedBooking.kodeBooking})
+              </h4>
+              <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
+                Tujuan <strong>{detectedBooking.namaPoli}</strong>, dokter <strong>{detectedBooking.namaDokter || 'Dokter Jaga'}</strong>, dan nomor antrean <strong>{detectedBooking.noAntrian}</strong> telah diisi otomatis. Loket dapat langsung memverifikasi atau melengkapi data.
+              </p>
+            </div>
+          </div>
+        )}
+
         {satusehatNotFound && (
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-none flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -332,29 +395,146 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
 
 
 
-          <Input label="Nomor KK (Opsional)" placeholder="16 digit angka" maxLength={16} readOnly={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50' : ''} {...register('noKk')} error={errors.noKk?.message} />
-          <Input label="Nama Lengkap *" placeholder="Sesuai KTP" readOnly={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50' : ''} {...namaRest} onChange={(e) => onNamaChange(formatPascalCase(e))} error={errors.namaLengkap?.message} />
+          <Input 
+            label="Nomor KK (Opsional)" 
+            placeholder="16 digit angka (opsional)" 
+            maxLength={16} 
+            {...register('noKk')} 
+            error={errors.noKk?.message} 
+          />
+          <Input 
+            label="Nama Lengkap *" 
+            placeholder="Sesuai KTP" 
+            {...namaRest} 
+            onChange={(e) => onNamaChange(formatPascalCase(e))} 
+            error={errors.namaLengkap?.message} 
+          />
           
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Tempat Lahir *" placeholder="Kota kelahiran" readOnly={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50' : ''} {...tempatRest} onChange={(e) => onTempatChange(formatPascalCase(e))} error={errors.tempatLahir?.message} />
-            <Input label="Tanggal Lahir *" type="date" readOnly={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50' : ''} {...register('tanggalLahir')} error={errors.tanggalLahir?.message} />
+            <Input 
+              label="Tempat Lahir *" 
+              placeholder="Kota kelahiran" 
+              {...tempatRest} 
+              onChange={(e) => onTempatChange(formatPascalCase(e))} 
+              error={errors.tempatLahir?.message} 
+            />
+            <Input 
+              label="Tanggal Lahir *" 
+              type="date" 
+              {...register('tanggalLahir')} 
+              error={errors.tanggalLahir?.message} 
+            />
           </div>
           
-          <Select label="Jenis Kelamin *" disabled={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50 disabled:opacity-100 disabled:text-gray-900' : ''} {...register('jenisKelamin')} error={errors.jenisKelamin?.message} options={[{ label: 'Laki-laki', value: 'Laki-laki' }, { label: 'Perempuan', value: 'Perempuan' }]} />
+          <Select 
+            label="Jenis Kelamin *" 
+            {...register('jenisKelamin')} 
+            error={errors.jenisKelamin?.message} 
+            options={[
+              { label: '- Pilih Jenis Kelamin -', value: '' },
+              { label: 'Laki-laki', value: 'Laki-laki' }, 
+              { label: 'Perempuan', value: 'Perempuan' }
+            ]} 
+          />
           
           <div className="grid grid-cols-2 gap-4">
-            <Select label="Golongan Darah" disabled={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50 disabled:opacity-100 disabled:text-gray-900' : ''} {...register('golonganDarah')} error={errors.golonganDarah?.message} options={[{ label: 'A', value: 'A' }, { label: 'B', value: 'B' }, { label: 'AB', value: 'AB' }, { label: 'O', value: 'O' }]} />
-            <Select label="Rhesus" disabled={currentSkenario === 'Lama'} className={currentSkenario === 'Lama' ? 'bg-gray-50 disabled:opacity-100 disabled:text-gray-900' : ''} {...register('rhesus')} error={errors.rhesus?.message} options={[{ label: 'Positif (+)', value: '+' }, { label: 'Negatif (-)', value: '-' }]} />
+            <Select 
+              label="Golongan Darah (Opsional)" 
+              {...register('golonganDarah')} 
+              error={errors.golonganDarah?.message} 
+              options={[
+                { label: '- Belum Diketahui / Kosong -', value: '' },
+                { label: 'A', value: 'A' }, 
+                { label: 'B', value: 'B' }, 
+                { label: 'AB', value: 'AB' }, 
+                { label: 'O', value: 'O' }
+              ]} 
+            />
+            <Select 
+              label="Rhesus (Opsional)" 
+              {...register('rhesus')} 
+              error={errors.rhesus?.message} 
+              options={[
+                { label: '- Belum Diketahui / Kosong -', value: '' },
+                { label: 'Positif (+)', value: '+' }, 
+                { label: 'Negatif (-)', value: '-' }
+              ]} 
+            />
           </div>
 
-          <Select label="Agama *" {...register('agama')} error={errors.agama?.message} options={[{ label: 'Islam', value: 'Islam' }, { label: 'Kristen', value: 'Kristen' }, { label: 'Katolik', value: 'Katolik' }, { label: 'Hindu', value: 'Hindu' }, { label: 'Buddha', value: 'Buddha' }, { label: 'Konghucu', value: 'Konghucu' }]} />
+          <Select 
+            label="Agama *" 
+            {...register('agama')} 
+            error={errors.agama?.message} 
+            options={[
+              { label: '- Pilih Agama -', value: '' },
+              { label: 'Islam', value: 'Islam' }, 
+              { label: 'Kristen', value: 'Kristen' }, 
+              { label: 'Katolik', value: 'Katolik' }, 
+              { label: 'Hindu', value: 'Hindu' }, 
+              { label: 'Buddha', value: 'Buddha' }, 
+              { label: 'Konghucu', value: 'Konghucu' }
+            ]} 
+          />
           
-          <Input label="Nomor Rekam Medis (Otomatis) *" readOnly className="bg-gray-50 text-blue-700 font-mono" {...register('noRekamMedis')} error={errors.noRekamMedis?.message} />
-          <Input label="Nomor SATUSEHAT / IHS *" readOnly className="bg-gray-50 text-blue-700 font-mono" {...register('noIHS')} error={errors.noIHS?.message} />
-          <Select label="Pendidikan (Opsional)" {...register('pendidikan')} error={errors.pendidikan?.message} options={[{ label: 'Tidak Sekolah', value: 'Tidak Sekolah' }, { label: 'SD', value: 'SD' }, { label: 'SMP', value: 'SMP' }, { label: 'SMA/SMK', value: 'SMA/SMK' }, { label: 'D3', value: 'D3' }, { label: 'S1', value: 'S1' }, { label: 'S2', value: 'S2' }, { label: 'S3', value: 'S3' }]} />
-          <Input label="Pekerjaan *" placeholder="Pekerjaan saat ini" {...kerjaRest} onChange={(e) => onKerjaChange(formatPascalCase(e))} error={errors.pekerjaan?.message} />
-          <Select label="Status Perkawinan *" {...register('statusPerkawinan')} error={errors.statusPerkawinan?.message} options={[{ label: 'Belum Kawin', value: 'Belum Kawin' }, { label: 'Kawin', value: 'Kawin' }, { label: 'Cerai Hidup', value: 'Cerai Hidup' }, { label: 'Cerai Mati', value: 'Cerai Mati' }]} />
-          <Select label="Kewarganegaraan *" {...register('kewarganegaraan')} error={errors.kewarganegaraan?.message} options={[{ label: 'WNI (Warga Negara Indonesia)', value: 'WNI' }, { label: 'WNA (Warga Negara Asing)', value: 'WNA' }]} />
+          <Input 
+            label="Nomor Rekam Medis (Otomatis) *" 
+            readOnly 
+            className="bg-gray-50 text-blue-700 font-mono" 
+            {...register('noRekamMedis')} 
+            error={errors.noRekamMedis?.message} 
+          />
+          <Input 
+            label="Nomor SATUSEHAT / IHS (Opsional)" 
+            placeholder="Kosongkan jika belum ada / disinkronkan nanti" 
+            className="bg-white text-blue-700 font-mono" 
+            {...register('noIHS')} 
+            error={errors.noIHS?.message} 
+          />
+          <Select 
+            label="Pendidikan (Opsional)" 
+            {...register('pendidikan')} 
+            error={errors.pendidikan?.message} 
+            options={[
+              { label: '- Pilih Pendidikan -', value: '' },
+              { label: 'Tidak Sekolah', value: 'Tidak Sekolah' }, 
+              { label: 'SD', value: 'SD' }, 
+              { label: 'SMP', value: 'SMP' }, 
+              { label: 'SMA/SMK', value: 'SMA/SMK' }, 
+              { label: 'D3', value: 'D3' }, 
+              { label: 'S1', value: 'S1' }, 
+              { label: 'S2', value: 'S2' }, 
+              { label: 'S3', value: 'S3' }
+            ]} 
+          />
+          <Input 
+            label="Pekerjaan *" 
+            placeholder="Pekerjaan saat ini" 
+            {...kerjaRest} 
+            onChange={(e) => onKerjaChange(formatPascalCase(e))} 
+            error={errors.pekerjaan?.message} 
+          />
+          <Select 
+            label="Status Perkawinan *" 
+            {...register('statusPerkawinan')} 
+            error={errors.statusPerkawinan?.message} 
+            options={[
+              { label: '- Pilih Status -', value: '' },
+              { label: 'Belum Kawin', value: 'Belum Kawin' }, 
+              { label: 'Kawin', value: 'Kawin' }, 
+              { label: 'Cerai Hidup', value: 'Cerai Hidup' }, 
+              { label: 'Cerai Mati', value: 'Cerai Mati' }
+            ]} 
+          />
+          <Select 
+            label="Kewarganegaraan *" 
+            {...register('kewarganegaraan')} 
+            error={errors.kewarganegaraan?.message} 
+            options={[
+              { label: 'WNI (Warga Negara Indonesia)', value: 'WNI' }, 
+              { label: 'WNA (Warga Negara Asing)', value: 'WNA' }
+            ]} 
+          />
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Pill, Search, Plus, Edit2, Trash2, Loader2, X } from 'lucide-react';
+import Link from 'next/link';
+import { Pill, Search, Plus, Edit2, Trash2, Loader2, X, Package, ExternalLink, Info } from 'lucide-react';
 import { masterService } from '@/services/master.service';
 import { satusehatService } from '@/services/satusehat.service';
 import Swal from 'sweetalert2';
@@ -212,11 +213,19 @@ export default function MasterObatPage() {
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
             />
           </div>
+          <Link
+            href="/apoteker/stok"
+            className="flex items-center px-4 py-2 bg-teal-50 border border-teal-200 text-teal-800 text-sm font-medium rounded-none hover:bg-teal-100 transition-colors shadow-2xs whitespace-nowrap"
+          >
+            <Package className="w-4 h-4 mr-2 text-teal-600" />
+            Kelola Stok Fisik di Logistik Faskes
+            <ExternalLink className="w-3.5 h-3.5 ml-1.5 text-teal-500" />
+          </Link>
           <button 
             onClick={() => handleOpenModal()}
             className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-none hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
           >
-            <Plus className="w-4 h-4 mr-2" /> Tambah Obat
+            <Plus className="w-4 h-4 mr-2" /> Daftarkan Obat Baru
           </button>
           <button 
             onClick={() => setIsKfaModalOpen(true)}
@@ -224,6 +233,23 @@ export default function MasterObatPage() {
           >
             <Search className="w-4 h-4 mr-2" /> Tarik dari SATUSEHAT
           </button>
+        </div>
+      </div>
+
+      {/* Info Alert: Penjelasan Master vs Stok Fisik */}
+      <div className="bg-blue-50/80 border border-blue-200 p-4 text-xs text-blue-900 flex items-start gap-3 shadow-2xs">
+        <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        <div className="flex-1 space-y-1">
+          <p className="font-bold text-blue-950">
+            Modul Master / Formularium Obat &amp; KFA SATUSEHAT (Bukan Pencatatan Stok Fisik)
+          </p>
+          <p className="text-blue-800 leading-relaxed">
+            Halaman ini digunakan untuk mendaftarkan nama/katalog obat yang tampil di sistem resep dokter dan integrasi Kemenkes SATUSEHAT.
+            Jika Anda ingin <strong>menambah stok fisik persediaan masuk</strong> (dropping Dinkes / PBF) lengkap dengan nomor batch dan tanggal kadaluwarsa (FEFO), silakan gunakan modul{' '}
+            <Link href="/apoteker/stok" className="font-bold underline text-blue-900 hover:text-blue-950">
+              Logistik Obat &amp; Vaksin Faskes
+            </Link>.
+          </p>
         </div>
       </div>
 
@@ -235,21 +261,20 @@ export default function MasterObatPage() {
                 <th className="px-6 py-4 font-semibold w-16">Gambar</th>
                 <th className="px-6 py-4 font-semibold">Obat & Kategori</th>
                 <th className="px-6 py-4 font-semibold">Sediaan</th>
-                <th className="px-6 py-4 font-semibold">Stok di Faskes</th>
-                <th className="px-6 py-4 font-semibold">Harga</th>
+                <th className="px-6 py-4 font-semibold">Harga Satuan (E-Katalog)</th>
                 <th className="px-6 py-4 font-semibold text-center w-32">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
                   </td>
                 </tr>
               ) : obatList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     Tidak ada data obat.
                   </td>
                 </tr>
@@ -271,9 +296,6 @@ export default function MasterObatPage() {
                       <span className="inline-block mt-1 text-[10px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 uppercase border border-blue-200">{obat.kategori}</span>
                     </td>
                     <td className="px-6 py-4 text-gray-600">{obat.sediaan || '-'}</td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 font-mono">{obat.stok ?? 0} {obat.sediaan || 'Unit'}</div>
-                    </td>
                     <td className="px-6 py-4">
                       <div className="font-mono text-gray-900 font-medium">Rp {obat.harga.toLocaleString('id-ID')}</div>
                     </td>

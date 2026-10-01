@@ -131,7 +131,7 @@ export default function DinkesAssetsPage() {
                     <td className="py-4 px-4 text-slate-700">
                       <div className="flex items-center gap-1.5">
                         <Building2 className="w-4 h-4 text-slate-400" />
-                        <span>{asset.faskes?.namaFaskes || 'Puskesmas Terdata'}</span>
+                        <span>{asset.faskes?.namaFaskes || '-'}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4 text-slate-600">

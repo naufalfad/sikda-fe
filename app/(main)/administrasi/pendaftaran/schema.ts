@@ -65,7 +65,7 @@ export const registrationSchema = z.object({
   // Administrasi & Medis
   poliTujuan: z.string().min(1, 'Poli tujuan wajib dipilih'),
   layananTujuan: z.string().optional().or(z.literal('')),
-  dokterTujuan: z.string().optional().or(z.literal('')),
+  dokterTujuan: z.string().min(1, 'Dokter tujuan wajib dipilih'),
   jenisPelayanan: z.string().min(1, 'Pilih jenis pelayanan'),
   statusPasien: z.enum(['Baru', 'Lama'], { message: 'Pilih status pasien' }),
   noAntrian: z.string().optional().or(z.literal('')),
@@ -82,15 +82,15 @@ export const registrationSchema = z.object({
   diagnosaAwal: z.string().optional().or(z.literal('')),
   jenisRujukan: z.string().optional().or(z.literal('')),
   
-  // Persetujuan (Consent)
-  persetujuanPengobatan: z.literal(true, { error: 'Anda harus menyetujui persetujuan pengobatan' }),
-  persetujuanRekamMedis: z.literal(true, { error: 'Anda harus menyetujui rekam medis elektronik' }),
-  persetujuanSatusehat: z.literal(true, { error: 'Anda harus menyetujui sinkronisasi SATUSEHAT' }),
+  // Persetujuan (Consent) - Cukup dilakukan sekali saja
+  persetujuanPengobatan: z.boolean().optional(),
+  persetujuanRekamMedis: z.boolean().optional(),
+  persetujuanSatusehat: z.boolean().optional(),
   persetujuanReminder: z.boolean().optional(), // Opsional untuk notif
-  metodePersetujuan: z.enum(['Tanda Tangan', 'Cap Jari']),
+  metodePersetujuan: z.enum(['Tanda Tangan', 'Cap Jari']).optional(),
   tandaTangan: z.string().optional().or(z.literal('')),
   capJari: z.string().optional().or(z.literal('')),
-  fotoWajah: z.string().min(1, 'Foto wajah pasien wajib diisi untuk verifikasi'),
+  fotoWajah: z.string().optional().or(z.literal('')),
   
   // Metadata Sistem
   userPendaftar: z.string().optional().or(z.literal('')),

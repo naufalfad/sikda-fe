@@ -16,7 +16,13 @@ export interface PasienResponse {
 }
 
 export interface Pasien {
-  id: number;
+  id: string | number;
+  faskesId?: string | null;
+  faskes?: {
+    id: string;
+    namaFaskes: string;
+    kodeFaskes: string;
+  } | null;
   noRM: string;
   noIHS: string | null;
   nik: string | null;

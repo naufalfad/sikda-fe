@@ -60,9 +60,48 @@ export interface MedicineStockAlert {
   obatId: string;
   namaObat: string;
   satuan: string;
+  kategori?: string;
   stokFaskes: number;
   stokMinimum: number;
   statusStok: 'HABIS' | 'KRITIS' | 'AMAN';
+}
+
+export interface VaccineStockItem {
+  id: string;
+  vaksinId: string;
+  namaVaksin: string;
+  kodeKfa: string;
+  targetPenyakit: string;
+  noBatch: string;
+  tanggalExpired: string;
+  sisaHari: number | null;
+  statusExpired: 'AMAN' | 'WASPADA' | 'SEGERA_KADALUWARSA' | 'KADALUWARSA';
+  stok: number;
+  stokMinimum: number;
+  statusStok: 'AMAN' | 'KRITIS' | 'HABIS';
+  suhuPenyimpanan: string;
+}
+
+export interface VaccineFaskesSummary {
+  faskesId: string;
+  namaFaskes: string;
+  kodeFaskes: string;
+  kecamatan: string;
+  totalDosis: number;
+  jumlahBatch: number;
+  kritisBatchCount: number;
+  segeraExpiredCount: number;
+  vaksinList: VaccineStockItem[];
+}
+
+export interface VaccineMonitoringResponse {
+  ringkasan: {
+    totalDosisKabupaten: number;
+    totalPuskesmas: number;
+    vaksinKritisCount: number;
+    vaksinSegeraExpiredCount: number;
+  };
+  data: VaccineFaskesSummary[];
 }
 
 export interface FaskesItem {
@@ -81,6 +120,177 @@ export interface FaskesItem {
   tersediaIGD: boolean;
   latitude?: number;
   longitude?: number;
+}
+
+export interface FaskesDetailData {
+  profil: {
+    id: string;
+    kodeFaskes: string;
+    namaFaskes: string;
+    jenisFaskes: string;
+    kategoriWilayah: string;
+    statusAktif: boolean;
+    alamat: string;
+    kecamatan: string;
+    desaKelurahan?: string | null;
+    kabupatenKota?: string | null;
+    provinsi?: string | null;
+    kodePos?: string | null;
+    titikGps?: string | null;
+    noTelepon?: string | null;
+    email?: string | null;
+    kepalaPuskesmas?: string | null;
+    nipKepala?: string | null;
+    targetKunjunganHarian?: number | null;
+    jumlahPendudukWilayah?: number | null;
+    ihsOrganizationId?: string | null;
+    createdAt?: string;
+  };
+  ringkasanEksekutif: {
+    totalNakes: number;
+    totalDokter: number;
+    totalPasienBulanIni: number;
+    totalPasienHariIni: number;
+    totalKunjunganAllTime: number;
+    rasioPasienPerDokter: number;
+    statusBebanKerja: string;
+    totalBed: number;
+    bedTerisi: number;
+    bedTersedia: number;
+    bor: string;
+    borAngka: number;
+    totalAset: number;
+    alkesKritisRusakCount: number;
+    kalibrasiExpiredCount: number;
+    totalItemObat: number;
+    obatKritisCount: number;
+    totalItemBmhp: number;
+    bmhpKritisCount: number;
+    totalDosisVaksin: number;
+    vaksinBatchCount: number;
+  };
+  asetAlkes: {
+    totalAset: number;
+    totalAlkesMedis: number;
+    totalNonMedis: number;
+    kondisi: {
+      baik: number;
+      rusakRingan: number;
+      rusakBerat: number;
+      afkir: number;
+    };
+    statusOperasional: {
+      aktif: number;
+      dalamPerbaikan: number;
+      dalamKalibrasi: number;
+      nonAktif: number;
+    };
+    alkesKritisRusak: any[];
+    kalibrasiAlerts: any[];
+    daftarAset: any[];
+  };
+  sdmk: {
+    totalNakes: number;
+    totalDokter: number;
+    totalPerawat: number;
+    totalBidan: number;
+    totalApoteker: number;
+    rasioPasienPerDokter: number;
+    statusBebanKerja: string;
+    daftarNakes: Array<{
+      id: string;
+      namaLengkap: string;
+      nik?: string;
+      profesi: string;
+      spesialis?: string | null;
+      noSip?: string | null;
+      noIhs?: string | null;
+      statusAktif?: boolean;
+      username?: string;
+    }>;
+  };
+  tempatTidurRuangan: {
+    totalRuangan: number;
+    totalBed: number;
+    bedTerisi: number;
+    bedTersedia: number;
+    bedPerbaikan: number;
+    bor: string;
+    borAngka: number;
+    daftarRuangan: Array<{
+      id: string;
+      namaRuangan: string;
+      kategoriRuangan: string;
+      gedung?: string | null;
+      lantai?: number | null;
+      totalBed: number;
+      tempatTidurs: Array<{
+        id: string;
+        nomorBed: string;
+        kelasKamar: string;
+        statusBed: string;
+        gambarUrl?: string | null;
+        pasienNama?: string | null;
+        pasienNoRM?: string | null;
+      }>;
+    }>;
+  };
+  pelayananKlinis: {
+    totalKunjunganAllTime: number;
+    totalPasienBulanIni: number;
+    totalPasienHariIni: number;
+    polikliniks: Array<{
+      id: string;
+      namaPoli: string;
+      kodePoli?: string;
+      deskripsi?: string | null;
+      totalKunjungan: number;
+    }>;
+    daftarKunjungan?: Array<{
+      id: string;
+      noAntrian: string;
+      tanggalRegistrasi: string;
+      statusKunjungan: string;
+      jenisPembayaran: string;
+      prioritasPasien: string;
+      pasienId?: string;
+      noRM?: string;
+      namaPasien?: string;
+      jenisKelamin?: string;
+      usia?: number | null;
+      poliId?: string;
+      namaPoli: string;
+      kodePoli: string;
+      namaDokter: string;
+      diagnosis: Array<{
+        kode: string;
+        nama: string;
+        jenis: string;
+      }>;
+    }>;
+  };
+  logistik: {
+    totalItemObat: number;
+    obatKritis: any[];
+    totalItemBmhp: number;
+    bmhpKritis: any[];
+    totalDosisVaksin: number;
+    daftarVaksin: any[];
+    daftarObat?: any[];
+    daftarBmhp?: any[];
+  };
+  surveilans: {
+    totalKasusFaskes: number;
+    topPenyakit: Array<{
+      peringkat: number;
+      kodeIcd10: string;
+      namaDiagnosis: string;
+      isPenyakitMenular: boolean;
+      isWajibLapor: boolean;
+      jumlahKasus: number;
+      persentase: string;
+    }>;
+  };
 }
 
 export const dinkesService = {
@@ -184,7 +394,8 @@ export const dinkesService = {
             namaFaskes: faskes.namaFaskes,
             obatId: o.obatId || o.kodeObat,
             namaObat: o.namaObat,
-            satuan: o.satuan || 'Tablet/Botol',
+            satuan: o.satuan || 'Pcs',
+            kategori: o.kategori || 'Obat',
             stokFaskes: o.sisaStok ?? o.stok ?? 0,
             stokMinimum: o.stokMinimum ?? 10,
             statusStok: (o.sisaStok ?? 0) === 0 ? 'HABIS' : 'KRITIS'
@@ -193,6 +404,11 @@ export const dinkesService = {
       }
     });
     return list;
+  },
+
+  getVaccineMonitoring: async (): Promise<VaccineMonitoringResponse> => {
+    const res = await api.get('/dinkes/vaccines');
+    return res.data?.data;
   },
 
   getFaskesList: async (params?: { tipeFaskes?: string; status?: string }): Promise<FaskesItem[]> => {
@@ -211,7 +427,7 @@ export const dinkesService = {
       telepon: f.telepon || '-',
       email: f.email || '-',
       kepalaFaskes: f.kepalaFaskes || '-',
-      kapasitasRawatInap: f.targetKunjunganHarian || 0,
+      kapasitasRawatInap: f.totalBedFisik ?? f.kapasitasRawatInap ?? 0,
       tersediaIGD: true,
       latitude: f.titikGps ? parseFloat(f.titikGps.split(',')[0]) : undefined,
       longitude: f.titikGps ? parseFloat(f.titikGps.split(',')[1]) : undefined,
@@ -252,6 +468,11 @@ export const dinkesService = {
       alasan: data.alasanMutasi,
       nomorSk: data.nomorSkDinkes
     });
+    return res.data?.data;
+  },
+
+  getFaskesDetailById: async (id: string): Promise<FaskesDetailData> => {
+    const res = await api.get(`/dinkes/faskes/${id}`);
     return res.data?.data;
   },
 };

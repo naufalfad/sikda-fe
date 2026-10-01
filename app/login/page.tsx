@@ -143,8 +143,8 @@ function LoginContent() {
               )}
             </div>
             <div>
-              <span className="text-4xl font-black tracking-widest uppercase leading-none block">SIKDA</span>
-              <span className={`text-[10px] font-bold tracking-[0.35em] uppercase ${
+              <span className="text-4xl font-black tracking-widest uppercase leading-none block">SIAP-KES</span>
+              <span className={`text-[10px] font-bold tracking-[0.25em] uppercase ${
                 isDinkes ? 'text-emerald-400' : 'text-blue-400'
               }`}>
                 {isDinkes ? 'PUSAT KOMANDO DINKES' : 'PELAYANAN FASKES'}
@@ -204,7 +204,7 @@ function LoginContent() {
         </div>
 
         <div className="relative z-10 text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em]">
-          © 2026 SIKDA Kesehatan Daerah. Seluruh Hak Cipta Dilindungi.
+          © 2026 SIAP-KES Daerah. Seluruh Hak Cipta Dilindungi.
         </div>
       </div>
 
@@ -513,7 +513,7 @@ function LoginContent() {
           
           <div className="mt-6 text-center">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] leading-relaxed">
-              Sistem Informasi Kesehatan Daerah Terpadu.<br/>
+              Sistem Integrasi Aset &amp; Pelayanan Kesehatan Daerah (SIAP-KES).<br/>
               Khusus petugas berwenang dan jajaran Dinas Kesehatan.
             </p>
           </div>
@@ -529,7 +529,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="h-screen w-full flex items-center justify-center bg-slate-900 text-white font-sans text-sm">
         <Loader2 className="w-6 h-6 animate-spin mr-3 text-blue-500" />
-        Memuat Portal SIKDA...
+        Memuat Portal SIAP-KES...
       </div>
     }>
       <LoginContent />

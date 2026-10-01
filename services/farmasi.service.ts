@@ -72,6 +72,25 @@ export interface StokFaskesItem {
   prioritasFEFO: number;
 }
 
+export interface StokVaksinItem {
+  id: string;
+  faskesId: string;
+  namaFaskes?: string;
+  vaksinId: string;
+  kodeKfa: string;
+  namaVaksin: string;
+  targetPenyakit: string;
+  noBatch: string;
+  tanggalExpired: string;
+  sisaHariExpired?: number | null;
+  statusExpired: 'AMAN' | 'WASPADA' | 'SEGERA_KADALUWARSA' | 'KADALUWARSA';
+  stok: number;
+  stokMinimum: number;
+  suhuPenyimpanan: string;
+  statusStok: 'AMAN' | 'KRITIS' | 'HABIS';
+  prioritasFEFO: number;
+}
+
 export const farmasiService = {
   getAntrian: async (): Promise<ResepData[]> => {
     const response = await api.get('/farmasi/antrian');
@@ -101,6 +120,44 @@ export const farmasiService = {
     stokMinimum?: number;
   }) => {
     const response = await api.post('/farmasi/stok/masuk', payload);
+    return response.data;
+  },
+
+  getStokVaksin: async (): Promise<{ data: StokVaksinItem[]; ringkasan: any }> => {
+    const response = await api.get('/farmasi/vaksin/stok');
+    return response.data;
+  },
+
+  tambahStokVaksinMasuk: async (payload: {
+    vaksinId: string;
+    jumlahMasuk: number;
+    noBatch: string;
+    tanggalExpired: string;
+    stokMinimum?: number;
+    suhuPenyimpanan?: string;
+  }) => {
+    const response = await api.post('/farmasi/vaksin/masuk', payload);
+    return response.data;
+  },
+
+  kurangiStokKeluar: async (payload: {
+    obatId: string;
+    jumlahKeluar: number;
+    alasanKeluar: string;
+    catatan?: string;
+  }) => {
+    const response = await api.post('/farmasi/stok/keluar', payload);
+    return response.data;
+  },
+
+  kurangiStokVaksinKeluar: async (payload: {
+    vaksinId: string;
+    noBatch: string;
+    jumlahKeluar: number;
+    alasanKeluar: string;
+    catatan?: string;
+  }) => {
+    const response = await api.post('/farmasi/vaksin/keluar', payload);
     return response.data;
   }
 };

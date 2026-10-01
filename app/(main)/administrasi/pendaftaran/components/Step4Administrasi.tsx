@@ -102,12 +102,42 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
       }
     }
   }, [jenisPelayanan, polikliniks, setValue, poliTujuan]);
-  
+
   // Set current date & time on mount for Tanggal & Jam Registrasi
   const now = new Date();
   const today = now.toISOString().split('T')[0];
   const currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // Format HH:MM
-  
+
+  // Default field values on mount
+  useEffect(() => {
+    if (!watch('jenisPelayanan') && setValue) {
+      setValue('jenisPelayanan', 'Rawat Jalan');
+    }
+    if (!watch('caraDatang') && setValue) {
+      setValue('caraDatang', 'Datang sendiri');
+    }
+    if (!watch('prioritas') && setValue) {
+      setValue('prioritas', 'Umum');
+    }
+    if (!watch('tanggalRegistrasi') && setValue) {
+      setValue('tanggalRegistrasi', today);
+    }
+    if (!watch('jamRegistrasi') && setValue) {
+      setValue('jamRegistrasi', currentTime);
+    }
+  }, [setValue, watch, today, currentTime]);
+
+  // Auto-select dokter jika poli dipilih dan dokter tersedia
+  useEffect(() => {
+    if (poliTujuan && dokters[poliTujuan] && dokters[poliTujuan].length > 0 && setValue) {
+      const currentDokter = watch('dokterTujuan');
+      const isValid = dokters[poliTujuan].some(d => d.id === currentDokter);
+      if (!currentDokter || !isValid || currentDokter === 'Bebas') {
+        setValue('dokterTujuan', dokters[poliTujuan][0].id, { shouldValidate: true });
+      }
+    }
+  }, [poliTujuan, dokters, setValue, watch]);
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -115,18 +145,26 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
         <p className="text-sm text-gray-500 mt-1">Tujuan pelayanan, dokter, dan penentuan antrian.</p>
       </div>
 
+      {watch('noAntrian') && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs text-emerald-900">
+          <div className="flex items-center gap-2">
+            <span className="font-bold">✓ Terhubung dengan Antrean Online / Booking:</span>
+            <span className="bg-emerald-600 text-white font-mono px-2 py-0.5 font-bold">{watch('noAntrian')}</span>
+          </div>
+          <span className="text-emerald-700 italic">Poli & dokter tujuan terisi otomatis</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Input
           label="Tanggal Registrasi *"
           type="date"
-          defaultValue={today}
           {...register('tanggalRegistrasi')}
           error={errors.tanggalRegistrasi?.message}
         />
         <Input
           label="Jam Registrasi *"
           type="time"
-          defaultValue={currentTime}
           {...register('jamRegistrasi')}
           error={errors.jamRegistrasi?.message}
         />
@@ -145,31 +183,33 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
           options={jenisPelayananOptions}
         />
         
-        {jenisPelayanan && (
-          <Select
-            label="Poli/Unit Tujuan *"
-            {...register('poliTujuan')}
-            error={errors.poliTujuan?.message}
-            options={[
-              { label: '-- Pilih Unit/Poli --', value: '' },
-              ...filteredPolikliniks.map(p => ({ label: p.namaPoli, value: p.id }))
-            ]}
-          />
-        )}
+        <Select
+          label="Poli/Unit Tujuan *"
+          {...register('poliTujuan')}
+          error={errors.poliTujuan?.message}
+          options={[
+            { label: '-- Pilih Unit/Poli --', value: '' },
+            ...filteredPolikliniks.map(p => ({ label: p.namaPoli, value: p.id }))
+          ]}
+        />
 
-
-        {jenisPelayanan !== 'UGD' && (
+        <div>
           <Select
             label="Dokter Tujuan *"
             {...register('dokterTujuan')}
             error={errors.dokterTujuan?.message}
             disabled={!poliTujuan || isLoadingDokter}
             options={[
-              { label: isLoadingDokter ? 'Memuat Dokter...' : '-- Pilih Dokter --', value: '' },
+              { label: isLoadingDokter ? 'Memuat Dokter...' : (poliTujuan ? '-- Pilih Dokter Bertugas * --' : '-- Pilih Poli Terlebih Dahulu --'), value: '' },
               ...(poliTujuan && dokters[poliTujuan] ? dokters[poliTujuan].map(d => ({ label: d.namaLengkap || d.username, value: d.id })) : [])
             ]}
           />
-        )}
+          {poliTujuan && (!dokters[poliTujuan] || dokters[poliTujuan].length === 0) && !isLoadingDokter && (
+            <p className="text-[11px] text-amber-600 mt-1 font-semibold">
+              Belum ada dokter yang bertugas di poli/unit ini.
+            </p>
+          )}
+        </div>
         
         <Select
           label="Prioritas Pasien *"

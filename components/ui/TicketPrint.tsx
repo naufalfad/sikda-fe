@@ -40,8 +40,13 @@ export const TicketPrint = React.forwardRef<HTMLDivElement, TicketPrintProps>(
 
         <div className="border-t-2 border-dashed border-black my-3"></div>
 
-        <div className="text-xs text-center">
-          <p>Silakan tunggu panggilan di ruang tunggu poli.</p>
+        <div className="text-xs text-center space-y-1">
+          <div className="border border-dashed border-black p-1.5 my-2 text-[10px] text-left">
+            <p className="font-bold text-center mb-1">ALUR PELAYANAN:</p>
+            <p>1. Menuju Ruang Pemeriksaan Awal (Perawat)</p>
+            <p>2. Pengukuran TTV & Skrining Triase</p>
+            <p>3. Menuju Ruang Dokter Poliklinik</p>
+          </div>
           <p className="font-semibold mt-2">Semoga Lekas Sembuh</p>
         </div>
       </div>

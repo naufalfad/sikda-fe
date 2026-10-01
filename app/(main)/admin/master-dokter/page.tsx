@@ -4,9 +4,11 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Users, Edit, Trash2 } from 'lucide-react';
 import { useDokterStore } from '@/store/dokter.store';
 import { useKlinikStore } from '@/store/klinik.store';
+import { useAuthStore } from '@/store/auth.store';
 import { Dokter } from '@/services/dokter.service';
 
 export default function MasterDokterPage() {
+  const { user } = useAuthStore();
   const { dokters, isLoading, fetchDokters, createDokter, updateDokter, deleteDokter, checkIHSNik } = useDokterStore();
   const { polikliniks, fetchPoliklinik } = useKlinikStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -146,11 +148,19 @@ export default function MasterDokterPage() {
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
+          {user?.faskes?.namaFaskes && (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+              {user.faskes.namaFaskes}
+            </div>
+          )}
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Users className="w-8 h-8 text-blue-600" />
             Master Dokter
           </h1>
-          <p className="text-gray-500 mt-2">Kelola data dokter, akses login, dan penugasan ke poliklinik.</p>
+          <p className="text-gray-500 mt-1">
+            Kelola data dokter, akses login, dan penugasan poliklinik {user?.faskes?.namaFaskes ? `di ${user.faskes.namaFaskes}` : 'faskes'}.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -188,13 +198,13 @@ export default function MasterDokterPage() {
             <tbody className="divide-y divide-gray-200">
               {isLoading && dokters.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     Memuat data dokter...
                   </td>
                 </tr>
               ) : filteredDokters.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     {searchQuery ? 'Tidak ada dokter yang cocok dengan pencarian.' : 'Belum ada data dokter.'}
                   </td>
                 </tr>

@@ -8,6 +8,12 @@ export interface Dokter {
   role: string;
   poliklinikId: string | null;
   poliklinik?: Poliklinik | null;
+  faskesId?: string | null;
+  faskes?: {
+    id: string;
+    kodeFaskes: string;
+    namaFaskes: string;
+  } | null;
   tenagaMedis?: {
     nik: string;
     noIHS: string | null;

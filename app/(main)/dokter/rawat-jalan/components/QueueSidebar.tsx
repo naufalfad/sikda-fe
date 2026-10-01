@@ -178,7 +178,9 @@ export default function QueueSidebar({
                         ? 'bg-amber-100 text-amber-800 border-amber-200'
                         : k.statusKunjungan === 'MENUNGGU_RADIOLOGI'
                           ? 'bg-purple-100 text-purple-800 border-purple-200'
-                          : 'bg-gray-100 text-gray-700 border-gray-200'
+                          : k.statusKunjungan === 'MENUNGGU_DOKTER'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                            : 'bg-gray-100 text-gray-700 border-gray-200'
                   }`}>
                     {k.statusKunjungan === 'DIPERIKSA' 
                       ? 'DIPERIKSA' 
@@ -186,7 +188,9 @@ export default function QueueSidebar({
                         ? 'LAB'
                         : k.statusKunjungan === 'MENUNGGU_RADIOLOGI'
                           ? 'RADIOLOGI'
-                          : 'ANTRI'}
+                          : k.statusKunjungan === 'MENUNGGU_DOKTER'
+                            ? 'SIAP DOKTER'
+                            : 'ANTRI'}
                   </span>
                 </div>
 

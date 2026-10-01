@@ -8,7 +8,7 @@ interface PasienState {
   isLoading: boolean;
   error: string | null;
   fetchPasiens: () => Promise<void>;
-  deletePasien: (id: number) => Promise<void>;
+  deletePasien: (id: string | number) => Promise<void>;
   clearError: () => void;
   syncPasienIHS: (nik: string) => Promise<any>;
 }
@@ -35,7 +35,7 @@ export const usePasienStore = create<PasienState>((set, get) => ({
     }
   },
 
-  deletePasien: async (id: number) => {
+  deletePasien: async (id: string | number) => {
     set({ isLoading: true, error: null });
     try {
       const response = await pasienService.deletePasien(id);

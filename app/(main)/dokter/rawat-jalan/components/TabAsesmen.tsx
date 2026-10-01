@@ -1,5 +1,5 @@
-import React, { Dispatch, SetStateAction, useState } from 'react';
-import { FileText, Search, X, Plus } from 'lucide-react';
+import React, { Dispatch, SetStateAction, useState, useEffect } from 'react';
+import { FileText, Search, X, Plus, Loader2, Check } from 'lucide-react';
 import { SOAPPayload, DiagnosaItem } from '@/types/rawatJalan.types';
 import { masterService } from '@/services/master.service';
 
@@ -21,26 +21,36 @@ export default function TabAsesmen({
   const [selectedStatusKlinis, setSelectedStatusKlinis] = useState('Aktif');
   const [selectedStatusVerifikasi, setSelectedStatusVerifikasi] = useState('Suspek');
 
-  const handleSearchICD = async () => {
-    if (icdSearchTerm.length < 3) {
-      alert('Masukkan minimal 3 karakter untuk mencari ICD-10');
-      return;
-    }
+  // Ambil data ICD-10 (jika term kosong, akan mengembalikan seluruh master ICD-10)
+  const fetchICD = async (term?: string) => {
     setIsSearchingIcd(true);
     try {
-      const res = await masterService.getIcd10(icdSearchTerm);
+      const res = await masterService.getIcd10(term?.trim() || '');
       if (res && res.data) {
         setIcdResults(res.data);
       } else {
         setIcdResults([]);
       }
     } catch (err) {
-      console.error('Error search ICD10:', err);
+      console.error('Error fetching ICD10:', err);
       setIcdResults([]);
     } finally {
       setIsSearchingIcd(false);
     }
   };
+
+  // Muat seluruh daftar ICD-10 secara instan saat tab asesmen dibuka
+  useEffect(() => {
+    fetchICD('');
+  }, []);
+
+  // Filter pencarian otomatis saat dokter mengetik (debounce 250ms), atau reload full saat dikosongkan
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchICD(icdSearchTerm);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [icdSearchTerm]);
 
   const handleAddDiagnosis = (item: any) => {
     const currentArr = soapData.diagnosisArr || [];
@@ -63,9 +73,6 @@ export default function TabAsesmen({
       ...soapData,
       diagnosisArr: [...currentArr, newItem]
     });
-
-    setIcdSearchTerm('');
-    setIcdResults([]);
   };
 
   const handleRemoveDiagnosis = (id: string) => {
@@ -95,30 +102,40 @@ export default function TabAsesmen({
             <h4 className="text-md font-bold text-gray-800 mb-4 text-red-600">Pencatatan Diagnosa ICD-10 (Standar SATUSEHAT)</h4>
             
             <div className="bg-white p-4 border border-blue-200 shadow-sm mb-4">
-              <div className="flex flex-col md:flex-row gap-4 mb-2">
+              <div className="flex flex-col md:flex-row gap-4 mb-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Cari Penyakit (Kode ICD-10 / Nama)</label>
-                  <div className="flex">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Cari Penyakit (Kode ICD-10 / Nama)
+                  </label>
+                  <div className="relative flex items-center">
                     <input 
                       type="text"
                       value={icdSearchTerm}
                       onChange={(e) => setIcdSearchTerm(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearchICD())}
-                      placeholder="Ketik min. 3 huruf lalu Enter..."
-                      className="flex-1 px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          fetchICD(icdSearchTerm);
+                        }
+                      }}
+                      placeholder="Cari kode atau nama penyakit (seluruh ICD-10 tampil jika kosong)..."
+                      className="w-full pl-9 pr-9 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm rounded-none"
                     />
-                    <button 
-                      type="button" 
-                      onClick={handleSearchICD}
-                      disabled={isSearchingIcd}
-                      className="bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400"
-                    >
-                      <Search className="w-4 h-4" />
-                    </button>
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 pointer-events-none" />
+                    {icdSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setIcdSearchTerm('')}
+                        className="absolute right-2 p-1 text-gray-400 hover:text-gray-600 rounded"
+                        title="Hapus pencarian"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="w-full md:w-1/4">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status Diagnosa</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status Diagnosa</label>
                   <select
                     value={selectedJenis}
                     onChange={(e) => setSelectedJenis(e.target.value)}
@@ -131,7 +148,7 @@ export default function TabAsesmen({
                   </select>
                 </div>
                 <div className="w-full md:w-1/4">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status Klinis</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status Klinis</label>
                   <select
                     value={selectedStatusKlinis}
                     onChange={(e) => setSelectedStatusKlinis(e.target.value)}
@@ -144,7 +161,7 @@ export default function TabAsesmen({
                   </select>
                 </div>
                 <div className="w-full md:w-1/4">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Status Verifikasi</label>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Status Verifikasi</label>
                   <select
                     value={selectedStatusVerifikasi}
                     onChange={(e) => setSelectedStatusVerifikasi(e.target.value)}
@@ -158,28 +175,96 @@ export default function TabAsesmen({
                 </div>
               </div>
 
-              {icdResults.length > 0 && (
-                <div className="mt-2 border border-blue-200 bg-gray-50 max-h-60 overflow-y-auto">
-                  {icdResults.map((res: any, idx: number) => (
-                    <div 
-                      key={idx} 
-                      className="p-3 border-b border-gray-200 hover:bg-blue-50 flex justify-between items-center group cursor-pointer"
-                      onClick={() => handleAddDiagnosis(res)}
+              {/* Status Header Informasi ICD-10 */}
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-2 px-1">
+                <span className="flex items-center gap-1.5 font-medium">
+                  {isSearchingIcd ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                      <span>Memuat data ICD-10...</span>
+                    </>
+                  ) : icdSearchTerm ? (
+                    <span>Menampilkan {icdResults.length} hasil untuk &quot;{icdSearchTerm}&quot;</span>
+                  ) : (
+                    <span>Menampilkan seluruh master ICD-10 ({icdResults.length} tersedia)</span>
+                  )}
+                </span>
+                <span className="text-gray-400 italic">
+                  Klik baris atau tombol + untuk menambahkan ke diagnosa
+                </span>
+              </div>
+
+              {/* Daftar Master ICD-10 (Selalu Tampil) */}
+              <div className="border border-blue-200 bg-white max-h-64 overflow-y-auto divide-y divide-gray-100 shadow-inner">
+                {isSearchingIcd && icdResults.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                    <span>Memuat daftar ICD-10...</span>
+                  </div>
+                ) : icdResults.length === 0 ? (
+                  <div className="p-6 text-center text-sm text-gray-500">
+                    <p>Tidak ditemukan diagnosa ICD-10 yang sesuai &quot;{icdSearchTerm}&quot;.</p>
+                    <button
+                      type="button"
+                      onClick={() => setIcdSearchTerm('')}
+                      className="mt-2 text-xs text-blue-600 hover:underline font-semibold"
                     >
-                      <div>
-                        <div className="font-bold text-gray-900 text-sm">{res.kode_icd10} - {res.nama_diagnosis}</div>
-                        <div className="text-xs text-gray-500 mt-1">Kategori: {res.kategori || 'Unknown'} | Bab: {res.bab || 'Unknown'}</div>
-                      </div>
-                      <button 
-                        type="button"
-                        className="text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-100 p-1 rounded"
+                      Tampilkan seluruh daftar ICD-10
+                    </button>
+                  </div>
+                ) : (
+                  icdResults.map((res: any, idx: number) => {
+                    const isSelected = diagnosisArr.some(d => d.icd10Id === res.id_icd10);
+                    return (
+                      <div 
+                        key={res.id_icd10 || idx} 
+                        className={`p-3 hover:bg-blue-50 flex justify-between items-center transition-colors cursor-pointer ${
+                          isSelected ? 'bg-blue-50/50' : ''
+                        }`}
+                        onClick={() => !isSelected && handleAddDiagnosis(res)}
                       >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                        <div className="pr-4">
+                          <div className="flex items-center gap-2">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-mono font-bold px-2 py-0.5 rounded border border-blue-200">
+                              {res.kode_icd10}
+                            </span>
+                            <span className="font-semibold text-gray-900 text-sm">
+                              {res.nama_diagnosis}
+                            </span>
+                          </div>
+                          {(res.kategori || res.bab) && (
+                            <div className="text-xs text-gray-500 mt-1 pl-1">
+                              {res.kategori ? `Kategori: ${res.kategori}` : ''} 
+                              {res.kategori && res.bab ? ' | ' : ''}
+                              {res.bab ? `Bab: ${res.bab}` : ''}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          {isSelected ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded">
+                              <Check className="w-3.5 h-3.5" />
+                              Terpilih
+                            </span>
+                          ) : (
+                            <button 
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddDiagnosis(res);
+                              }}
+                              className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-blue-600 px-2.5 py-1 rounded transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              Pilih
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
 
             {/* List Diagnosa Terpilih */}

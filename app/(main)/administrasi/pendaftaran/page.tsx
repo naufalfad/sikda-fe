@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import RegistrationForm from './components/RegistrationForm';
 
 export default function PendaftaranPage() {
@@ -11,7 +12,9 @@ export default function PendaftaranPage() {
           </p>
         </div>
         <div className="bg-white shadow-sm rounded-none p-6 sm:p-10 border border-gray-200">
-          <RegistrationForm />
+          <Suspense fallback={<div className="p-8 text-center text-gray-500">Memuat Formulir Pendaftaran...</div>}>
+            <RegistrationForm />
+          </Suspense>
         </div>
       </div>
     </div>

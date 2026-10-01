@@ -28,6 +28,7 @@ export interface TempatTidur {
   nomorBed: string;
   kelasKamar: string;
   statusBed: 'TERSEDIA' | 'TERISI' | 'PERBAIKAN' | 'DIBERSIHKAN';
+  gambarUrl?: string | null;
   kunjunganAktifId?: string | null;
   kunjunganAktif?: any;
   ihsLocationId?: string | null;
@@ -53,6 +54,7 @@ export interface AsetRuangan {
   merk?: string | null;
   tipeModel?: string | null;
   nomorSeri?: string | null;
+  gambarUrl?: string | null;
   tahunPerolehan?: number | null;
   sumberAnggaran?: string | null;
   hargaPerolehan?: number | null;
