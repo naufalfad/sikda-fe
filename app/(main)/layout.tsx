@@ -25,7 +25,8 @@ import {
   AlertCircle,
   Radio,
   BedDouble,
-  Syringe
+  Syringe,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -388,6 +389,14 @@ export default function DashboardLayout({
               <Link href="/dinkes" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Eksekutif</span>
+              </Link>
+
+              <Link href="/dinkes/ai-briefing" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/ai-briefing' ? 'text-amber-800 bg-amber-50 border-r-4 border-amber-600' : 'text-gray-600 hover:bg-amber-50 hover:text-amber-800'}`}>
+                <Sparkles className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/ai-briefing' ? 'text-amber-600' : 'text-amber-500 md:group-hover:text-amber-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap flex items-center gap-1.5 font-bold">
+                  AI Executive Briefing
+                  <span className="text-[9px] px-1.5 py-0.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-black uppercase tracking-wider">AI</span>
+                </span>
               </Link>
 
               <Link href="/dinkes/workload" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/workload' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>

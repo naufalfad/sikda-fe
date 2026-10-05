@@ -16,7 +16,8 @@ import {
   TrendingUp,
   MapPin,
   CheckCircle2,
-  Stethoscope
+  Stethoscope,
+  Sparkles
 } from 'lucide-react';
 import { dinkesService, DinkesSummary, FaskesWorkload } from '../../../services/dinkes.service';
 
@@ -75,6 +76,14 @@ export default function DinkesDashboardPage() {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
             Perbarui Data
           </button>
+          <Link
+            href="/dinkes/ai-briefing"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white text-sm font-bold rounded-lg shadow-sm transition-all"
+            title="Laporan Situasi Eksekutif & Briefing Cerdas AI"
+          >
+            <Sparkles className="w-4 h-4 text-white" />
+            AI Executive Briefing
+          </Link>
           <Link
             href="/dinkes/workload"
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg shadow-xs transition-colors"

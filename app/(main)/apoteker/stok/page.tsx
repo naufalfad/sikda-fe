@@ -40,8 +40,8 @@ function KatalogObatContent() {
   
   // Filter Kategori Utama: 'semua' | 'obat' | 'bmhp' | 'vaksin'
   const [kategoriTab, setKategoriTab] = useState<'semua' | 'obat' | 'bmhp' | 'vaksin'>('semua');
-  // Filter Status Operasional: 'semua' | 'fefo' | 'kritis'
-  const [statusTab, setStatusTab] = useState<'semua' | 'fefo' | 'kritis'>('semua');
+  // Filter Status Operasional: 'tersedia' | 'semua' | 'fefo' | 'kritis' | 'habis'
+  const [statusTab, setStatusTab] = useState<'tersedia' | 'semua' | 'fefo' | 'kritis' | 'habis'>('tersedia');
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -269,11 +269,13 @@ function KatalogObatContent() {
   const obatList = stokList.filter(o => o.kategori !== 'BMHP');
   const bmhpList = stokList.filter(o => o.kategori === 'BMHP');
 
-  const kritisObatBmhp = stokList.filter(o => o.statusStok === 'KRITIS' || o.statusStok === 'HABIS');
+  const kritisObatBmhp = stokList.filter(o => o.statusStok === 'KRITIS' && o.stok > 0);
+  const habisObatBmhp = stokList.filter(o => o.stok === 0);
   const fefoObatBmhp = stokList.filter(o => o.statusExpired === 'SEGERA_KADALUWARSA' || o.statusExpired === 'KADALUWARSA');
 
   const totalDosisVaksin = vaksinList.reduce((acc, v) => acc + v.stok, 0);
-  const kritisVaksin = vaksinList.filter(v => v.statusStok === 'KRITIS' || v.statusStok === 'HABIS');
+  const kritisVaksin = vaksinList.filter(v => v.statusStok === 'KRITIS' && v.stok > 0);
+  const habisVaksin = vaksinList.filter(v => v.stok === 0);
   const fefoVaksin = vaksinList.filter(v => v.statusExpired === 'SEGERA_KADALUWARSA' || v.statusExpired === 'KADALUWARSA');
 
   // Filter List for Obat/BMHP
@@ -291,8 +293,10 @@ function KatalogObatContent() {
     if (kategoriTab === 'bmhp' && o.kategori !== 'BMHP') return false;
 
     // Filter Status
+    if (statusTab === 'tersedia') return o.stok > 0;
     if (statusTab === 'fefo') return o.statusExpired === 'SEGERA_KADALUWARSA' || o.statusExpired === 'KADALUWARSA';
-    if (statusTab === 'kritis') return o.statusStok === 'KRITIS' || o.statusStok === 'HABIS';
+    if (statusTab === 'kritis') return o.statusStok === 'KRITIS' && o.stok > 0;
+    if (statusTab === 'habis') return o.stok === 0;
 
     return true;
   });
@@ -306,8 +310,10 @@ function KatalogObatContent() {
 
     if (!matchSearch) return false;
 
+    if (statusTab === 'tersedia') return v.stok > 0;
     if (statusTab === 'fefo') return v.statusExpired === 'SEGERA_KADALUWARSA' || v.statusExpired === 'KADALUWARSA';
-    if (statusTab === 'kritis') return v.statusStok === 'KRITIS' || v.statusStok === 'HABIS';
+    if (statusTab === 'kritis') return v.statusStok === 'KRITIS' && v.stok > 0;
+    if (statusTab === 'habis') return v.stok === 0;
 
     return true;
   });
@@ -414,9 +420,12 @@ function KatalogObatContent() {
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Stok Kritis &amp; FEFO</p>
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Stok Kritis &amp; Habis</p>
             <p className="text-xl font-black text-rose-600 font-mono">
               {kritisObatBmhp.length + kritisVaksin.length} <span className="text-xs font-normal text-gray-500">Kritis</span>
+              {(habisObatBmhp.length + habisVaksin.length) > 0 && (
+                <span className="text-xs font-bold text-red-600 ml-1.5">• {habisObatBmhp.length + habisVaksin.length} Habis</span>
+              )}
             </p>
             <p className="text-[11px] text-amber-700 font-medium mt-0.5">
               {fefoObatBmhp.length + fefoVaksin.length} Batch &lt; 60 Hari FEFO
@@ -493,16 +502,17 @@ function KatalogObatContent() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
           <button
-            onClick={() => setStatusTab('semua')}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors ${
-              statusTab === 'semua'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            onClick={() => setStatusTab('tersedia')}
+            className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              statusTab === 'tersedia'
+                ? 'bg-teal-700 text-white shadow-xs'
+                : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
             }`}
           >
-            Semua Status
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Tersedia (Ready)
           </button>
           <button
             onClick={() => setStatusTab('fefo')}
@@ -525,6 +535,27 @@ function KatalogObatContent() {
           >
             <AlertTriangle className="w-3 h-3" />
             Stok Kritis
+          </button>
+          <button
+            onClick={() => setStatusTab('habis')}
+            className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
+              statusTab === 'habis'
+                ? 'bg-red-700 text-white shadow-xs'
+                : 'bg-red-50 text-red-700 hover:bg-red-100'
+            }`}
+          >
+            <MinusCircle className="w-3.5 h-3.5" />
+            Stok Habis ({kategoriTab === 'vaksin' ? habisVaksin.length : habisObatBmhp.length})
+          </button>
+          <button
+            onClick={() => setStatusTab('semua')}
+            className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+              statusTab === 'semua'
+                ? 'bg-gray-900 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Semua Batch
           </button>
         </div>
       </div>

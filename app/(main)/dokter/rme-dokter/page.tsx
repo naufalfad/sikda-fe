@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  FileText, Search, User, Clock, CheckCircle2, Calendar, Eye, Filter, Loader2
+  FileText, Search, User, Clock, CheckCircle2, Calendar, Eye, Filter, Loader2, ShieldCheck
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 import { AntrianDokter } from '@/types/rawatJalan.types';
@@ -12,6 +12,8 @@ export default function RMEDaftarRiwayatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [riwayatData, setRiwayatData] = useState<AntrianDokter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [selectedPoli, setSelectedPoli] = useState<string>('ALL');
 
   useEffect(() => {
     const fetchRiwayat = async () => {
@@ -29,11 +31,21 @@ export default function RMEDaftarRiwayatPage() {
     fetchRiwayat();
   }, []);
 
-  const filteredData = riwayatData.filter(
-    (item) =>
-      item.pasien?.namaLengkap.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.pasien?.noRM.toLowerCase().includes(searchQuery.toLowerCase())
+  const availablePolis = Array.from(
+    new Set(riwayatData.map((item) => item.poliklinik?.namaPoli).filter(Boolean))
   );
+
+  const filteredData = riwayatData.filter((item) => {
+    const matchSearch =
+      item.pasien?.namaLengkap.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.pasien?.noRM.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.poliklinik?.namaPoli || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.dokterTujuan?.namaLengkap || '').toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchPoli = selectedPoli === 'ALL' || item.poliklinik?.namaPoli === selectedPoli;
+
+    return matchSearch && matchPoli;
+  });
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pb-12 font-sans">
@@ -45,8 +57,12 @@ export default function RMEDaftarRiwayatPage() {
               <FileText className="w-8 h-8 text-blue-300" />
             </div>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight">Daftar Riwayat RME</h1>
-              <p className="text-slate-300 mt-1 text-sm font-medium">Arsip rekam medis pasien yang telah selesai berobat</p>
+              <h1 className="text-3xl font-extrabold tracking-tight">Daftar Riwayat RME Pasien Anda</h1>
+              <p className="text-slate-300 mt-1 text-sm font-medium">Arsip rekam medis pasien yang pernah Anda tangani dalam pelayanan faskes ini</p>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                Privasi Terlindungi: Khusus Pasien yang Pernah Anda Rawat
+              </div>
             </div>
           </div>
         </div>
@@ -60,15 +76,42 @@ export default function RMEDaftarRiwayatPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Cari Nama Pasien atau No. RM..."
+                placeholder="Cari Nama Pasien, No. RM, atau Poliklinik..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
               />
             </div>
-            <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 bg-white text-gray-700 rounded-none hover:bg-gray-50 transition-colors text-sm font-medium w-full md:w-auto">
-              <Filter className="w-4 h-4" /> Filter Waktu
-            </button>
+            
+            {/* Filter Poli Tabs */}
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <button
+                onClick={() => setSelectedPoli('ALL')}
+                className={`px-3 py-2 text-xs font-bold transition-all ${
+                  selectedPoli === 'ALL'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Semua Poli ({riwayatData.length})
+              </button>
+              {availablePolis.map((poli) => {
+                const count = riwayatData.filter((item) => item.poliklinik?.namaPoli === poli).length;
+                return (
+                  <button
+                    key={poli}
+                    onClick={() => setSelectedPoli(poli as string)}
+                    className={`px-3 py-2 text-xs font-bold transition-all ${
+                      selectedPoli === poli
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {poli} ({count})
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Table */}
@@ -77,6 +120,7 @@ export default function RMEDaftarRiwayatPage() {
               <thead className="text-xs font-bold text-gray-500 bg-gray-50/80 border-b border-gray-200 uppercase tracking-wider">
                 <tr>
                   <th className="px-6 py-4">Pasien</th>
+                  <th className="px-6 py-4">Poliklinik &amp; Dokter</th>
                   <th className="px-6 py-4">Waktu Selesai</th>
                   <th className="px-6 py-4">Diagnosis Utama</th>
                   <th className="px-6 py-4">Status</th>
@@ -86,15 +130,15 @@ export default function RMEDaftarRiwayatPage() {
               <tbody className="divide-y divide-gray-100 bg-white">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                       Memuat data riwayat...
                     </td>
                   </tr>
                 ) : filteredData.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      Tidak ada riwayat RME yang cocok dengan pencarian Anda.
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      Tidak ada riwayat RME yang cocok dengan filter atau pencarian Anda.
                     </td>
                   </tr>
                 ) : (
@@ -106,6 +150,14 @@ export default function RMEDaftarRiwayatPage() {
                           {item.pasien?.namaLengkap}
                         </div>
                         <div className="text-xs text-gray-500 font-mono mt-1 ml-6">{item.pasien?.noRM}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-block px-2.5 py-0.5 text-xs font-bold rounded bg-blue-50 text-blue-700 border border-blue-200">
+                          {item.poliklinik?.namaPoli || 'Poli Umum'}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Dr: <span className="font-semibold text-gray-700">{item.dokterTujuan?.namaLengkap || '-'}</span>
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-gray-700">

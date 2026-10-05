@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { 
   Stethoscope, User, FileText, Activity, Syringe, Pill, 
   ClipboardList, CheckCircle2, Clock, Users, Search, Loader2, RefreshCw, TestTubes, Printer,
-  FileDown, AlertTriangle, Radio
+  FileDown, AlertTriangle, Radio, X
 } from 'lucide-react';
 import { laboratoriumService } from '@/services/laboratorium.service';
 import { kunjunganService } from '@/services/kunjungan.service';
@@ -25,7 +25,7 @@ import TabTindakan from './components/TabTindakan';
 import TabResep from './components/TabResep';
 import TabRujukan from './components/TabRujukan';
 import ScreeningModal from './components/ScreeningModal';
-import RiwayatRMEModal from './components/RiwayatRMEModal';
+import BerkasRMEPasienView from './components/BerkasRMEPasienView';
 import LabResultModal from './components/LabResultModal';
 import DoctorActionBar from './components/DoctorActionBar';
 import DischargePlanning from './components/DischargePlanning';
@@ -38,6 +38,9 @@ function DokterRawatJalanContent() {
   const searchParams = useSearchParams();
   const kunjunganIdParam = searchParams.get('kunjunganId');
   const [activeTab, setActiveTab] = useState('SOAP_S');
+  const [showSideRmePanel, setShowSideRmePanel] = useState<boolean>(false);
+  const [isQueueCollapsed, setIsQueueCollapsed] = useState<boolean>(false);
+  const [sideRmeSplitRatio, setSideRmeSplitRatio] = useState<'default' | 'equal' | 'focusRme'>('default');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Store
@@ -71,8 +74,48 @@ function DokterRawatJalanContent() {
   // Screening modal
   const [isScreeningModalOpen, setIsScreeningModalOpen] = useState(false);
   
-  // Riwayat RME modal
-  const [isRiwayatModalOpen, setIsRiwayatModalOpen] = useState(false);
+  // Riwayat RME Dossier View state (Full Workspace)
+  const [previewRmePatient, setPreviewRmePatient] = useState<{
+    noRM: string;
+    namaPasien: string;
+    kunjungan?: any;
+  } | null>(null);
+
+  const handleOpenRmePreview = (noRM: string, namaPasien: string = '', kunjungan?: any) => {
+    // If the currently examined patient is this one, simply switch to RIWAYAT_RME tab!
+    if (selectedKunjungan && selectedKunjungan.pasien?.noRM === noRM) {
+      setActiveTab('RIWAYAT_RME');
+      return;
+    }
+    // Auto-collapse queue sidebar to give doctor 100% spacious room to inspect dossier
+    setIsQueueCollapsed(true);
+    setPreviewRmePatient({
+      noRM,
+      namaPasien,
+      kunjungan: kunjungan || antrian.find((k: any) => k.pasien?.noRM === noRM),
+    });
+  };
+
+  const handleToggleSideRmePanel = () => {
+    const next = !showSideRmePanel;
+    setShowSideRmePanel(next);
+    if (next) {
+      // Auto-collapse queue so active examination form & RME panel have maximum width
+      setIsQueueCollapsed(true);
+      // If doctor was viewing full-tab RME, switch back to clinical examination SOAP_S so left is exam and right is RME
+      if (activeTab === 'RIWAYAT_RME') {
+        setActiveTab('SOAP_S');
+      }
+    }
+  };
+
+  const handleMulaiPeriksaDariRme = (kunjungan?: any) => {
+    const targetKunjungan = kunjungan || antrian.find((k: any) => k.pasien?.noRM === previewRmePatient?.noRM);
+    setPreviewRmePatient(null);
+    if (targetKunjungan) {
+      handlePilihPasien(targetKunjungan);
+    }
+  };
 
   // Lab Modal & Print Ref
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
@@ -183,6 +226,14 @@ function DokterRawatJalanContent() {
     }
   };
 
+  // Reset local prescription & procedure state when patient changes
+  useEffect(() => {
+    setSelectedObat([]);
+    setSelectedProsedur([]);
+    setObatQuery('');
+    setRujukanData({ faskesTujuan: '', poliTujuan: '', alasanRujukan: '' });
+  }, [selectedKunjungan?.id]);
+
   // Sync SOAP data when rekamMedis or screeningData is loaded
   useEffect(() => {
     if (rekamMedis || screeningData) {
@@ -222,6 +273,25 @@ function DokterRawatJalanContent() {
     } else {
       setLabOrders([]);
       setLabNote('');
+    }
+
+    // Sync Resep
+    if (selectedKunjungan?.resep && Array.isArray(selectedKunjungan.resep)) {
+      const activeResep = selectedKunjungan.resep[selectedKunjungan.resep.length - 1];
+      if (activeResep?.details) {
+        setSelectedObat(activeResep.details.map((d: any) => ({
+          obatId: d.obatId,
+          namaObat: d.obat?.namaObat || 'Obat',
+          kategori: d.obat?.kategori || 'Obat',
+          sediaan: d.obat?.sediaan || 'Tablet',
+          qty: d.jumlah,
+          signa: d.aturanPakai,
+          catatan: d.catatan || '',
+          noBatch: d.noBatch || null,
+        })));
+      }
+    } else {
+      setSelectedObat([]);
     }
   }, [selectedKunjungan]);
 
@@ -285,6 +355,8 @@ function DokterRawatJalanContent() {
         if (result.isConfirmed) {
           try {
             await tundaPemeriksaan(soapData);
+            setPreviewRmePatient(null);
+            setIsQueueCollapsed(true);
             pilihPasien(kunjungan);
           } catch {
             Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menunda pemeriksaan pasien sebelumnya.' });
@@ -294,26 +366,42 @@ function DokterRawatJalanContent() {
       return;
     }
 
-    // 2. Jika pasien baru (MENUNGGU_DOKTER), minta konfirmasi
+    // 2. Jika pasien baru (MENUNGGU_DOKTER), minta konfirmasi dengan opsi buka berkas RME
     if (kunjungan.statusKunjungan === 'MENUNGGU_DOKTER' || kunjungan.statusKunjungan === 'MENUNGGU') {
       Swal.fire({
         title: 'Mulai Pemeriksaan?',
-        text: `Anda akan memulai pemeriksaan untuk ${kunjungan.pasien.namaLengkap}.`,
+        html: `
+          <div style="font-size: 13px; text-align: left; line-height: 1.5; color: #334155;">
+            <p>Anda akan memulai pemeriksaan untuk <strong>${kunjungan.pasien.namaLengkap}</strong> (No. RM: <code>${kunjungan.pasien.noRM}</code>).</p>
+            <p style="color: #64748b; font-size: 12px; margin-top: 8px;">
+              💡 <em>Anda dapat meninjau riwayat kunjungan & rekam medis sebelumnya secara leluasa terlebih dahulu jika diperlukan.</em>
+            </p>
+          </div>
+        `,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#4f46e5',
-        cancelButtonColor: '#d1d5db',
-        confirmButtonText: 'Ya, Mulai',
+        showDenyButton: true,
+        confirmButtonColor: '#2563eb',
+        denyButtonColor: '#4f46e5',
+        cancelButtonColor: '#94a3b8',
+        confirmButtonText: 'Ya, Mulai Periksa',
+        denyButtonText: '📂 Buka Berkas RME Lengkap',
         cancelButtonText: 'Batal'
       }).then((result) => {
         if (result.isConfirmed) {
+          setPreviewRmePatient(null);
+          setIsQueueCollapsed(true);
           pilihPasien(kunjungan);
+        } else if (result.isDenied) {
+          handleOpenRmePreview(kunjungan.pasien.noRM, kunjungan.pasien.namaLengkap, kunjungan);
         }
       });
       return;
     }
 
     // 3. Bypass untuk pasien yang sudah pernah DIPERIKSA, MENUNGGU_LAB, dll
+    setPreviewRmePatient(null);
+    setIsQueueCollapsed(true);
     pilihPasien(kunjungan);
   };
 
@@ -389,12 +477,48 @@ function DokterRawatJalanContent() {
         }));
         await simpanTindakan(tPayload);
       }
+      // Save e-Resep dengan alokasi Batch FEFO
+      if (selectedObat.length > 0) {
+        const rPayload = selectedObat.map(o => ({
+          obatId: o.obatId,
+          qty: parseInt(String(o.qty)) || 1,
+          signa: o.signa || '3 x 1 Tablet sesudah makan',
+          catatan: o.catatan || '',
+          noBatch: o.noBatch || null,
+        }));
+        await simpanResep(rPayload);
+      }
       // Selesaikan
       await selesaikanPemeriksaan();
+      setSelectedObat([]);
+      setSelectedProsedur([]);
+      setSoapData({});
       setActiveTab('SOAP_S');
-      Swal.fire({ icon: 'success', title: 'Pemeriksaan Berhasil Disimpan!', text: 'Data rekam medis tersimpan. Pasien diteruskan ke antrian Farmasi / Selesai.', timer: 2500, showConfirmButton: false });
+      setIsQueueCollapsed(false);
+      setShowSideRmePanel(false);
+      Swal.fire({ icon: 'success', title: 'Pemeriksaan Berhasil Disimpan!', text: 'Data rekam medis tersimpan. Pasien diteruskan ke antrian Kasir & Farmasi.', timer: 2500, showConfirmButton: false });
     } catch {
       Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyelesaikan pemeriksaan' });
+    }
+  };
+
+  const handleSaveResepOnly = async () => {
+    if (!selectedObat || selectedObat.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih minimal satu obat untuk disimpan ke resep.' });
+      return;
+    }
+    try {
+      const rPayload = selectedObat.map(o => ({
+        obatId: o.obatId,
+        qty: parseInt(String(o.qty)) || 1,
+        signa: o.signa || '3 x 1 Tablet sesudah makan',
+        catatan: o.catatan || '',
+        noBatch: o.noBatch || null,
+      }));
+      await simpanResep(rPayload);
+      Swal.fire({ icon: 'success', title: 'Resep Tersimpan!', text: 'e-Resep pasien berhasil diteruskan ke Farmasi.', timer: 1500, showConfirmButton: false });
+    } catch {
+      Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan e-resep.' });
     }
   };
 
@@ -411,6 +535,8 @@ function DokterRawatJalanContent() {
       if (result.isConfirmed) {
         try {
           await tundaPemeriksaan(soapData);
+          setIsQueueCollapsed(false);
+          setShowSideRmePanel(false);
           Swal.fire({ icon: 'success', title: 'Ditunda', text: 'Pemeriksaan berhasil ditunda.', timer: 1500, showConfirmButton: false });
         } catch {
           Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menunda pemeriksaan.' });
@@ -449,12 +575,23 @@ function DokterRawatJalanContent() {
         isLoadingAntrian={isLoadingAntrian} 
         selectedKunjungan={selectedKunjungan} 
         pilihPasien={handlePilihPasien} 
-        getAge={getAge} 
+        getAge={getAge}
+        onIntipRme={handleOpenRmePreview}
+        isCollapsed={isQueueCollapsed}
+        onToggleCollapse={() => setIsQueueCollapsed(!isQueueCollapsed)}
       />
 
-      {/* RIGHT PANEL: MAIN FORM */}
+      {/* RIGHT PANEL: MAIN FORM OR DOSSIER VIEW */}
       <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-hidden min-w-0">
-        {selectedKunjungan ? (
+        {previewRmePatient ? (
+          <BerkasRMEPasienView
+            noRM={previewRmePatient.noRM}
+            namaPasien={previewRmePatient.namaPasien}
+            kunjunganSaatIni={previewRmePatient.kunjungan}
+            onClose={() => setPreviewRmePatient(null)}
+            onMulaiPeriksa={previewRmePatient.kunjungan ? handleMulaiPeriksaDariRme : undefined}
+          />
+        ) : selectedKunjungan ? (
           <>
             {/* Header Pasien */}
             <PatientHeader 
@@ -463,7 +600,15 @@ function DokterRawatJalanContent() {
               alergiList={alergiList}
               getAge={getAge} 
               setIsScreeningModalOpen={setIsScreeningModalOpen} 
-              setIsRiwayatModalOpen={setIsRiwayatModalOpen}
+              onOpenRiwayatTab={() => {
+                setShowSideRmePanel(false);
+                setActiveTab('RIWAYAT_RME');
+              }}
+              showSideRmePanel={showSideRmePanel}
+              onToggleSideRmePanel={handleToggleSideRmePanel}
+              isQueueCollapsed={isQueueCollapsed}
+              onToggleQueue={() => setIsQueueCollapsed(!isQueueCollapsed)}
+              queueCount={antrian.length}
             />
 
             {/* Status Banner Penunjang & Loading Overlay Component */}
@@ -473,40 +618,63 @@ function DokterRawatJalanContent() {
               isViewingLabOverlay={isViewingLabOverlay}
               setIsViewingLabOverlay={setIsViewingLabOverlay}
               fetchAntrian={fetchAntrian}
+              openLabModal={openLabModal}
             />
 
-            {!isLoadingRekamMedis && selectedKunjungan.statusKunjungan !== 'MENUNGGU_LAB' && fase === 2 && (
+            {!isLoadingRekamMedis && fase === 2 && (
               <DischargePlanning />
             )}
 
-            {!isLoadingRekamMedis && 
-             (selectedKunjungan.statusKunjungan !== 'MENUNGGU_LAB' && selectedKunjungan.statusKunjungan !== 'MENUNGGU_RADIOLOGI' || !isViewingLabOverlay) && 
-             fase === 1 && (
-              <>
-                {/* Form Tabs Component */}
+            {!isLoadingRekamMedis && fase === 1 && (
+              <div className="flex-1 flex overflow-hidden min-h-0">
+                {/* LEFT PANE: ACTIVE CLINICAL EXAMINATION FORM */}
+                <div className={`flex flex-col h-full overflow-hidden transition-all duration-200 ${
+                  showSideRmePanel
+                    ? sideRmeSplitRatio === 'equal'
+                      ? 'w-full lg:w-1/2 border-r-2 border-slate-300'
+                      : sideRmeSplitRatio === 'focusRme'
+                        ? 'w-full lg:w-5/12 border-r-2 border-slate-300'
+                        : 'w-full lg:w-7/12 border-r-2 border-slate-300'
+                    : 'w-full'
+                }`}>
+                  {/* Form Tabs Component */}
                 <SoapTabBar 
                   activeTab={activeTab} 
-                  setActiveTab={setActiveTab} 
+                  setActiveTab={(tab) => {
+                    setActiveTab(tab);
+                    if (tab === 'RIWAYAT_RME') {
+                      setShowSideRmePanel(false);
+                    }
+                  }} 
                   scrollContainerRef={scrollContainerRef} 
                 />
 
                 {/* Tab Content */}
-                <fieldset disabled={selectedKunjungan.statusKunjungan === 'MENUNGGU_LAB'} className="contents">
-                <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                  <div className="max-w-5xl mx-auto bg-white shadow-sm border border-gray-200 rounded-none overflow-hidden">
-                    
-                    {/* TAB S: Subjektif */}
-                    {activeTab === 'SOAP_S' && (
-                      <TabSubjektif soapData={soapData} setSoapData={setSoapData} setActiveTab={setActiveTab} screeningData={screeningData} />
-                    )}
+                <fieldset className="contents">
+                {activeTab === 'RIWAYAT_RME' ? (
+                  <div className="flex-1 overflow-hidden h-full">
+                    <BerkasRMEPasienView 
+                      noRM={selectedKunjungan.pasien.noRM}
+                      namaPasien={selectedKunjungan.pasien.namaLengkap}
+                      isEmbeddedTab={true}
+                    />
+                  </div>
+                ) : (
+                  <div className={`flex-1 overflow-y-auto bg-gray-50 transition-all ${showSideRmePanel ? 'p-3 sm:p-4' : 'p-4 sm:p-6'}`}>
+                    <div className={`mx-auto bg-white shadow-sm border border-gray-200 rounded-none overflow-hidden transition-all ${showSideRmePanel ? 'w-full' : 'max-w-5xl'}`}>
+                      
+                      {/* TAB S: Subjektif */}
+                      {activeTab === 'SOAP_S' && (
+                        <TabSubjektif soapData={soapData} setSoapData={setSoapData} setActiveTab={setActiveTab} screeningData={screeningData} />
+                      )}
 
-                    {/* TAB O: Objektif */}
-                    {activeTab === 'SOAP_O' && (
-                      <TabObjektif 
-                        soapData={soapData} 
-                        setSoapData={setSoapData} 
-                        setActiveTab={setActiveTab} 
-                        openLabModal={openLabModal} 
+                      {/* TAB O: Objektif */}
+                      {activeTab === 'SOAP_O' && (
+                        <TabObjektif 
+                          soapData={soapData} 
+                          setSoapData={setSoapData} 
+                          setActiveTab={setActiveTab} 
+                          openLabModal={openLabModal} 
                         isPoliGigi={Boolean(selectedKunjungan?.poliklinik?.namaPoli?.toLowerCase().includes('gigi'))}
                       />
                     )}
@@ -547,6 +715,7 @@ function DokterRawatJalanContent() {
                       <TabRadiologi 
                         kunjunganId={selectedKunjungan.id}
                         isPoliGigi={Boolean(selectedKunjungan?.poliklinik?.namaPoli?.toLowerCase().includes('gigi'))}
+                        setActiveTab={setActiveTab}
                       />
                     )}
 
@@ -565,7 +734,11 @@ function DokterRawatJalanContent() {
                         obatQuery={obatQuery} 
                         setObatQuery={setObatQuery} 
                         selectedObat={selectedObat} 
-                        setSelectedObat={setSelectedObat} 
+                        setSelectedObat={setSelectedObat}
+                        kunjunganId={selectedKunjungan?.id}
+                        faskesId={selectedKunjungan?.poliklinik?.faskesId}
+                        onSaveResep={handleSaveResepOnly}
+                        isSaving={isSaving}
                       />
                     )}
 
@@ -576,6 +749,7 @@ function DokterRawatJalanContent() {
 
                   </div>
                 </div>
+                )}
               </fieldset>
 
                 {/* Bottom Footer Actions Component */}
@@ -585,15 +759,142 @@ function DokterRawatJalanContent() {
                   handleSaveSOAP={handleSaveSOAP}
                   handleSelesaikan={handleSelesaikan}
                   isSaving={isSaving}
-                  isMenungguLab={selectedKunjungan.statusKunjungan === 'MENUNGGU_LAB'}
+                  isMenungguLab={false}
                 />
-              </>
-            )}
+              </div>
+
+              {/* RIGHT PANE: SIDE-BY-SIDE RME DOSSIER PANEL (COLLAPSIBLE / HIDEABLE) */}
+              {showSideRmePanel && (
+                <div className={`hidden lg:flex ${
+                  sideRmeSplitRatio === 'equal'
+                    ? 'lg:w-1/2'
+                    : sideRmeSplitRatio === 'focusRme'
+                      ? 'lg:w-7/12'
+                      : 'lg:w-5/12'
+                } h-full flex-col overflow-hidden bg-slate-100 shadow-xl border-l-2 border-indigo-200 animate-in slide-in-from-right duration-200`}>
+                  {/* Header Panel Samping */}
+                  <div className="bg-indigo-900 text-white px-3.5 py-2.5 flex items-center justify-between border-b-2 border-indigo-700 shrink-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Clock className="w-4 h-4 text-indigo-300 shrink-0" />
+                      <div className="truncate">
+                        <h4 className="text-xs font-black uppercase tracking-wider text-white truncate">
+                          Riwayat Medis Pasien (Berdampingan)
+                        </h4>
+                        <span className="text-[10px] text-indigo-200 font-mono">
+                          No. RM: {selectedKunjungan.pasien.noRM}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Width ratio toggles & Close button */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="hidden xl:flex items-center bg-indigo-950 p-0.5 border border-indigo-800 text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setSideRmeSplitRatio('default')}
+                          className={`px-2 py-0.5 transition-colors ${sideRmeSplitRatio === 'default' ? 'bg-indigo-600 text-white' : 'text-indigo-300 hover:text-white'}`}
+                          title="Fokus Input Pemeriksaan (60% Form : 40% RME)"
+                        >
+                          60:40
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSideRmeSplitRatio('equal')}
+                          className={`px-2 py-0.5 transition-colors ${sideRmeSplitRatio === 'equal' ? 'bg-indigo-600 text-white' : 'text-indigo-300 hover:text-white'}`}
+                          title="Proporsi Seimbang (50% Form : 50% RME)"
+                        >
+                          50:50
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSideRmeSplitRatio('focusRme')}
+                          className={`px-2 py-0.5 transition-colors ${sideRmeSplitRatio === 'focusRme' ? 'bg-indigo-600 text-white' : 'text-indigo-300 hover:text-white'}`}
+                          title="Fokus Baca Riwayat RME (40% Form : 60% RME)"
+                        >
+                          40:60
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowSideRmePanel(false)}
+                        className="p-1 px-2.5 bg-indigo-800 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1 transition-colors border border-indigo-600 shadow-sm"
+                        title="Sembunyikan Panel RME (Kembali ke Tampilan Penuh)"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Tutup</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 overflow-hidden">
+                    <BerkasRMEPasienView 
+                      noRM={selectedKunjungan.pasien.noRM}
+                      namaPasien={selectedKunjungan.pasien.namaLengkap}
+                      isEmbeddedTab={true}
+                      isSidePanel={true}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-            <Users className="w-16 h-16 mb-4 text-gray-300" />
-            <p className="text-lg font-semibold">Pilih pasien dari daftar antrian sebelah kiri</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+            <div className="w-16 h-16 bg-blue-100/70 text-blue-600 flex items-center justify-center rounded-none mb-4 shadow-sm border border-blue-200">
+              <Users className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 tracking-tight mb-1.5">
+              Pelayanan Rawat Jalan & Poliklinik
+            </h3>
+            <p className="text-sm text-slate-500 max-w-md mb-6 leading-relaxed">
+              Silakan pilih pasien di panel antrean sebelah kiri untuk memulai pemeriksaan, atau gunakan tombol <strong>RME Lalu</strong> untuk meninjau berkas rekam medis pasien secara leluasa sebelum memanggil.
+            </p>
+
+            {antrian.length > 0 && (
+              <div className="bg-white border border-slate-200 p-5 shadow-sm max-w-md w-full text-left space-y-3.5">
+                <div className="flex justify-between items-center border-b border-slate-100 pb-2.5">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-blue-600" />
+                    Pasien Antrean Terdepan
+                  </span>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200">
+                    No. {antrian[0].noAntrian}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-slate-900 text-sm">{antrian[0].pasien?.namaLengkap}</h4>
+                  <p className="text-xs text-slate-500 font-mono mt-0.5">
+                    No. RM: {antrian[0].pasien?.noRM} • {antrian[0].poliklinik?.namaPoli || 'Poli'} • {getAge(antrian[0].pasien?.tanggalLahir)} Thn ({antrian[0].pasien?.jenisKelamin})
+                  </p>
+                  {antrian[0].screening?.keluhanUtama && (
+                    <p className="text-xs text-slate-600 italic mt-1.5 bg-slate-50 p-2 border border-slate-200">
+                      &quot;{antrian[0].screening.keluhanUtama}&quot;
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRmePreview(antrian[0].pasien?.noRM, antrian[0].pasien?.namaLengkap, antrian[0])}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                    Buka Berkas RME Lengkap
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePilihPasien(antrian[0])}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors"
+                  >
+                    <Stethoscope className="w-3.5 h-3.5" />
+                    Mulai Periksa
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -603,13 +904,6 @@ function DokterRawatJalanContent() {
         isScreeningModalOpen={isScreeningModalOpen} 
         setIsScreeningModalOpen={setIsScreeningModalOpen} 
         screeningData={screeningData} 
-      />
-
-      {/* RIWAYAT RME MODAL */}
-      <RiwayatRMEModal
-        isOpen={isRiwayatModalOpen}
-        onClose={() => setIsRiwayatModalOpen(false)}
-        noRM={selectedKunjungan?.pasien?.noRM || ''}
       />
 
       {/* LAB RESULT MODAL COMPONENT */}

@@ -94,7 +94,7 @@ export default function AdminDashboardPage() {
 
   const fetchOnlineBookings = async () => {
     try {
-      const res = await portalPasienService.getFaskesBookings({ faskesId: user?.faskesId });
+      const res = await portalPasienService.getFaskesBookings({ faskesId: user?.faskesId || undefined });
       if (res.success && res.data) {
         setOnlineBookings(res.data);
       }

@@ -50,7 +50,7 @@ export default function RMEDokterViewerPage() {
           setError(res.message || 'Gagal memuat data riwayat');
         }
       } catch (err: any) {
-        setError(err.message || 'Terjadi kesalahan saat mengambil data');
+        setError(err.response?.data?.message || err.message || 'Terjadi kesalahan saat mengambil data');
       } finally {
         setIsLoading(false);
       }
@@ -109,13 +109,18 @@ export default function RMEDokterViewerPage() {
   }
 
   if (error || !pasienData) {
+    const isForbidden = error.toLowerCase().includes('akses ditolak') || error.toLowerCase().includes('403') || error.toLowerCase().includes('wewenang');
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center pb-20 p-6 text-center">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-md w-full">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Data Tidak Ditemukan</h2>
-          <p className="text-slate-500 mb-6">{error || 'Pasien ini mungkin belum memiliki riwayat kunjungan yang selesai.'}</p>
-          <Link href="/dokter/rme-dokter" className="inline-block px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        <div className="bg-white p-8 rounded-none shadow-sm border border-slate-200 max-w-lg w-full">
+          <AlertCircle className={`w-16 h-16 mx-auto mb-4 ${isForbidden ? 'text-amber-500' : 'text-red-500'}`} />
+          <h2 className="text-xl font-black text-slate-800 mb-2">
+            {isForbidden ? 'Akses Dibatasi: Privasi Rekam Medis' : 'Data Tidak Ditemukan'}
+          </h2>
+          <p className="text-slate-600 text-sm leading-relaxed mb-6 font-medium">
+            {error || 'Pasien ini mungkin belum memiliki riwayat kunjungan yang selesai.'}
+          </p>
+          <Link href="/dokter/rme-dokter" className="inline-block px-6 py-2.5 bg-blue-600 text-white text-xs font-bold uppercase tracking-wider hover:bg-blue-700 transition-colors">
             Kembali ke Daftar Riwayat
           </Link>
         </div>

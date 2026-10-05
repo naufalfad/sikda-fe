@@ -2,8 +2,10 @@ import api from './api';
 
 export const masterService = {
   // Master Obat
-  getObat: async (search?: string) => {
-    const params = search ? { search } : {};
+  getObat: async (search?: string, faskesId?: string) => {
+    const params: any = {};
+    if (search) params.search = search;
+    if (faskesId) params.faskesId = faskesId;
     const res = await api.get('/master/obat', { params });
     return res.data;
   },
@@ -71,8 +73,10 @@ export const masterService = {
   },
 
   // Master Vaksin
-  getVaksin: async () => {
-    const res = await api.get('/master/vaksin');
+  getVaksin: async (faskesId?: string) => {
+    const params: any = {};
+    if (faskesId) params.faskesId = faskesId;
+    const res = await api.get('/master/vaksin', { params });
     return res.data;
   },
 

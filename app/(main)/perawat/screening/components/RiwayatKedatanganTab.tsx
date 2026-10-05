@@ -28,7 +28,7 @@ export default function RiwayatKedatanganTab({ noRM }: RiwayatKedatanganTabProps
           setError(res.message || 'Gagal mengambil riwayat kunjungan.');
         }
       } catch (err: any) {
-        setError(err.message || 'Terjadi kesalahan jaringan.');
+        setError(err.response?.data?.message || err.message || 'Terjadi kesalahan jaringan.');
       } finally {
         setIsLoading(false);
       }

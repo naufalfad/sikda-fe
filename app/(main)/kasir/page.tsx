@@ -160,6 +160,12 @@ export default function KasirPage() {
                     <div className="text-[10px] sm:text-xs text-gray-600 flex flex-wrap items-center gap-x-1 mt-0.5">
                       <span className="text-emerald-600 font-semibold truncate">{k.poliklinik?.namaPoli}</span>
                     </div>
+                    {k.tagihan && (
+                      <div className="text-[11px] font-bold text-slate-700 mt-1.5 flex items-center justify-between border-t border-slate-100 pt-1">
+                        <span className="text-slate-400 text-[10px]">{k.tagihan.details?.length || 0} Layanan/Obat</span>
+                        <span className="text-emerald-700 font-mono font-black">{formatRupiah(k.tagihan.totalBiaya)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

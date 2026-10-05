@@ -8,7 +8,8 @@ import {
   Radio, 
   Syringe, 
   Pill, 
-  ClipboardList 
+  ClipboardList,
+  Clock
 } from 'lucide-react';
 
 export interface SoapTabItem {
@@ -22,6 +23,7 @@ export const SOAP_TABS: SoapTabItem[] = [
   { id: 'SOAP_O', label: 'O (Objektif)', icon: <Stethoscope className="w-4 h-4 mr-2" /> },
   { id: 'SOAP_A', label: 'A (Asesmen & Diagnosa)', icon: <FileText className="w-4 h-4 mr-2" /> },
   { id: 'SOAP_P', label: 'P (Plan)', icon: <Activity className="w-4 h-4 mr-2" /> },
+  { id: 'RIWAYAT_RME', label: 'Riwayat RME Pasien', icon: <Clock className="w-4 h-4 mr-2 text-indigo-600" /> },
   { id: 'LABORATORIUM', label: 'Laboratorium', icon: <TestTubes className="w-4 h-4 mr-2 text-amber-500" /> },
   { id: 'RADIOLOGI', label: 'Radiologi', icon: <Radio className="w-4 h-4 mr-2 text-purple-500" /> },
   { id: 'TINDAKAN', label: 'Tindakan Medis (ICD-9)', icon: <Syringe className="w-4 h-4 mr-2 text-blue-500" /> },

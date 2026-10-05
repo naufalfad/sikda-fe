@@ -1,5 +1,4 @@
-import React from 'react';
-import { User, Clock, Heart, Activity, Thermometer, ShieldAlert, Sparkles } from 'lucide-react';
+import { User, Clock, Heart, Activity, Thermometer, ShieldAlert, Sparkles, Columns, Users } from 'lucide-react';
 
 interface PatientHeaderProps {
   selectedKunjungan: any;
@@ -7,7 +6,13 @@ interface PatientHeaderProps {
   alergiList?: any[];
   getAge: (dob: string) => number;
   setIsScreeningModalOpen: (isOpen: boolean) => void;
-  setIsRiwayatModalOpen: (isOpen: boolean) => void;
+  setIsRiwayatModalOpen?: (isOpen: boolean) => void;
+  onOpenRiwayatTab?: () => void;
+  showSideRmePanel?: boolean;
+  onToggleSideRmePanel?: () => void;
+  isQueueCollapsed?: boolean;
+  onToggleQueue?: () => void;
+  queueCount?: number;
 }
 
 export default function PatientHeader({
@@ -16,7 +21,13 @@ export default function PatientHeader({
   alergiList = [],
   getAge,
   setIsScreeningModalOpen,
-  setIsRiwayatModalOpen
+  setIsRiwayatModalOpen,
+  onOpenRiwayatTab,
+  showSideRmePanel = false,
+  onToggleSideRmePanel,
+  isQueueCollapsed = false,
+  onToggleQueue,
+  queueCount = 0,
 }: PatientHeaderProps) {
   if (!selectedKunjungan) return null;
 
@@ -105,6 +116,23 @@ export default function PatientHeader({
 
           {/* Quick Action Modal Buttons */}
           <div className="flex items-center gap-2">
+            {/* Toggle Panel Antrean Pasien */}
+            {onToggleQueue && (
+              <button 
+                type="button"
+                onClick={onToggleQueue}
+                className={`px-3 py-1.5 rounded-none font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm border ${
+                  !isQueueCollapsed 
+                    ? 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200' 
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                }`}
+                title={!isQueueCollapsed ? "Sembunyikan Antrean (Perlebar Ruang Periksa)" : "Buka Panel Antrean Pasien"}
+              >
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>Antrean ({queueCount})</span>
+              </button>
+            )}
+
             <button 
               onClick={() => setIsScreeningModalOpen(true)}
               className="bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-none font-bold text-xs flex items-center transition-colors shadow-sm"
@@ -112,12 +140,36 @@ export default function PatientHeader({
               <User className="w-3.5 h-3.5 mr-1.5" />
               Screening Triage
             </button>
+            {/* Toggle Panel RME Berdampingan (Side-by-Side) */}
+            {onToggleSideRmePanel && (
+              <button 
+                type="button"
+                onClick={onToggleSideRmePanel}
+                className={`px-3 py-1.5 rounded-none font-bold text-xs flex items-center transition-all shadow-sm border ${
+                  showSideRmePanel 
+                    ? 'bg-indigo-600 text-white border-indigo-700 hover:bg-indigo-700' 
+                    : 'bg-indigo-50 text-indigo-700 border-indigo-300 hover:bg-indigo-100'
+                }`}
+                title={showSideRmePanel ? "Sembunyikan Panel RME Bersisian" : "Buka Panel RME Berdampingan (Side-by-Side)"}
+              >
+                <Columns className="w-3.5 h-3.5 mr-1.5" />
+                {showSideRmePanel ? 'Sembunyikan RME' : 'RME Berdampingan'}
+              </button>
+            )}
+
             <button 
-              onClick={() => setIsRiwayatModalOpen(true)}
-              className="bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-none font-bold text-xs flex items-center transition-colors shadow-sm"
+              onClick={() => {
+                if (onOpenRiwayatTab) {
+                  onOpenRiwayatTab();
+                } else if (setIsRiwayatModalOpen) {
+                  setIsRiwayatModalOpen(true);
+                }
+              }}
+              className="bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 px-3 py-1.5 rounded-none font-bold text-xs flex items-center transition-colors shadow-sm"
+              title="Buka Tab Berkas Riwayat RME Pasien Penuh"
             >
-              <Clock className="w-3.5 h-3.5 mr-1.5" />
-              Riwayat RME
+              <Clock className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
+              Tab RME Penuh
             </button>
           </div>
 

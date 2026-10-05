@@ -282,11 +282,16 @@ export default function MasterObatPage() {
                 obatList.map((obat) => (
                   <tr key={obat.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="w-12 h-12 rounded-none bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
-                        {obat.gambarUrl ? (
-                          <img src={obat.gambarUrl} alt={obat.namaObat} className="w-full h-full object-cover" />
-                        ) : (
-                          <Pill className="w-5 h-5 text-gray-400" />
+                      <div className="w-12 h-12 rounded-none bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden relative group">
+                        <img 
+                          src={obat.gambarUrl || (obat.kategori === 'BMHP' ? '/images/logistik/bmhp.jpg' : '/images/logistik/obat.jpg')} 
+                          alt={obat.namaObat} 
+                          className="w-full h-full object-cover" 
+                        />
+                        {!obat.gambarUrl && (
+                          <span className="absolute bottom-0 inset-x-0 bg-gray-900/60 text-[8px] text-white text-center py-0.5 font-medium leading-none">
+                            Default
+                          </span>
                         )}
                       </div>
                     </td>
@@ -360,7 +365,9 @@ export default function MasterObatPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Gambar Obat</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Foto Kemasan Obat / BMHP
+                </label>
                 <input 
                   type="file" 
                   accept="image/*"
@@ -372,11 +379,26 @@ export default function MasterObatPage() {
                   }} 
                   className="w-full border border-gray-300 p-2 text-sm outline-none focus:ring-1 focus:ring-pink-500 rounded-none bg-white file:mr-4 file:py-1 file:px-3 file:rounded-none file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 cursor-pointer" 
                 />
-                {previewUrl && (
-                  <div className="mt-3 w-24 h-24 border border-gray-200 bg-gray-50 flex items-center justify-center p-1">
-                    <img src={previewUrl} alt="Preview" className="max-w-full max-h-full object-contain" />
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="w-20 h-20 border border-gray-200 bg-gray-50 flex items-center justify-center p-1 overflow-hidden relative">
+                    <img 
+                      src={previewUrl || (formData.kategori === 'BMHP' ? '/images/logistik/bmhp.jpg' : '/images/logistik/obat.jpg')} 
+                      alt="Preview" 
+                      className="max-w-full max-h-full object-contain" 
+                    />
                   </div>
-                )}
+                  <div className="text-xs text-gray-500">
+                    {previewUrl ? (
+                      <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                        ✓ Foto terpasang
+                      </span>
+                    ) : (
+                      <span className="text-amber-600 font-medium">
+                        Saat ini menggunakan foto standar bawaan sistem. Pilih gambar di atas untuk mengunggah foto kemasan fisik Anda.
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 flex justify-end gap-3 mt-4">

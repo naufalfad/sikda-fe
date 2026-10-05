@@ -515,14 +515,16 @@ export default function DinkesMedicinesPage() {
                             <td className="py-4 px-6 text-center">
                               <span
                                 className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full ${
-                                  v.statusStok === 'HABIS'
+                                  v.statusStok === 'HABIS_TERGANTIKAN'
+                                    ? 'bg-slate-100 text-slate-700 border border-slate-300'
+                                    : v.statusStok === 'HABIS'
                                     ? 'bg-rose-100 text-rose-800 border border-rose-200'
                                     : v.statusStok === 'KRITIS'
                                     ? 'bg-orange-100 text-orange-800 border border-orange-200'
                                     : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                 }`}
                               >
-                                {v.statusStok}
+                                {v.statusStok === 'HABIS_TERGANTIKAN' ? 'HABIS (Ada Batch Baru)' : v.statusStok}
                               </span>
                             </td>
                           </tr>

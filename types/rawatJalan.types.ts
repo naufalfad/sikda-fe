@@ -20,6 +20,7 @@ export interface AntrianDokter {
   poliklinik: {
     id: string;
     namaPoli: string;
+    faskesId?: string;
   };
   dokterTujuan?: {
     id: string;
@@ -29,6 +30,7 @@ export interface AntrianDokter {
   rekamMedis?: RekamMedis | null;
   orderLab?: OrderLaboratorium | null;
   diagnosis?: DiagnosisPasien[];
+  resep?: any[];
 
   tanggalRegistrasi: string;
   jamRegistrasi: string;
@@ -196,6 +198,7 @@ export interface ResepPayloadItem {
   qty: number;
   signa: string;
   catatan?: string;
+  noBatch?: string;
 }
 
 export interface RujukanPayload {

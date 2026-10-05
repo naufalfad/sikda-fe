@@ -7,7 +7,7 @@ interface DoctorActionBarProps {
   handleSaveSOAP: () => void;
   handleSelesaikan: () => void;
   isSaving: boolean;
-  isMenungguLab: boolean;
+  isMenungguLab?: boolean;
 }
 
 export default function DoctorActionBar({
@@ -16,7 +16,7 @@ export default function DoctorActionBar({
   handleSaveSOAP,
   handleSelesaikan,
   isSaving,
-  isMenungguLab,
+  isMenungguLab = false,
 }: DoctorActionBarProps) {
   return (
     <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md px-6 py-3.5 border-t border-gray-200 shadow-2xl z-30 flex flex-wrap justify-between items-center gap-3">
@@ -43,7 +43,7 @@ export default function DoctorActionBar({
 
         <button 
           onClick={handleSaveSOAP} 
-          disabled={isSaving || isMenungguLab} 
+          disabled={isSaving} 
           className="px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold transition-all text-xs rounded-none shadow-sm disabled:opacity-50 flex items-center gap-1.5"
         >
           <Save className="w-3.5 h-3.5 text-gray-500" />
@@ -54,7 +54,7 @@ export default function DoctorActionBar({
       {/* RIGHT: PRIMARY COMPLETION ACTION */}
       <button 
         onClick={handleSelesaikan} 
-        disabled={isSaving || isMenungguLab} 
+        disabled={isSaving} 
         className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-none shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
       >
         <CheckCircle2 className="w-4 h-4 text-emerald-300" />

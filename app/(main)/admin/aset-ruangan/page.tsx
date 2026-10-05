@@ -22,7 +22,8 @@ import {
   Sparkles,
   ShieldCheck,
   FileCheck2,
-  Send
+  Send,
+  X
 } from 'lucide-react';
 import { asetRuanganService } from '../../../../services/asetRuangan.service';
 import { 
@@ -124,6 +125,19 @@ export default function AsetRuanganPage() {
     tanggalJadwal: new Date().toISOString().split('T')[0],
     pelaksanaVendor: '',
     biayaPemeliharaan: 0,
+    catatan: ''
+  });
+
+  const [showSelesaiModal, setShowSelesaiModal] = useState(false);
+  const [selectedPemeliharaan, setSelectedPemeliharaan] = useState<RiwayatPemeliharaanAset | null>(null);
+  const [selesaiForm, setSelesaiForm] = useState({
+    tanggalPelaksanaan: new Date().toISOString().split('T')[0],
+    tanggalKalibrasiExpired: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+    nomorSertifikatKalibrasi: '',
+    pelaksanaVendor: '',
+    hasilKegiatan: 'LAIK_PAKAI',
+    biayaPemeliharaan: 0,
+    status: 'SELESAI' as const,
     catatan: ''
   });
 
@@ -252,6 +266,25 @@ export default function AsetRuanganPage() {
   const handleQuickStatusBed = async (id: string, statusBed: 'TERSEDIA' | 'TERISI' | 'DIBERSIHKAN' | 'PERBAIKAN') => {
     try {
       await asetRuanganService.updateBed(id, { statusBed });
+      if (statusBed === 'DIBERSIHKAN') {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'info',
+          title: 'Bed masuk proses pembersihan. Data pasien sebelumnya telah dikosongkan.',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      } else if (statusBed === 'TERSEDIA') {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Tempat tidur telah siap dan kosong untuk pasien berikutnya.',
+          timer: 2500,
+          showConfirmButton: false
+        });
+      }
       loadTabData();
     } catch (err: any) {
       Swal.fire('Gagal', err.message, 'error');
@@ -322,6 +355,59 @@ export default function AsetRuanganPage() {
       loadTabData();
     } catch (err: any) {
       Swal.fire('Gagal', err.response?.data?.message || err.message, 'error');
+    }
+  };
+
+  const handleOpenSelesaikanPemeliharaan = (p: RiwayatPemeliharaanAset) => {
+    setSelectedPemeliharaan(p);
+    const defaultTglPelaksanaan = p.tanggalPelaksanaan 
+      ? new Date(p.tanggalPelaksanaan).toISOString().split('T')[0]
+      : (p.tanggalJadwal ? new Date(p.tanggalJadwal).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+    
+    let defaultTglExpired = '';
+    if (p.tanggalKalibrasiExpired) {
+      defaultTglExpired = new Date(p.tanggalKalibrasiExpired).toISOString().split('T')[0];
+    } else {
+      const d = new Date(defaultTglPelaksanaan);
+      d.setFullYear(d.getFullYear() + 1);
+      defaultTglExpired = d.toISOString().split('T')[0];
+    }
+
+    const validHasil = ['LAIK_PAKAI', 'LULUS_UJI', 'SELESAI_SERVIS', 'TIDAK_LAIK_PAKAI'];
+    const initialHasil = (p.hasilKegiatan && validHasil.includes(p.hasilKegiatan)) 
+      ? p.hasilKegiatan 
+      : 'LAIK_PAKAI';
+
+    setSelesaiForm({
+      tanggalPelaksanaan: defaultTglPelaksanaan,
+      tanggalKalibrasiExpired: defaultTglExpired,
+      nomorSertifikatKalibrasi: p.nomorSertifikatKalibrasi || '',
+      pelaksanaVendor: p.pelaksanaVendor || '',
+      hasilKegiatan: initialHasil,
+      biayaPemeliharaan: p.biayaPemeliharaan || 0,
+      status: 'SELESAI',
+      catatan: p.catatan || ''
+    });
+    setShowSelesaiModal(true);
+  };
+
+  const handleSaveSelesaiPemeliharaan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPemeliharaan) return;
+    try {
+      await asetRuanganService.updatePemeliharaan(selectedPemeliharaan.id, selesaiForm);
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil Disimpan',
+        text: 'Data kalibrasi/pemeliharaan dan status kelayakan alat berhasil diperbarui.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setShowSelesaiModal(false);
+      setSelectedPemeliharaan(null);
+      loadTabData();
+    } catch (err: any) {
+      Swal.fire('Gagal Menyimpan', err.response?.data?.message || err.message, 'error');
     }
   };
 
@@ -624,7 +710,8 @@ export default function AsetRuanganPage() {
                   ruanganId: ruangans[0]?.id || '',
                   nomorBed: `BED-${Math.floor(10 + Math.random() * 90)}`,
                   kelasKamar: 'NON_KELAS_IGD',
-                  statusBed: 'TERSEDIA'
+                  statusBed: 'TERSEDIA',
+                  gambarUrl: ''
                 });
                 setShowBedModal(true);
               }}
@@ -692,14 +779,25 @@ export default function AsetRuanganPage() {
                           {b.kelasKamar.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      {b.kunjunganAktif ? (
+                      {b.statusBed === 'TERISI' && b.kunjunganAktif ? (
                         <div className="bg-red-50 border border-red-200 p-2 rounded text-[11px] text-red-900 mt-1">
                           <p className="font-bold truncate">👤 {b.kunjunganAktif.pasien?.namaLengkap}</p>
                           <p className="text-[10px] text-red-600 font-mono">RM: {b.kunjunganAktif.pasien?.noRM}</p>
                         </div>
+                      ) : b.statusBed === 'DIBERSIHKAN' ? (
+                        <div className="bg-amber-50 border border-amber-200 p-2 rounded text-[11px] text-amber-900 mt-1">
+                          <p className="font-bold flex items-center gap-1 text-amber-800">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Proses Pembersihan
+                          </p>
+                          <p className="text-[10px] text-amber-700">Sterilisasi tempat tidur untuk pasien baru</p>
+                        </div>
+                      ) : b.statusBed === 'PERBAIKAN' ? (
+                        <p className="text-[11px] text-gray-500 font-medium flex items-center gap-1 mt-1">
+                          <Wrench className="w-3 h-3 text-gray-400" /> Sedang perbaikan teknis
+                        </p>
                       ) : (
                         <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">
-                          <CheckCircle2 className="w-3 h-3" /> Siap digunakan pasien
+                          <CheckCircle2 className="w-3 h-3" /> Kosong & siap digunakan
                         </p>
                       )}
                     </div>
@@ -976,10 +1074,11 @@ export default function AsetRuanganPage() {
                   <th className="py-3 px-4">Alat Kesehatan</th>
                   <th className="py-3 px-4">Ruangan</th>
                   <th className="py-3 px-4">Jenis Kegiatan</th>
-                  <th className="py-3 px-4">Tanggal Pelaksanaan</th>
+                  <th className="py-3 px-4">Tgl Rencana / Pelaksanaan</th>
                   <th className="py-3 px-4">Expired Kalibrasi</th>
                   <th className="py-3 px-4">Vendor / Teknisi</th>
                   <th className="py-3 px-4">Hasil & Status</th>
+                  <th className="py-3 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -1008,18 +1107,63 @@ export default function AsetRuanganPage() {
                       <span className="font-medium text-gray-900">{p.jenisKegiatan.replace(/_/g, ' ')}</span>
                     </td>
                     <td className="py-3 px-4 text-xs font-mono">
-                      {p.tanggalPelaksanaan ? new Date(p.tanggalPelaksanaan).toLocaleDateString('id-ID') : '-'}
+                      <div>
+                        {p.tanggalPelaksanaan ? (
+                          <span className="text-emerald-700 font-semibold">
+                            {new Date(p.tanggalPelaksanaan).toLocaleDateString('id-ID')}
+                          </span>
+                        ) : (
+                          <span className="text-gray-500">
+                            Rencana: {p.tanggalJadwal ? new Date(p.tanggalJadwal).toLocaleDateString('id-ID') : '-'}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4 text-xs font-mono font-bold text-amber-700">
                       {p.tanggalKalibrasiExpired ? new Date(p.tanggalKalibrasiExpired).toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td className="py-3 px-4">{p.pelaksanaVendor || '-'}</td>
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                        p.status === 'SELESAI' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {p.status}
-                      </span>
+                      <div className="space-y-1">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                          p.status === 'SELESAI' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {p.status}
+                        </span>
+                        {p.hasilKegiatan && (
+                          <p className="text-[11px] font-medium text-gray-700">
+                            {p.hasilKegiatan.replace(/_/g, ' ')}
+                          </p>
+                        )}
+                        {p.nomorSertifikatKalibrasi && (
+                          <p className="text-[10px] text-gray-500 font-mono">
+                            No: {p.nomorSertifikatKalibrasi}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-center whitespace-nowrap">
+                      <button
+                        onClick={() => handleOpenSelesaikanPemeliharaan(p)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition ${
+                          p.status === 'TERJADWAL'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            : 'bg-gray-100 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200'
+                        }`}
+                        title={p.status === 'TERJADWAL' ? 'Selesaikan & Catat Hasil Kalibrasi' : 'Lihat / Edit Hasil'}
+                      >
+                        {p.status === 'TERJADWAL' ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Selesaikan</span>
+                          </>
+                        ) : (
+                          <>
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Hasil</span>
+                          </>
+                        )}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1673,6 +1817,191 @@ export default function AsetRuanganPage() {
                   className="px-4 py-2 bg-amber-600 text-white rounded text-sm font-semibold hover:bg-amber-700"
                 >
                   Jadwalkan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SELESAIKAN KALIBRASI & PEMELIHARAAN */}
+      {showSelesaiModal && selectedPemeliharaan && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 my-8 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  Selesaikan & Catat Hasil Kalibrasi
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Update hasil uji kelayakan fisik alat dan perbarui masa aktif sertifikat
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowSelesaiModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Aset Info Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-4 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg bg-white border border-gray-200 overflow-hidden shrink-0">
+                <img 
+                  src={getAsetImageUrl(selectedPemeliharaan.aset)} 
+                  alt={selectedPemeliharaan.aset?.namaAset}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/images/aset/usg.jpg";
+                  }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-sm text-gray-900 truncate">
+                  {selectedPemeliharaan.aset?.namaAset}
+                </h4>
+                <div className="flex items-center gap-2 text-xs text-gray-500 font-mono mt-0.5">
+                  <span>{selectedPemeliharaan.aset?.kodeAset}</span>
+                  <span>•</span>
+                  <span>Ruang: {selectedPemeliharaan.aset?.ruangan?.namaRuangan || '-'}</span>
+                </div>
+                <div className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-semibold rounded mt-1">
+                  Kegiatan: {selectedPemeliharaan.jenisKegiatan.replace(/_/g, ' ')}
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveSelesaiPemeliharaan} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Tanggal Pelaksanaan Riil *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={selesaiForm.tanggalPelaksanaan}
+                    onChange={(e) => setSelesaiForm({ ...selesaiForm, tanggalPelaksanaan: e.target.value })}
+                    className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Expired Kalibrasi Baru *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={selesaiForm.tanggalKalibrasiExpired}
+                    onChange={(e) => setSelesaiForm({ ...selesaiForm, tanggalKalibrasiExpired: e.target.value })}
+                    className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
+                  />
+                  <span className="text-[10px] text-gray-400">Umumnya 1 tahun dari uji</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Hasil Pengujian Fisik *
+                  </label>
+                  <select
+                    required
+                    value={selesaiForm.hasilKegiatan}
+                    onChange={(e) => setSelesaiForm({ ...selesaiForm, hasilKegiatan: e.target.value })}
+                    className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="LAIK_PAKAI">✅ LAIK PAKAI (Lolos Uji & Normal)</option>
+                    <option value="LULUS_UJI">✅ LULUS UJI KALIBRASI</option>
+                    <option value="SELESAI_SERVIS">🛠️ SELESAI SERVIS BERKALA</option>
+                    <option value="TIDAK_LAIK_PAKAI">❌ TIDAK LAIK PAKAI (Gagal Uji)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Status Kegiatan *
+                  </label>
+                  <select
+                    required
+                    value={selesaiForm.status}
+                    onChange={(e: any) => setSelesaiForm({ ...selesaiForm, status: e.target.value })}
+                    className="w-full border p-2 rounded text-sm font-bold text-emerald-800 bg-emerald-50 focus:ring-2 focus:ring-emerald-500 outline-none"
+                  >
+                    <option value="SELESAI">SELESAI (Kegiatan Tuntas)</option>
+                    <option value="TERJADWAL">TERJADWAL (Masih Berjalan)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    No. Sertifikat / Stiker Kalibrasi
+                  </label>
+                  <input
+                    type="text"
+                    value={selesaiForm.nomorSertifikatKalibrasi}
+                    onChange={(e) => setSelesaiForm({ ...selesaiForm, nomorSertifikatKalibrasi: e.target.value })}
+                    className="w-full border p-2 rounded text-sm text-black placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 outline-none font-mono"
+                    placeholder="Contoh: BPFK-2026-KLB-098"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Realisasi Biaya (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    value={selesaiForm.biayaPemeliharaan}
+                    onChange={(e) => setSelesaiForm({ ...selesaiForm, biayaPemeliharaan: parseFloat(e.target.value) || 0 })}
+                    className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Vendor / Teknisi Penguji
+                </label>
+                <input
+                  type="text"
+                  value={selesaiForm.pelaksanaVendor}
+                  onChange={(e) => setSelesaiForm({ ...selesaiForm, pelaksanaVendor: e.target.value })}
+                  className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
+                  placeholder="Nama Balai Kalibrasi / Teknisi Vendor"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Catatan Pengujian / Rekomendasi
+                </label>
+                <textarea
+                  rows={2}
+                  value={selesaiForm.catatan}
+                  onChange={(e) => setSelesaiForm({ ...selesaiForm, catatan: e.target.value })}
+                  className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
+                  placeholder="Hasil pengecekan fisik, toleransi sensor, penggantian sparepart, dll."
+                ></textarea>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowSelesaiModal(false)}
+                  className="px-4 py-2 border rounded text-sm text-gray-600 hover:bg-gray-50 font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 text-white rounded text-sm font-bold hover:bg-emerald-700 transition flex items-center gap-1.5 shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Simpan & Selesaikan
                 </button>
               </div>
             </form>

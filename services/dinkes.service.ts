@@ -78,7 +78,7 @@ export interface VaccineStockItem {
   statusExpired: 'AMAN' | 'WASPADA' | 'SEGERA_KADALUWARSA' | 'KADALUWARSA';
   stok: number;
   stokMinimum: number;
-  statusStok: 'AMAN' | 'KRITIS' | 'HABIS';
+  statusStok: 'AMAN' | 'KRITIS' | 'HABIS' | 'HABIS_TERGANTIKAN';
   suhuPenyimpanan: string;
 }
 
@@ -475,4 +475,24 @@ export const dinkesService = {
     const res = await api.get(`/dinkes/faskes/${id}`);
     return res.data?.data;
   },
+
+  /** AI Automated Executive Briefing */
+  getFaskesAiReport: async (faskesId: string, params?: { startDate?: string; endDate?: string }): Promise<AiReportResponse> => {
+    const res = await api.get(`/dinkes/ai/report/faskes/${faskesId}`, { params });
+    return res.data;
+  },
+
+  getWilayahAiSitRep: async (params?: { startDate?: string; endDate?: string; kecamatan?: string }): Promise<AiReportResponse> => {
+    const res = await api.get('/dinkes/ai/report/wilayah', { params });
+    return res.data;
+  },
 };
+
+export interface AiReportResponse {
+  success: boolean;
+  scope: 'FASKES' | 'WILAYAH';
+  generatedAt: string;
+  reportMarkdown: string;
+  rawMetrics: any;
+}
+

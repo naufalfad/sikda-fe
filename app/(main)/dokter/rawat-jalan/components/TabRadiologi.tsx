@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 interface TabRadiologiProps {
   kunjunganId: string;
   isPoliGigi?: boolean;
+  setActiveTab?: (tab: string) => void;
 }
 
 const MASTER_RADIOLOGI_LOINC = [
@@ -17,7 +18,7 @@ const MASTER_RADIOLOGI_LOINC = [
   { kodeLoinc: '95611-0', namaPemeriksaan: 'Rontgen Panoramic / Dental Occlusal (XR Teeth Occlusal)', modalitas: 'XR', bodySiteCode: '39481002', bodySiteDisplay: 'Upper dental arch structure' },
 ];
 
-export default function TabRadiologi({ kunjunganId }: TabRadiologiProps) {
+export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologiProps) {
   const [prioritas, setPrioritas] = useState<'routine' | 'stat'>('routine');
   const [catatan, setCatatan] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,13 +81,16 @@ export default function TabRadiologi({ kunjunganId }: TabRadiologiProps) {
         Swal.fire({
           icon: 'success',
           title: 'Order Radiologi Berhasil!',
-          text: `Nomor ACSN: ${res.data.acsn}`,
+          text: `Nomor ACSN: ${res.data.acsn}. Permintaan rujukan radiologi tercatat untuk diserahkan ke pasien.`,
           timer: 2000,
           showConfirmButton: false,
         });
         setSelectedDetails([]);
         setCatatan('');
         fetchOrders();
+        if (setActiveTab) {
+          setActiveTab('RESEP');
+        }
       }
     } catch (error: any) {
       Swal.fire('Gagal', error?.response?.data?.message || 'Gagal mengirim order radiologi', 'error');

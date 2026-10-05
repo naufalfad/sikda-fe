@@ -99,9 +99,14 @@ export default function TabLaboratorium({
                 catatanKlinis: labNote,
                 tests: labOrders
               });
-              Swal.fire('Order Terkirim!', 'Status antrean pasien menjadi MENUNGGU LAB.', 'success');
-              clearSelection();
-              fetchAntrian();
+              Swal.fire({
+                icon: 'success',
+                title: 'Permintaan Lab Tersimpan!',
+                text: 'Permintaan rujukan lab berhasil dicatat. Lembar rujukan dapat diserahkan ke pasien dan Anda dapat melanjutkan pemeriksaan.',
+                timer: 2000,
+                showConfirmButton: false,
+              });
+              setActiveTab('TINDAKAN');
             } catch (error) {
               // Error ditangani oleh store
             }
@@ -109,7 +114,7 @@ export default function TabLaboratorium({
           className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-none shadow-sm transition-colors flex items-center gap-2"
         >
           {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <TestTubes className="w-5 h-5" />}
-          {isSaving ? 'Mengirim...' : 'Kirim Order Lab Sekarang'}
+          {isSaving ? 'Menyimpan...' : 'Simpan Permintaan Lab & Lanjut ➔'}
         </button>
       </div>
       

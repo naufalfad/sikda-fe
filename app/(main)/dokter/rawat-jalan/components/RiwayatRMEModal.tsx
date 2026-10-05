@@ -13,6 +13,7 @@ interface RiwayatRMEModalProps {
   isOpen: boolean;
   onClose: () => void;
   noRM: string;
+  namaPasien?: string;
 }
 
 function KunjunganCard({ kunjungan }: { kunjungan: any }) {
@@ -146,7 +147,7 @@ function KunjunganCard({ kunjungan }: { kunjungan: any }) {
   );
 }
 
-export default function RiwayatRMEModal({ isOpen, onClose, noRM }: RiwayatRMEModalProps) {
+export default function RiwayatRMEModal({ isOpen, onClose, noRM, namaPasien }: RiwayatRMEModalProps) {
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -163,7 +164,7 @@ export default function RiwayatRMEModal({ isOpen, onClose, noRM }: RiwayatRMEMod
         setError(res.message || 'Gagal mengambil riwayat medis.');
       }
     } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan saat memuat riwayat medis.');
+      setError(err.response?.data?.message || err.message || 'Terjadi kesalahan saat memuat riwayat medis.');
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +192,14 @@ export default function RiwayatRMEModal({ isOpen, onClose, noRM }: RiwayatRMEMod
               <Clock className="w-6 h-6 text-indigo-300" />
               Riwayat Rekam Medis (RME)
             </h3>
-            <p className="text-indigo-200 text-sm font-mono mt-1 font-bold">No. RM: <span className="text-white">{noRM}</span></p>
+            <p className="text-indigo-200 text-sm font-mono mt-1 font-bold flex items-center gap-2 flex-wrap">
+              {namaPasien && (
+                <span className="bg-indigo-800 text-white px-2 py-0.5 font-sans font-extrabold text-xs">
+                  {namaPasien}
+                </span>
+              )}
+              <span>No. RM: <strong className="text-white">{noRM}</strong></span>
+            </p>
           </div>
           <button 
             onClick={onClose}
