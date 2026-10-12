@@ -45,8 +45,6 @@ interface MedicineItem {
   totalStok: number;
   prioritasFefoBatch?: BatchInfo | null;
   stokFaskes?: BatchInfo[];
-  batchVaksin?: BatchInfo[];
-  isVaksin?: boolean;
 }
 
 interface PrescribedItem {
@@ -59,7 +57,6 @@ interface PrescribedItem {
   catatan?: string;
   noBatch?: string | null;
   batchDetail?: BatchInfo | null;
-  isVaksin?: boolean;
 }
 
 interface TabResepProps {
@@ -82,7 +79,6 @@ const SIGNA_PRESETS = [
   '1 x 1 Bungkus dilarutkan air',
   'Bila demam / nyeri (prn)',
   'Oleskan tipis 2x sehari (pagi-malam)',
-  '1 Dosis Injeksi IM / SC (Imunisasi)'
 ];
 
 export default function TabResep({
@@ -95,12 +91,11 @@ export default function TabResep({
   onSaveResep,
   isSaving = false
 }: TabResepProps) {
-  // Mode Tab: 'SEMUA' | 'OBAT' | 'BMHP' | 'VAKSIN'
-  const [filterKategori, setFilterKategori] = useState<'SEMUA' | 'OBAT' | 'BMHP' | 'VAKSIN'>('SEMUA');
+  // Mode Tab: 'SEMUA' | 'OBAT' | 'BMHP'
+  const [filterKategori, setFilterKategori] = useState<'SEMUA' | 'OBAT' | 'BMHP'>('SEMUA');
   
   // Data states
   const [obatList, setObatList] = useState<MedicineItem[]>([]);
-  const [vaksinList, setVaksinList] = useState<MedicineItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Active Selected Item for Configuration Form
@@ -110,35 +105,18 @@ export default function TabResep({
   const [inputSigna, setInputSigna] = useState<string>('3 x 1 Tablet sesudah makan');
   const [inputCatatan, setInputCatatan] = useState<string>('');
 
-  // Fetch Master Obat & Master Vaksin
+  // Fetch Master Obat & BMHP
   useEffect(() => {
     let isMounted = true;
     const loadCatalog = async () => {
       setIsLoading(true);
       try {
-        const [resObat, resVaksin] = await Promise.allSettled([
-          masterService.getObat('', faskesId),
-          masterService.getVaksin(faskesId)
-        ]);
-
-        if (isMounted) {
-          if (resObat.status === 'fulfilled' && resObat.value?.data) {
-            setObatList(resObat.value.data);
-          }
-          if (resVaksin.status === 'fulfilled' && resVaksin.value?.data) {
-            const mappedVaksin = (resVaksin.value.data || []).map((v: any) => ({
-              ...v,
-              namaObat: v.namaVaksin,
-              kategori: 'Vaksin Cold-Chain',
-              sediaan: 'Vial',
-              isVaksin: true,
-              stokFaskes: v.batchVaksin || []
-            }));
-            setVaksinList(mappedVaksin);
-          }
+        const resObat = await masterService.getObat('', faskesId);
+        if (isMounted && resObat?.data) {
+          setObatList(resObat.data);
         }
       } catch (err) {
-        console.error('Gagal memuat katalog obat/vaksin:', err);
+        console.error('Gagal memuat katalog obat/BMHP:', err);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -148,22 +126,12 @@ export default function TabResep({
     return () => { isMounted = false; };
   }, [faskesId]);
 
-  // Unified Catalog
-  const fullCatalog = useMemo(() => {
-    return [...obatList, ...vaksinList];
-  }, [obatList, vaksinList]);
-
-  // Filtered Catalog
+  // Filtered Catalog (Obat & BMHP)
   const filteredCatalog = useMemo(() => {
-    return fullCatalog.filter((item) => {
+    return obatList.filter((item) => {
       // 1. Kategori filter
-      if (filterKategori === 'OBAT') {
-        if (item.isVaksin || item.kategori === 'BMHP') return false;
-      } else if (filterKategori === 'BMHP') {
-        if (item.kategori !== 'BMHP') return false;
-      } else if (filterKategori === 'VAKSIN') {
-        if (!item.isVaksin) return false;
-      }
+      if (filterKategori === 'OBAT' && item.kategori === 'BMHP') return false;
+      if (filterKategori === 'BMHP' && item.kategori !== 'BMHP') return false;
 
       // 2. Query search
       if (!obatQuery.trim()) return true;
@@ -175,7 +143,7 @@ export default function TabResep({
 
       return namaMatch || kodeMatch || katMatch || batchMatch;
     });
-  }, [fullCatalog, filterKategori, obatQuery]);
+  }, [obatList, filterKategori, obatQuery]);
 
   // Handle select medicine to configure
   const handleSelectMedicine = (item: MedicineItem) => {
@@ -190,9 +158,7 @@ export default function TabResep({
     setChosenBatch(fefoBatch);
     setInputQty(1);
     
-    if (item.isVaksin) {
-      setInputSigna('1 Dosis Injeksi IM / SC (Imunisasi)');
-    } else if (item.kategori === 'BMHP') {
+    if (item.kategori === 'BMHP') {
       setInputSigna('Gunakan untuk tindakan klinis / ganti balut');
     } else if (item.sediaan?.toLowerCase().includes('sirup')) {
       setInputSigna('3 x 1 Cth (5ml) sesudah makan');
@@ -244,7 +210,6 @@ export default function TabResep({
       catatan: inputCatatan,
       noBatch: chosenBatch?.noBatch || null,
       batchDetail: chosenBatch,
-      isVaksin: selectedForConfig.isVaksin
     };
 
     // Replace if exact same obatId and batch already exists, or append
@@ -315,7 +280,7 @@ export default function TabResep({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-bold text-slate-800">Cari Obat, BMHP, atau Vaksin Tersedia di Faskes</span>
+            <span className="text-sm font-bold text-slate-800">Cari Obat & BMHP Tersedia di Gudang Farmasi Faskes</span>
           </div>
 
           {/* Category Tabs Filter */}
@@ -327,7 +292,7 @@ export default function TabResep({
                 filterKategori === 'SEMUA' ? 'bg-white text-blue-700 shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Semua ({fullCatalog.length})
+              Semua ({obatList.length})
             </button>
             <button
               type="button"
@@ -337,7 +302,7 @@ export default function TabResep({
               }`}
             >
               <Pill className="w-3.5 h-3.5" />
-              Obat Oral/Topikal
+              Obat-Obatan
             </button>
             <button
               type="button"
@@ -347,17 +312,7 @@ export default function TabResep({
               }`}
             >
               <Package className="w-3.5 h-3.5" />
-              BMHP
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterKategori('VAKSIN')}
-              className={`px-3 py-1.5 transition-all flex items-center gap-1 ${
-                filterKategori === 'VAKSIN' ? 'bg-white text-cyan-800 shadow-sm font-black' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Syringe className="w-3.5 h-3.5" />
-              Vaksin Cold-Chain ({vaksinList.length})
+              BMHP Habis Pakai
             </button>
           </div>
         </div>
@@ -368,7 +323,7 @@ export default function TabResep({
             type="text"
             value={obatQuery}
             onChange={(e) => setObatQuery(e.target.value)}
-            placeholder="Ketik nama obat, vaksin, BMHP, atau nomor lot batch (misal: Paracetamol, Spuit, Campak)..."
+            placeholder="Ketik nama obat, BMHP, atau nomor lot batch (misal: Paracetamol, Amoxicillin, Spuit)..."
             className="w-full bg-slate-50 border border-slate-300 px-4 py-3 pl-11 text-sm text-slate-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
           />
           <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
@@ -388,11 +343,11 @@ export default function TabResep({
           {isLoading ? (
             <div className="p-8 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-              Memuat katalog stok & batch logistik Puskesmas...
+              Memuat katalog stok & batch logistik Farmasi...
             </div>
           ) : filteredCatalog.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-sm">
-              Tidak ditemukan obat atau vaksin yang cocok dengan pencarian &quot;{obatQuery}&quot;.
+              Tidak ditemukan obat atau BMHP yang cocok dengan pencarian &quot;{obatQuery}&quot;.
             </div>
           ) : (
             filteredCatalog.slice(0, 10).map((item) => {

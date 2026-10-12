@@ -63,9 +63,11 @@ export const registrationSchema = z.object({
   masaBerlakuAsuransi: z.string().optional().or(z.literal('')),
 
   // Administrasi & Medis
-  poliTujuan: z.string().min(1, 'Poli tujuan wajib dipilih'),
+  poliTujuan: z.string().optional().or(z.literal('')),
   layananTujuan: z.string().optional().or(z.literal('')),
-  dokterTujuan: z.string().min(1, 'Dokter tujuan wajib dipilih'),
+  dokterTujuan: z.string().optional().or(z.literal('')),
+  tempatTidurId: z.string().optional().or(z.literal('')),
+  triase: z.string().optional().or(z.literal('')),
   jenisPelayanan: z.string().min(1, 'Pilih jenis pelayanan'),
   statusPasien: z.enum(['Baru', 'Lama'], { message: 'Pilih status pasien' }),
   noAntrian: z.string().optional().or(z.literal('')),

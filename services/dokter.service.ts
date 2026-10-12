@@ -26,6 +26,7 @@ export interface DokterPayload {
   username: string;
   password?: string;
   poliklinikId?: string;
+  role?: 'DOKTER' | 'DOKTER_UGD';
   nik?: string;
 }
 

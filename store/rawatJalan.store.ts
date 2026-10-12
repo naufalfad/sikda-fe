@@ -38,7 +38,10 @@ interface RawatJalanState {
   setFase: (fase: 1 | 2) => void;
   simpanResep: (resep: any[]) => Promise<void>;
   simpanRujukan: (rujukan: any) => Promise<void>;
+  assignRawatInap: (payload: { tempatTidurId: string; alasanRawatInap?: string; instruksiMedis?: string }) => Promise<void>;
+  dischargeRawatInap: (kunjunganId: string, payload?: { caraKeluar?: string; kondisiDischarge?: string; edukasiPulang?: string; rencanaKontrol?: string }) => Promise<void>;
   pulang: () => Promise<void>;
+  catatMeninggal: (catatan?: string) => Promise<void>;
 
   clearSelection: () => void;
   clearError: () => void;
@@ -317,6 +320,34 @@ export const useRawatJalanStore = create<RawatJalanState>((set, get) => ({
     }
   },
 
+  assignRawatInap: async (payload: { tempatTidurId: string; alasanRawatInap?: string; instruksiMedis?: string }) => {
+    const { selectedKunjungan } = get();
+    if (!selectedKunjungan) return;
+    set({ isSaving: true, error: null });
+    try {
+      await rawatJalanService.assignRawatInap(selectedKunjungan.id, payload);
+      set({ isSaving: false });
+      get().clearSelection();
+      get().fetchAntrian();
+    } catch (err: any) {
+      set({ error: err?.response?.data?.message || 'Gagal mengalihkan pasien ke rawat inap', isSaving: false });
+      throw err;
+    }
+  },
+
+  dischargeRawatInap: async (kunjunganId: string, payload = {}) => {
+    set({ isSaving: true, error: null });
+    try {
+      await rawatJalanService.dischargeRawatInap(kunjunganId, payload);
+      set({ isSaving: false });
+      get().clearSelection();
+      get().fetchAntrian();
+    } catch (err: any) {
+      set({ error: err?.response?.data?.message || 'Gagal memulangkan pasien rawat inap', isSaving: false });
+      throw err;
+    }
+  },
+
   pulang: async () => {
     const { selectedKunjungan } = get();
     if (!selectedKunjungan) return;
@@ -328,6 +359,21 @@ export const useRawatJalanStore = create<RawatJalanState>((set, get) => ({
       get().fetchAntrian();
     } catch (err: any) {
       set({ error: err?.response?.data?.message || 'Gagal mengakhiri kunjungan', isSaving: false });
+      throw err;
+    }
+  },
+
+  catatMeninggal: async (catatan?: string) => {
+    const { selectedKunjungan } = get();
+    if (!selectedKunjungan) return;
+    set({ isSaving: true, error: null });
+    try {
+      await rawatJalanService.catatMeninggal(selectedKunjungan.id, catatan);
+      set({ isSaving: false });
+      get().clearSelection();
+      get().fetchAntrian();
+    } catch (err: any) {
+      set({ error: err?.response?.data?.message || 'Gagal mencatat status meninggal', isSaving: false });
       throw err;
     }
   },

@@ -121,7 +121,7 @@ export default function RegistrationForm() {
             ref={ticketRef}
             noAntrian={generatedNoAntrian || 'A-001'}
             namaPasien={watch('namaLengkap') || 'Pasien Baru'}
-            poliTujuan={polikliniks.find(p => p.id === watch('poliTujuan'))?.namaPoli || 'Poli Umum'}
+            poliTujuan={watch('jenisPelayanan') === 'UGD' ? 'UGD / Gawat Darurat' : (polikliniks.find(p => p.id === watch('poliTujuan'))?.namaPoli || 'Poli Umum')}
             tanggal={watch('tanggalRegistrasi') || new Date().toISOString().split('T')[0]}
             jam={watch('jamRegistrasi') || '08:00'}
           />

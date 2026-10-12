@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Users, FileText, CheckCircle, Trash2, Edit, RefreshCw, Baby, X } from 'lucide-react';
+import { Plus, Search, Users, FileText, CheckCircle, Trash2, Edit, RefreshCw, Baby, X, AlertTriangle } from 'lucide-react';
 import { usePasienStore } from '@/store/pasien.store';
 import Link from 'next/link';
 
@@ -10,6 +10,7 @@ export default function MasterPasienAdminPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [syncingId, setSyncingId] = useState<string | number | null>(null);
   const [expandedMotherId, setExpandedMotherId] = useState<number | string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'RESMI' | 'DARURAT_PENDING' | 'SEMUA'>('RESMI');
 
   const toggleExpandMother = (id: number | string) => {
     setExpandedMotherId(prev => prev === id ? null : id);
@@ -47,10 +48,27 @@ export default function MasterPasienAdminPage() {
     }
   };
 
+  // Helper mendeteksi apakah pasien adalah Pasien Darurat Sementara UGD
+  const isPasienDaruratSementara = (p: any) => {
+    if (p.noRM && p.noRM.startsWith('RM-EMG-')) return true;
+    if (p.kunjungans && p.kunjungans.some((k: any) => k.isAnonim || k.statusAdministrasi === 'PENDING')) return true;
+    if (!p.nik && (p.namaLengkap.includes('Mr. X') || p.namaLengkap.includes('Mrs. X') || p.namaLengkap.includes('Anonim'))) return true;
+    return false;
+  };
+
+  const countResmi = pasiens.filter(p => !isPasienDaruratSementara(p) && (!p.dataBayi || !p.dataBayi.nikIbu)).length;
+  const countDarurat = pasiens.filter(p => isPasienDaruratSementara(p)).length;
+  const countSemua = pasiens.filter(p => !p.dataBayi || !p.dataBayi.nikIbu).length;
+
   const filteredPasiens = pasiens.filter(p => {
     // Sembunyikan pasien bayi dari daftar utama (karena sudah berada di dalam dropdown ibunya)
     const isBayiChild = Boolean(p.dataBayi && p.dataBayi.nikIbu);
     if (isBayiChild) return false;
+
+    // Filter status resmi vs darurat sementara
+    const isDarurat = isPasienDaruratSementara(p);
+    if (filterStatus === 'RESMI' && isDarurat) return false;
+    if (filterStatus === 'DARURAT_PENDING' && !isDarurat) return false;
 
     return (
       p.namaLengkap.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -61,7 +79,7 @@ export default function MasterPasienAdminPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Users className="w-8 h-8 text-blue-600" />
@@ -90,6 +108,93 @@ export default function MasterPasienAdminPage() {
         </div>
       </div>
 
+      {/* Tab Filter Status Pasien */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 pb-3">
+        <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded">
+          <button
+            type="button"
+            onClick={() => setFilterStatus('RESMI')}
+            className={`px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-2 ${
+              filterStatus === 'RESMI'
+                ? 'bg-white text-blue-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Terverifikasi Resmi</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+              filterStatus === 'RESMI' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-700'
+            }`}>
+              {countResmi}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('DARURAT_PENDING')}
+            className={`px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-2 ${
+              filterStatus === 'DARURAT_PENDING'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'text-amber-700 hover:text-amber-900'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>Darurat UGD (Sementara)</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+              filterStatus === 'DARURAT_PENDING' ? 'bg-white text-amber-800' : 'bg-amber-100 text-amber-800 font-bold'
+            }`}>
+              {countDarurat}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFilterStatus('SEMUA')}
+            className={`px-3.5 py-1.5 text-xs font-bold transition-all flex items-center gap-2 ${
+              filterStatus === 'SEMUA'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <span>Semua Data</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+              filterStatus === 'SEMUA' ? 'bg-gray-200 text-gray-800' : 'bg-gray-200 text-gray-700'
+            }`}>
+              {countSemua}
+            </span>
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500">
+          {filterStatus === 'RESMI' && '💡 Menampilkan pasien resmi. Data darurat sementara otomatis disembunyikan agar tidak membingungkan.'}
+          {filterStatus === 'DARURAT_PENDING' && '⚠️ Menampilkan pasien darurat UGD yang sedang dirawat dan menunggu verifikasi loket.'}
+          {filterStatus === 'SEMUA' && 'Menampilkan seluruh record pasien di sistem.'}
+        </p>
+      </div>
+
+      {/* Banner Khusus jika Tab Darurat UGD Aktif */}
+      {filterStatus === 'DARURAT_PENDING' && (
+        <div className="bg-amber-50 border border-amber-300 p-4 rounded-none text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-amber-950 text-sm">
+                Pasien Gawat Darurat UGD (Menunggu Kelengkapan Administrasi)
+              </h4>
+              <p className="text-amber-800 text-[11px] mt-0.5">
+                Data pasien ini dibuat secara cepat oleh Perawat UGD untuk tindakan cito/emergency. Segera tarik NIK atau lengkapi data resmi di Loket Pendaftaran agar rekam medis terhubung secara permanen.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/administrasi"
+            className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider whitespace-nowrap flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            Buka Loket Pendaftaran UGD
+          </Link>
+        </div>
+      )}
+
       <div className="bg-white rounded-none shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -111,11 +216,16 @@ export default function MasterPasienAdminPage() {
               ) : filteredPasiens.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-gray-500">
-                    {searchQuery ? 'Tidak ada pasien yang cocok dengan pencarian.' : 'Belum ada data pasien.'}
+                    {searchQuery
+                      ? 'Tidak ada pasien yang cocok dengan pencarian.'
+                      : filterStatus === 'DARURAT_PENDING'
+                      ? 'Tidak ada pasien gawat darurat sementara. Semua data pasien telah terverifikasi resmi!'
+                      : 'Belum ada data pasien.'}
                   </td>
                 </tr>
               ) : (
                 filteredPasiens.map((p) => {
+                  const isDarurat = isPasienDaruratSementara(p);
                   const kontakUtama = p.kontak ? p.kontak.noHp : '-';
                   const penjaminUtama = p.penjamin ? p.penjamin.jenisPenjamin : 'UMUM / MANDIRI';
                   const isExpanded = expandedMotherId === p.id;
@@ -132,21 +242,46 @@ export default function MasterPasienAdminPage() {
 
                   return (
                     <React.Fragment key={p.id}>
-                      <tr className={`border-b border-gray-100 text-slate-800 transition-colors ${isExpanded ? 'bg-purple-50/40' : 'hover:bg-gray-50'}`}>
+                      <tr className={`border-b border-gray-100 text-slate-800 transition-colors ${
+                        isDarurat
+                          ? 'bg-amber-50/50 hover:bg-amber-50 border-l-4 border-l-amber-500'
+                          : isExpanded
+                          ? 'bg-purple-50/40'
+                          : 'hover:bg-gray-50'
+                      }`}>
                         <td className="py-4 px-6">
-                          <div className="font-bold text-blue-700">{p.noRM}</div>
-                          <div className="text-xs text-gray-500">NIK: {p.nik || 'Kosong'}</div>
-                          {p.noIHS ? (
-                            <div className="text-xs text-emerald-600 font-medium flex items-center mt-1">
-                              <CheckCircle className="w-3 h-3 mr-1" /> IHS: {p.noIHS}
-                            </div>
+                          {isDarurat ? (
+                            <>
+                              <div className="font-mono font-bold text-amber-800 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                                <span>{p.noRM}</span>
+                              </div>
+                              <div className="text-[11px] text-amber-700 font-medium mt-0.5">
+                                Sementara (KTP Belum Diverifikasi)
+                              </div>
+                            </>
                           ) : (
-                            <div className="text-xs text-amber-600 mt-1 italic">Belum Sync IHS</div>
+                            <>
+                              <div className="font-bold text-blue-700">{p.noRM}</div>
+                              <div className="text-xs text-gray-500">NIK: {p.nik || 'Kosong'}</div>
+                              {p.noIHS ? (
+                                <div className="text-xs text-emerald-600 font-medium flex items-center mt-1">
+                                  <CheckCircle className="w-3 h-3 mr-1" /> IHS: {p.noIHS}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-amber-600 mt-1 italic">Belum Sync IHS</div>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="py-4 px-6">
-                          <div className="font-semibold text-gray-900 flex items-center gap-2">
-                            {p.namaLengkap}
+                          <div className="font-semibold text-gray-900 flex items-center gap-2 flex-wrap">
+                            <span>{p.namaLengkap}</span>
+                            {isDarurat && (
+                              <span className="bg-amber-100 text-amber-900 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-none border border-amber-300 flex-shrink-0">
+                                Darurat UGD
+                              </span>
+                            )}
                             {p.faskes && (
                               <span className="bg-emerald-50 text-emerald-700 text-[10px] px-2 py-0.5 font-bold uppercase tracking-wider rounded-none border border-emerald-200 flex-shrink-0">
                                 {p.faskes.namaFaskes}
@@ -168,45 +303,63 @@ export default function MasterPasienAdminPage() {
                           <div className="text-xs text-gray-500">{age} Tahun</div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-none ${penjaminUtama.includes('BPJS') ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {penjaminUtama}
+                          <span className={`px-2 py-1 text-xs font-medium rounded-none ${
+                            isDarurat
+                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                              : penjaminUtama.includes('BPJS')
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {isDarurat ? 'Menunggu Loket' : penjaminUtama}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-right space-x-2">
-                          {/* Tombol Dropdown Lihat Anak jika pasien ini memiliki anak terdaftar */}
-                          {anakList.length > 0 && (
-                            <button 
-                              onClick={() => toggleExpandMother(p.id)}
-                              className={`px-3 py-1.5 font-bold text-xs rounded-none border transition-colors inline-flex items-center gap-1.5 ${isExpanded ? 'bg-purple-700 text-white border-purple-700' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200'}`}
-                              title="Tampilkan / Sembunyikan Anak"
+                          {isDarurat ? (
+                            <Link
+                              href="/administrasi"
+                              className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider rounded-none shadow-sm transition-colors inline-flex items-center gap-1.5"
+                              title="Lengkapi data pasien di loket"
                             >
-                              <Baby className="w-3.5 h-3.5" />
-                              {isExpanded ? 'Sembunyikan Anak' : `Lihat Anak (${anakList.length})`}
-                              <span className="text-[10px] ml-0.5">{isExpanded ? '▲' : '▼'}</span>
-                            </button>
-                          )}
+                              <span>Lengkapi di Loket</span>
+                            </Link>
+                          ) : (
+                            <>
+                              {/* Tombol Dropdown Lihat Anak jika pasien ini memiliki anak terdaftar */}
+                              {anakList.length > 0 && (
+                                <button 
+                                  onClick={() => toggleExpandMother(p.id)}
+                                  className={`px-3 py-1.5 font-bold text-xs rounded-none border transition-colors inline-flex items-center gap-1.5 ${isExpanded ? 'bg-purple-700 text-white border-purple-700' : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200'}`}
+                                  title="Tampilkan / Sembunyikan Anak"
+                                >
+                                  <Baby className="w-3.5 h-3.5" />
+                                  {isExpanded ? 'Sembunyikan Anak' : `Lihat Anak (${anakList.length})`}
+                                  <span className="text-[10px] ml-0.5">{isExpanded ? '▲' : '▼'}</span>
+                                </button>
+                              )}
 
-                          {!p.noIHS && p.nik && (
-                            <button 
-                              onClick={() => handleSyncIHS(p.id, p.nik)}
-                              disabled={syncingId === p.id}
-                              className={`px-3 py-1.5 ${syncingId === p.id ? 'bg-gray-100 text-gray-400' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'} font-medium text-xs rounded-none transition-colors inline-flex items-center`}
-                              title="Sync SATUSEHAT"
-                            >
-                              <RefreshCw className={`w-3 h-3 mr-1 ${syncingId === p.id ? 'animate-spin' : ''}`} />
-                              Sync IHS
-                            </button>
+                              {!p.noIHS && p.nik && (
+                                <button 
+                                  onClick={() => handleSyncIHS(p.id, p.nik)}
+                                  disabled={syncingId === p.id}
+                                  className={`px-3 py-1.5 ${syncingId === p.id ? 'bg-gray-100 text-gray-400' : 'bg-teal-50 text-teal-600 hover:bg-teal-100'} font-medium text-xs rounded-none transition-colors inline-flex items-center`}
+                                  title="Sync SATUSEHAT"
+                                >
+                                  <RefreshCw className={`w-3 h-3 mr-1 ${syncingId === p.id ? 'animate-spin' : ''}`} />
+                                  Sync IHS
+                                </button>
+                              )}
+                              <button className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-xs rounded-none transition-colors" title="Edit Data">
+                                Edit
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(p.id, p.namaLengkap)}
+                                className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 font-medium text-xs rounded-none transition-colors" 
+                                title="Hapus Data"
+                              >
+                                Hapus
+                              </button>
+                            </>
                           )}
-                          <button className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-xs rounded-none transition-colors" title="Edit Data">
-                            Edit
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(p.id, p.namaLengkap)}
-                            className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 font-medium text-xs rounded-none transition-colors" 
-                            title="Hapus Data"
-                          >
-                            Hapus
-                          </button>
                         </td>
                       </tr>
 

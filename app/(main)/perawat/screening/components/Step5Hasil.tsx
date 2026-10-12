@@ -86,10 +86,15 @@ export default function Step5Hasil({ register, watch }: Step5Props) {
 
       {/* Kesimpulan Akhir & Tindak Lanjut */}
       <div className="bg-white p-6 border border-gray-200 shadow-sm rounded-none">
-        <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center">
-          <FileCheck className="w-5 h-5 mr-2 text-blue-600" />
-          Kesimpulan Akhir Skrining & Tindak Lanjut
-        </h3>
+        <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-100">
+          <h3 className="text-lg font-bold text-gray-900 flex items-center">
+            <FileCheck className="w-5 h-5 mr-2 text-blue-600" />
+            Kesimpulan Akhir Skrining & Tindak Lanjut
+          </h3>
+          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold uppercase tracking-wider">
+            Step 6: Hasil & Rujukan
+          </span>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -111,7 +116,34 @@ export default function Step5Hasil({ register, watch }: Step5Props) {
             </select>
           </div>
 
-          <div className="md:col-span-2 mt-4">
+          {/* Rencana Tindak Lanjut */}
+          <div className="md:col-span-2 mt-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              Rencana Tindak Lanjut Klinis
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                'Pemeriksaan Dokter Umum',
+                'Pemeriksaan Dokter Gigi',
+                'Konsultasi Gizi',
+                'Edukasi & Konseling Kesehatan',
+                'Pemeriksaan Laboratorium Sederhana',
+                'Rujukan Eksternal (Faskes Rujukan)',
+              ].map((item) => (
+                <label key={item} className="flex items-center gap-2.5 p-3 border border-gray-200 bg-gray-50/50 hover:bg-blue-50/50 hover:border-blue-200 cursor-pointer text-xs font-medium text-gray-800 transition-colors">
+                  <input
+                    type="checkbox"
+                    value={item}
+                    {...register('tindakLanjut')}
+                    className="w-4 h-4 text-blue-600 rounded-none border-gray-300 focus:ring-blue-500"
+                  />
+                  <span>{item}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="md:col-span-2 mt-2">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Catatan Tambahan Petugas (Opsional)</label>
             <textarea 
               {...register('catatanPetugas')}

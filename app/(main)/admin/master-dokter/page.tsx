@@ -20,11 +20,20 @@ export default function MasterDokterPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form State
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    namaLengkap: string;
+    username: string;
+    password: string;
+    poliklinikId: string;
+    role: 'DOKTER' | 'DOKTER_UGD';
+    nik: string;
+    noIHS: string;
+  }>({
     namaLengkap: '',
     username: '',
     password: '',
     poliklinikId: '',
+    role: 'DOKTER',
     nik: '',
     noIHS: ''
   });
@@ -47,6 +56,7 @@ export default function MasterDokterPage() {
       username: '',
       password: '',
       poliklinikId: '',
+      role: 'DOKTER',
       nik: '',
       noIHS: ''
     });
@@ -61,6 +71,7 @@ export default function MasterDokterPage() {
       username: dokter.username,
       password: '', // Leave blank unless they want to change it
       poliklinikId: dokter.poliklinikId || '',
+      role: dokter.role === 'DOKTER_UGD' ? 'DOKTER_UGD' : 'DOKTER',
       nik: dokter.tenagaMedis?.nik || '',
       noIHS: dokter.tenagaMedis?.noIHS || ''
     });
@@ -75,11 +86,15 @@ export default function MasterDokterPage() {
           namaLengkap: formData.namaLengkap,
           username: formData.username,
           password: formData.password ? formData.password : undefined,
-          poliklinikId: formData.poliklinikId,
+          poliklinikId: formData.role === 'DOKTER_UGD' ? undefined : formData.poliklinikId,
+          role: formData.role,
           nik: formData.nik
         });
       } else {
-        await createDokter(formData);
+        await createDokter({
+          ...formData,
+          poliklinikId: formData.role === 'DOKTER_UGD' ? undefined : formData.poliklinikId,
+        });
       }
       setIsModalOpen(false);
     } catch (error: any) {
@@ -216,7 +231,11 @@ export default function MasterDokterPage() {
                     </td>
                     <td className="px-6 py-4 font-mono text-xs">{dokter.username}</td>
                     <td className="px-6 py-4">
-                      {dokter.poliklinik ? (
+                      {dokter.role === 'DOKTER_UGD' ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                          🚨 Unit Gawat Darurat (UGD)
+                        </span>
+                      ) : dokter.poliklinik ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-medium bg-blue-100 text-blue-800">
                           {dokter.poliklinik.namaPoli}
                         </span>
@@ -373,19 +392,60 @@ export default function MasterDokterPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tugaskan ke Poliklinik</label>
-                <select
-                  name="poliklinikId"
-                  value={formData.poliklinikId}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">-- Tidak Ditugaskan / Bebas --</option>
-                  {polikliniks.map(poli => (
-                    <option key={poli.id} value={poli.id}>{poli.namaPoli}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unit Penugasan Dokter *
+                </label>
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  <label className={`flex items-center gap-2 p-2.5 border cursor-pointer text-xs font-semibold ${
+                    formData.role === 'DOKTER' ? 'border-blue-500 bg-blue-50/70 text-blue-800' : 'border-gray-200 text-gray-700'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="role"
+                      value="DOKTER"
+                      checked={formData.role === 'DOKTER'}
+                      onChange={() => setFormData(prev => ({ ...prev, role: 'DOKTER' }))}
+                      className="text-blue-600"
+                    />
+                    <span>Poliklinik (Rawat Jalan)</span>
+                  </label>
+                  <label className={`flex items-center gap-2 p-2.5 border cursor-pointer text-xs font-semibold ${
+                    formData.role === 'DOKTER_UGD' ? 'border-rose-500 bg-rose-50/70 text-rose-800' : 'border-gray-200 text-gray-700'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="role"
+                      value="DOKTER_UGD"
+                      checked={formData.role === 'DOKTER_UGD'}
+                      onChange={() => setFormData(prev => ({ ...prev, role: 'DOKTER_UGD', poliklinikId: '' }))}
+                      className="text-rose-600"
+                    />
+                    <span>Dokter Jaga UGD</span>
+                  </label>
+                </div>
               </div>
+
+              {formData.role === 'DOKTER' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tugaskan ke Poliklinik</label>
+                  <select
+                    name="poliklinikId"
+                    value={formData.poliklinikId}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">-- Tidak Ditugaskan / Bebas --</option>
+                    {polikliniks.map(poli => (
+                      <option key={poli.id} value={poli.id}>{poli.namaPoli}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-xs text-rose-800">
+                  <span className="font-bold">Penugasan Otomatis: </span>
+                  Dokter ini akan bertugas sebagai Dokter Jaga di Unit Gawat Darurat (UGD/IGD) dan akan muncul pada antrean triase DPJP pasien darurat.
+                </div>
+              )}
 
               <div className="pt-4 flex items-center justify-end gap-3">
                 <button

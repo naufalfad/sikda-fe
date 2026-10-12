@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { 
-  ArrowLeft, 
-  ShieldCheck, 
-  Loader2, 
-  HeartPulse, 
-  Building2, 
-  Stethoscope, 
+import {
+  ArrowLeft,
+  ShieldCheck,
+  Loader2,
+  HeartPulse,
+  Building2,
+  Stethoscope,
   Activity,
   CheckCircle2,
   UserCheck
@@ -61,10 +61,10 @@ function LoginContent() {
     e.preventDefault();
     try {
       await login(formData);
-      
+
       // Ambil user dari store setelah berhasil login
       const user = useAuthStore.getState().user;
-      
+
       // Routing cerdas otomatis mendeteksi role terdaftar
       if (user?.role === 'DINKES_ADMIN' || user?.role === 'DINKES_MONITORING') {
         router.push('/dinkes');
@@ -76,6 +76,8 @@ function LoginContent() {
         router.push('/perawat');
       } else if (user?.role === 'DOKTER') {
         router.push('/dokter');
+      } else if (user?.role === 'DOKTER_UGD') {
+        router.push('/dokter/ugd');
       } else if (user?.role === 'APOTEKER') {
         router.push('/apoteker');
       } else if (user?.role === 'LABORATORIUM') {
@@ -98,33 +100,30 @@ function LoginContent() {
 
   return (
     <div className="h-screen w-full flex overflow-hidden font-sans bg-white">
-      
+
       {/* LEFT SIDE - BRANDING */}
-      <div className={`hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden p-12 transition-colors duration-500 ${
-        isDinkes ? 'bg-slate-950' : 'bg-slate-900'
-      }`}>
+      <div className={`hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden p-12 transition-colors duration-500 ${isDinkes ? 'bg-slate-950' : 'bg-slate-900'
+        }`}>
         {/* Background Decor */}
-        <div 
-          className="absolute inset-0 z-0 opacity-20 bg-cover bg-center" 
+        <div
+          className="absolute inset-0 z-0 opacity-20 bg-cover bg-center"
           style={{ backgroundImage: "url('/doctor_hero_bg.png')" }}
         ></div>
-        <div className={`absolute inset-0 mix-blend-multiply z-0 transition-colors duration-500 ${
-          isDinkes ? 'bg-emerald-950/90' : 'bg-blue-950/90'
-        }`}></div>
-        <div 
-          className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none z-0" 
-          style={{ 
-            backgroundImage: `radial-gradient(${isDinkes ? '#10b981' : '#3b82f6'} 1px, transparent 1px)`, 
-            backgroundSize: '32px 32px' 
+        <div className={`absolute inset-0 mix-blend-multiply z-0 transition-colors duration-500 ${isDinkes ? 'bg-emerald-950/90' : 'bg-blue-950/90'
+          }`}></div>
+        <div
+          className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none z-0"
+          style={{
+            backgroundImage: `radial-gradient(${isDinkes ? '#10b981' : '#3b82f6'} 1px, transparent 1px)`,
+            backgroundSize: '32px 32px'
           }}
         ></div>
 
         <div className="relative z-10">
-          <Link 
-            href="/" 
-            className={`inline-flex items-center text-xs font-bold uppercase tracking-widest transition-colors ${
-              isDinkes ? 'text-emerald-400 hover:text-emerald-300' : 'text-blue-400 hover:text-blue-300'
-            }`}
+          <Link
+            href="/"
+            className={`inline-flex items-center text-xs font-bold uppercase tracking-widest transition-colors ${isDinkes ? 'text-emerald-400 hover:text-emerald-300' : 'text-blue-400 hover:text-blue-300'
+              }`}
           >
             <ArrowLeft className="w-4 h-4 mr-2 transition-transform hover:-translate-x-1" />
             Kembali ke Beranda
@@ -133,9 +132,8 @@ function LoginContent() {
 
         <div className="relative z-10 my-auto">
           <div className="flex items-center gap-3 mb-8 text-white">
-            <div className={`w-14 h-14 flex items-center justify-center rounded-none shadow-lg border-2 transition-colors ${
-              isDinkes ? 'bg-emerald-600 border-emerald-400' : 'bg-blue-600 border-blue-400'
-            }`}>
+            <div className={`w-14 h-14 flex items-center justify-center rounded-none shadow-lg border-2 transition-colors ${isDinkes ? 'bg-emerald-600 border-emerald-400' : 'bg-blue-600 border-blue-400'
+              }`}>
               {isDinkes ? (
                 <Building2 className="w-8 h-8 text-white" />
               ) : (
@@ -144,9 +142,8 @@ function LoginContent() {
             </div>
             <div>
               <span className="text-4xl font-black tracking-widest uppercase leading-none block">SIAP-KES</span>
-              <span className={`text-[10px] font-bold tracking-[0.25em] uppercase ${
-                isDinkes ? 'text-emerald-400' : 'text-blue-400'
-              }`}>
+              <span className={`text-[10px] font-bold tracking-[0.25em] uppercase ${isDinkes ? 'text-emerald-400' : 'text-blue-400'
+                }`}>
                 {isDinkes ? 'PUSAT KOMANDO DINKES' : 'PELAYANAN FASKES'}
               </span>
             </div>
@@ -154,9 +151,9 @@ function LoginContent() {
 
           <h1 className="text-3xl xl:text-4xl font-black text-white leading-tight mb-4">
             {isDinkes ? (
-              <>Pusat Komando Eksekutif <br/><span className="text-emerald-400">Dinas Kesehatan Kabupaten</span></>
+              <>Pusat Komando Eksekutif <br /><span className="text-emerald-400">Dinas Kesehatan Kabupaten</span></>
             ) : (
-              <>Portal Pelayanan Medis <br/><span className="text-blue-400">Puskesmas & Fasilitas Kesehatan</span></>
+              <>Portal Pelayanan Medis <br /><span className="text-blue-400">Puskesmas & Fasilitas Kesehatan</span></>
             )}
           </h1>
 
@@ -210,7 +207,7 @@ function LoginContent() {
 
       {/* RIGHT SIDE - FORM */}
       <div className="w-full lg:w-1/2 h-full flex flex-col items-center p-4 sm:p-8 lg:p-10 relative bg-slate-50 overflow-y-auto">
-        
+
         {/* Mobile Header (Shows only on small screens) */}
         <div className="lg:hidden w-full max-w-md pt-2 pb-4 flex items-center justify-between text-slate-900 flex-shrink-0">
           <Link href="/" className="inline-flex items-center text-xs font-bold text-blue-600 hover:text-blue-500 uppercase tracking-widest">
@@ -222,18 +219,17 @@ function LoginContent() {
         </div>
 
         <div className="w-full max-w-md my-auto py-4 sm:py-6">
-          
+
           {/* PORTAL SWITCHER TABS - SELALU TAMPAK JELAS DI ATAS KARTU LOGIN */}
           <div className="bg-slate-200/90 p-1.5 rounded-xl flex mb-6 border border-slate-300 shadow-sm">
             <button
               type="button"
               id="tab-petugas-faskes"
               onClick={() => handleSwitchPortal('faskes')}
-              className={`flex-1 py-2.5 px-3 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 rounded-lg transition-all ${
-                !isDinkes
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              className={`flex-1 py-2.5 px-3 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 rounded-lg transition-all ${!isDinkes
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
             >
               <HeartPulse className="w-4 h-4" />
               Petugas Faskes
@@ -242,11 +238,10 @@ function LoginContent() {
               type="button"
               id="tab-dinas-kesehatan"
               onClick={() => handleSwitchPortal('dinkes')}
-              className={`flex-1 py-2.5 px-3 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 rounded-lg transition-all ${
-                isDinkes
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
+              className={`flex-1 py-2.5 px-3 text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 rounded-lg transition-all ${isDinkes
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
             >
               <Building2 className="w-4 h-4" />
               Dinas Kesehatan
@@ -267,10 +262,9 @@ function LoginContent() {
             </p>
           </div>
 
-          <div className={`bg-white p-6 sm:p-8 border-t-4 shadow-xl rounded-none relative transition-colors ${
-            isDinkes ? 'border-t-emerald-600' : 'border-t-blue-600'
-          }`}>
-            
+          <div className={`bg-white p-6 sm:p-8 border-t-4 shadow-xl rounded-none relative transition-colors ${isDinkes ? 'border-t-emerald-600' : 'border-t-blue-600'
+            }`}>
+
             <div className="mb-5 flex items-center justify-between bg-slate-50 py-2 px-3 border border-slate-200">
               <div className="flex items-center">
                 <ShieldCheck className={`w-4 h-4 mr-2 ${isDinkes ? 'text-emerald-600' : 'text-blue-600'}`} />
@@ -278,9 +272,8 @@ function LoginContent() {
                   {isDinkes ? 'Akses Eksekutif Dinkes' : 'Akses Operasional Faskes'}
                 </span>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                isDinkes ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
-              }`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${isDinkes ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                }`}>
                 {isDinkes ? 'Global Scope' : 'Multi-Tenant'}
               </span>
             </div>
@@ -328,9 +321,8 @@ function LoginContent() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className={`w-full flex justify-center items-center py-3.5 px-4 text-white text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-70 disabled:transform-none disabled:cursor-not-allowed rounded-none ${
-                    isDinkes ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
+                  className={`w-full flex justify-center items-center py-3.5 px-4 text-white text-xs font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-70 disabled:transform-none disabled:cursor-not-allowed rounded-none ${isDinkes ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                 >
                   {isLoading ? (
                     <>
@@ -382,22 +374,20 @@ function LoginContent() {
                     <button
                       type="button"
                       onClick={() => setActiveFaskesTab('cibinong')}
-                      className={`flex-1 py-1 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${
-                        activeFaskesTab === 'cibinong'
-                          ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
+                      className={`flex-1 py-1 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${activeFaskesTab === 'cibinong'
+                        ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                        : 'text-slate-500 hover:text-slate-800'
+                        }`}
                     >
                       🏥 Cibinong Raya
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveFaskesTab('sukamakmur')}
-                      className={`flex-1 py-1 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${
-                        activeFaskesTab === 'sukamakmur'
-                          ? 'bg-white text-amber-700 shadow-sm border border-slate-200'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
+                      className={`flex-1 py-1 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${activeFaskesTab === 'sukamakmur'
+                        ? 'bg-white text-amber-700 shadow-sm border border-slate-200'
+                        : 'text-slate-500 hover:text-slate-800'
+                        }`}
                     >
                       ⛰️ Sukamakmur
                     </button>
@@ -405,14 +395,6 @@ function LoginContent() {
 
                   {activeFaskesTab === 'cibinong' ? (
                     <div className="grid grid-cols-3 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleQuickFill('admin_cibinong')}
-                        className="py-1.5 px-2 rounded border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 text-[11px] font-semibold text-slate-800 text-center transition-all truncate"
-                        title="admin_cibinong (Administrator)"
-                      >
-                        Admin
-                      </button>
                       <button
                         type="button"
                         onClick={() => handleQuickFill('dr_cibinong')}
@@ -428,6 +410,22 @@ function LoginContent() {
                         title="drg_cibinong (drg. Tri - Poli Gigi)"
                       >
                         drg_cibinong
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickFill('dr.andi')}
+                        className="py-1.5 px-2 rounded border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 text-[11px] font-semibold text-slate-800 text-center transition-all truncate"
+                        title="dr.andi"
+                      >
+                        dr.andi
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickFill('admin_cibinong')}
+                        className="py-1.5 px-2 rounded border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 text-[11px] font-semibold text-slate-800 text-center transition-all truncate"
+                        title="admin_cibinong (Administrator)"
+                      >
+                        Admin
                       </button>
                       <button
                         type="button"
@@ -452,6 +450,30 @@ function LoginContent() {
                         title="apoteker_cibinong (Apt. Rudi)"
                       >
                         Apoteker
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickFill('kasir')}
+                        className="py-1.5 px-2 rounded border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 text-[11px] font-semibold text-slate-800 text-center transition-all truncate"
+                        title="Kasir"
+                      >
+                        Kasir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickFill('laboratorium')}
+                        className="py-1.5 px-2 rounded border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 text-[11px] font-semibold text-slate-800 text-center transition-all truncate"
+                        title="Laboritorium"
+                      >
+                        Laboratorium
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickFill('dr_ugd_cibinong')}
+                        className="py-1.5 px-2 rounded border border-rose-200 hover:border-rose-500 bg-rose-50/50 hover:bg-rose-100 text-[11px] font-semibold text-rose-800 text-center transition-all truncate"
+                        title="dr_ugd_cibinong (dr. Rizky, Sp.Em - Dokter UGD)"
+                      >
+                        Dokter UGD
                       </button>
                     </div>
                   ) : (
@@ -504,22 +526,30 @@ function LoginContent() {
                       >
                         Apoteker
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickFill('dr_ugd_sukamakmur')}
+                        className="py-1.5 px-2 rounded border border-rose-200 hover:border-rose-500 bg-rose-50/50 hover:bg-rose-100 text-[11px] font-semibold text-rose-800 text-center transition-all truncate"
+                        title="dr_ugd_sukamakmur (dr. Farhan - Dokter UGD)"
+                      >
+                        Dokter UGD
+                      </button>
                     </div>
                   )}
                 </div>
               )}
             </div>
           </div>
-          
+
           <div className="mt-6 text-center">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] leading-relaxed">
-              Sistem Integrasi Aset &amp; Pelayanan Kesehatan Daerah (SIAP-KES).<br/>
+              Sistem Integrasi Aset &amp; Pelayanan Kesehatan Daerah (SIAP-KES).<br />
               Khusus petugas berwenang dan jajaran Dinas Kesehatan.
             </p>
           </div>
         </div>
       </div>
-      
+
     </div>
   );
 }

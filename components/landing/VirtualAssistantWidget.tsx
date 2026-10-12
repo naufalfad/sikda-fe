@@ -30,6 +30,10 @@ interface ChatMessage {
   feedback?: 'like' | 'dislike' | null;
 }
 
+// Aset maskot avatar (simpan di sikda-fe/public/images/avatar/)
+const AVATAR_IDLE_SRC = '/images/avatar/avatar-idle.png';
+const AVATAR_ACTIVE_SRC = '/images/avatar/avatar-active.png';
+
 const INITIAL_SUGGESTIONS = [
   'Bagaimana cara daftar antrean online dari rumah?',
   'Kapan jadwal operasional poli di Puskesmas?',
@@ -58,6 +62,45 @@ export default function VirtualAssistantWidget() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Avatar maskot: state interaksi (hover desktop / lambaian saat tap di mobile)
+  const [isHovered, setIsHovered] = useState(false);
+  const [isWaving, setIsWaving] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const waveTimerRef = useRef<number | null>(null);
+  const avatarActive = isHovered || isWaving;
+
+  // Preload kedua pose agar tidak ada kedipan saat berganti gambar
+  useEffect(() => {
+    [AVATAR_IDLE_SRC, AVATAR_ACTIVE_SRC].forEach((src) => {
+      const img = new window.Image();
+      img.src = src;
+    });
+    return () => {
+      if (waveTimerRef.current) window.clearTimeout(waveTimerRef.current);
+    };
+  }, []);
+
+  const handleLauncherClick = () => {
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+    if (isWaving) return;
+
+    // Layar sentuh: tampilkan pose menyapa sesaat, baru buka chat
+    const isTouchDevice =
+      typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+    if (isTouchDevice) {
+      setIsWaving(true);
+      waveTimerRef.current = window.setTimeout(() => {
+        setIsWaving(false);
+        setIsOpen(true);
+      }, 450);
+    } else {
+      setIsOpen(true);
+    }
+  };
 
   // Auto scroll to bottom
   const scrollToBottom = () => {
@@ -161,11 +204,11 @@ export default function VirtualAssistantWidget() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 font-sans print:hidden">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 font-sans print:hidden flex flex-col items-end">
       {/* ─── EXPANDED CHAT WINDOW (CLEVELAND CLINIC VIRTUAL ASSISTANT STYLE) ─── */}
       {isOpen && (
         <div className="w-[92vw] sm:w-[410px] h-[580px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col overflow-hidden mb-3 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          
+
           {/* Header */}
           <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-900 p-4 text-white flex items-center justify-between shrink-0 shadow-md">
             <div className="flex items-center gap-3">
@@ -231,26 +274,23 @@ export default function VirtualAssistantWidget() {
                 className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'} space-y-1.5`}
               >
                 <div
-                  className={`flex items-start gap-2.5 max-w-[88%] ${
-                    msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
-                  }`}
+                  className={`flex items-start gap-2.5 max-w-[88%] ${msg.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
+                    }`}
                 >
                   <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
-                      msg.sender === 'user'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-emerald-700 text-white shadow-sm'
-                    }`}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${msg.sender === 'user'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-emerald-700 text-white shadow-sm'
+                      }`}
                   >
                     {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                   </div>
 
                   <div
-                    className={`p-3.5 rounded-2xl leading-relaxed shadow-xs ${
-                      msg.sender === 'user'
-                        ? 'bg-blue-600 text-white rounded-tr-none'
-                        : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-none'
-                    }`}
+                    className={`p-3.5 rounded-2xl leading-relaxed shadow-xs ${msg.sender === 'user'
+                      ? 'bg-blue-600 text-white rounded-tr-none'
+                      : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-none'
+                      }`}
                   >
                     <div className="whitespace-pre-line text-xs font-medium">
                       {msg.text}
@@ -287,9 +327,8 @@ export default function VirtualAssistantWidget() {
 
                 {/* Timestamp & Feedback for Assistant */}
                 <div
-                  className={`flex items-center gap-2 px-1 text-[10px] text-slate-400 ${
-                    msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
+                  className={`flex items-center gap-2 px-1 text-[10px] text-slate-400 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
                 >
                   <span>{msg.timestamp}</span>
                   {msg.sender === 'assistant' && (
@@ -297,9 +336,8 @@ export default function VirtualAssistantWidget() {
                       <button
                         type="button"
                         onClick={() => handleFeedback(msg.id, 'like')}
-                        className={`p-1 hover:text-emerald-600 transition-colors ${
-                          msg.feedback === 'like' ? 'text-emerald-600 font-bold' : ''
-                        }`}
+                        className={`p-1 hover:text-emerald-600 transition-colors ${msg.feedback === 'like' ? 'text-emerald-600 font-bold' : ''
+                          }`}
                         title="Jawaban Membantu"
                       >
                         <ThumbsUp className="w-3 h-3" />
@@ -307,9 +345,8 @@ export default function VirtualAssistantWidget() {
                       <button
                         type="button"
                         onClick={() => handleFeedback(msg.id, 'dislike')}
-                        className={`p-1 hover:text-rose-600 transition-colors ${
-                          msg.feedback === 'dislike' ? 'text-rose-600 font-bold' : ''
-                        }`}
+                        className={`p-1 hover:text-rose-600 transition-colors ${msg.feedback === 'dislike' ? 'text-rose-600 font-bold' : ''
+                          }`}
                         title="Jawaban Kurang Sesuai"
                       >
                         <ThumbsDown className="w-3 h-3" />
@@ -392,41 +429,78 @@ export default function VirtualAssistantWidget() {
         </div>
       )}
 
-      {/* ─── FLOATING LAUNCHER BUTTON (WITH BREATHING GLOW & TOOLTIP) ─── */}
-      <div className="relative group">
-        {!isOpen && (
-          <div className="absolute right-0 -top-12 bg-slate-950 text-white px-3 py-1.5 rounded-xl text-xs font-bold tracking-tight shadow-xl border border-slate-800 flex items-center gap-1.5 whitespace-nowrap pointer-events-none group-hover:opacity-100 transition-opacity">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin [animation-duration:3s]" />
-            <span>Tanya Asisten AI SIKDA</span>
-            <div className="w-2 h-2 bg-slate-950 rotate-45 absolute -bottom-1 right-6 border-r border-b border-slate-800"></div>
-          </div>
-        )}
-
+      {/* ─── FLOATING LAUNCHER: MASKOT AVATAR INTERAKTIF + BALON PERCAKAPAN ─── */}
+      {isOpen ? (
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 cursor-pointer relative group-hover:scale-105 ${
-            isOpen
-              ? 'bg-slate-900 text-white rotate-90 shadow-slate-900/30'
-              : 'bg-gradient-to-tr from-emerald-700 via-teal-600 to-emerald-500 text-white shadow-emerald-600/40'
-          }`}
-          aria-label="Buka Asisten Virtual SIKDA"
+          onClick={handleLauncherClick}
+          className="w-14 h-14 rounded-full flex items-center justify-center shadow-2xl bg-slate-900 text-white shadow-slate-900/30 hover:bg-slate-800 transition-colors cursor-pointer"
+          aria-label="Tutup Asisten Virtual SIKDA"
         >
-          {/* Subtle pulse wave */}
-          {!isOpen && (
-            <span className="absolute inset-0 rounded-full bg-emerald-500 opacity-40 animate-ping pointer-events-none"></span>
-          )}
-
-          {isOpen ? (
-            <X className="w-6 h-6 sm:w-7 sm:h-7" />
-          ) : (
-            <div className="relative flex items-center justify-center">
-              <Bot className="w-7 h-7 sm:w-8 sm:h-8" />
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 border-2 border-white rounded-full"></span>
-            </div>
-          )}
+          <X className="w-6 h-6" />
         </button>
-      </div>
+      ) : (
+        <div
+          className="flex items-end gap-0"
+          onPointerEnter={(e) => e.pointerType === 'mouse' && setIsHovered(true)}
+          onPointerLeave={(e) => e.pointerType === 'mouse' && setIsHovered(false)}
+        >
+          {/* Balon percakapan (pill) */}
+          <button
+            type="button"
+            onClick={handleLauncherClick}
+            tabIndex={-1}
+            aria-hidden="true"
+            className={`mb-3 sm:mb-4 -mr-3 sm:-mr-5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold tracking-tight shadow-xl border whitespace-nowrap flex items-center gap-1 cursor-pointer transition-colors duration-200 ${avatarActive
+              ? 'bg-emerald-600 text-white border-emerald-400 animate-[sikda-wiggle_0.6s_ease-in-out_infinite]'
+              : 'bg-white text-slate-800 border-slate-200 animate-[sikda-float_2.4s_ease-in-out_infinite]'
+              }`}
+          >
+            <span>✨ Tanya Asisten SIKDA</span>
+          </button>
+
+          {/* Avatar maskot: dua pose ditumpuk & selalu ada di DOM (tanpa flicker) */}
+          <button
+            type="button"
+            onClick={handleLauncherClick}
+            aria-label="Buka Asisten Virtual SIKDA"
+            className={`relative w-[200px] h-[200px] sm:w-[230px] sm:h-[230px] shrink-0 cursor-pointer select-none transition-transform duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-full ${avatarActive ? '-translate-y-1 scale-105' : 'translate-y-0 scale-100'
+              }`}
+          >
+            {avatarFailed ? (
+              <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white flex items-center justify-center shadow-2xl">
+                <Bot className="w-8 h-8" />
+              </span>
+            ) : (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={AVATAR_IDLE_SRC}
+                  alt="Asisten Virtual SIKDA"
+                  width={84}
+                  height={84}
+                  draggable={false}
+                  onError={() => setAvatarFailed(true)}
+                  className={`absolute inset-0 w-full h-full object-contain drop-shadow-xl transition-opacity duration-200 ${avatarActive ? 'opacity-0' : 'opacity-100'
+                    }`}
+                />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={AVATAR_ACTIVE_SRC}
+                  alt=""
+                  aria-hidden="true"
+                  width={84}
+                  height={84}
+                  draggable={false}
+                  onError={() => setAvatarFailed(true)}
+                  className={`absolute inset-0 w-full h-full object-contain drop-shadow-xl transition-opacity duration-200 ${avatarActive ? 'opacity-100' : 'opacity-0'
+                    }`}
+                />
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

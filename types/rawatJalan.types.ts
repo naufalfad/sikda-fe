@@ -40,6 +40,11 @@ export interface AntrianDokter {
   prioritas: string;
   statusKunjungan: string;
   noSep?: string | null;
+  triase?: string | null;
+  isAnonim?: boolean;
+  namaAnonim?: string | null;
+  kondisiTiba?: string | null;
+  tempatTidurs?: any[];
 }
 
 /** Rekam Medis Elektronik (SOAP) */
@@ -63,6 +68,8 @@ export interface RekamMedis {
   odontogram?: any;
   dmft?: any;
   oralFindings?: any;
+  primarySurvey?: any;
+  secondarySurvey?: string | null;
 
   // A - Asesmen
   diagnosisKlinis?: string | null;
@@ -95,6 +102,10 @@ export interface SOAPPayload {
   instruksiMedis?: string;
   tujuanPerawatan?: string;
   
+  // UGD Kegawatdaruratan Fields (Primary & Secondary Survey)
+  primarySurvey?: PrimarySurveyUGD;
+  secondarySurvey?: string;
+
   // Poli Gigi Fields (Odontogram & DMF-T)
   odontogram?: Record<number, any>;
   dmft?: { d: number; m: number; f: number; total: number };
@@ -107,6 +118,14 @@ export interface SOAPPayload {
     gigiAnomali?: string;
     kondisiLain?: string;
   };
+}
+
+export interface PrimarySurveyUGD {
+  airway?: string;
+  breathing?: string;
+  circulation?: string;
+  disability?: string;
+  exposure?: string;
 }
 
 /** Alergi yang dipilih dokter */

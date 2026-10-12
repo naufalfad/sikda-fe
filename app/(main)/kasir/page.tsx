@@ -239,7 +239,17 @@ export default function KasirPage() {
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-6 py-4">
                               <div className="font-semibold text-gray-800">{item.namaItem}</div>
-                              <div className="text-xs text-gray-400 mt-0.5 uppercase tracking-wide">{item.kategori}</div>
+                              <div className="mt-1">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide ${
+                                  item.kategori === 'Akomodasi' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                                  item.kategori === 'Obat' ? 'bg-blue-100 text-blue-800' :
+                                  item.kategori === 'Tindakan' ? 'bg-amber-100 text-amber-800' :
+                                  item.kategori === 'Vaksin' ? 'bg-emerald-100 text-emerald-800' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {item.kategori}
+                                </span>
+                              </div>
                             </td>
                             <td className="px-6 py-4 text-center text-gray-600 font-medium">{item.jumlah}</td>
                             <td className="px-6 py-4 text-right text-gray-600">{formatRupiah(item.hargaSatuan)}</td>

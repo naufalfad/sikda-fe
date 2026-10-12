@@ -225,6 +225,72 @@ export function DetailView({
           </div>
         </div>
 
+        {/* CATATAN PERKEMBANGAN PASIEN TERINTEGRASI (CPPT RAWAT INAP) */}
+        {selectedVisit.catatanPerkembangans && selectedVisit.catatanPerkembangans.length > 0 && (
+          <div className="bg-white border border-slate-300 shadow-sm overflow-hidden">
+            <div className="bg-slate-100 border-b border-slate-300 px-5 py-3 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Catatan Perkembangan Pasien Terintegrasi (CPPT Rawat Inap)
+              </h3>
+              <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2 py-0.5">
+                {selectedVisit.catatanPerkembangans.length} Catatan Perkembangan
+              </span>
+            </div>
+            <div className="p-5 space-y-4 bg-slate-50">
+              {selectedVisit.catatanPerkembangans.map((cppt: any, idx: number) => (
+                <div key={cppt.id || idx} className="bg-white border border-slate-200 border-l-4 border-l-blue-600 p-4 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-3">
+                    <span className="text-xs font-bold text-slate-700">
+                      📅 {new Date(cppt.tanggalCatatan || cppt.createdAt).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 font-bold uppercase ${cppt.profesi === 'DOKTER' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                        {cppt.profesi}
+                      </span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {cppt.petugas?.namaLengkap || 'Tenaga Medis'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    {cppt.subjektif && (
+                      <div className="bg-slate-50 p-2.5 border border-slate-100">
+                        <span className="font-bold text-slate-900 block mb-1">Subjektif (S):</span>
+                        <p className="text-slate-700 leading-relaxed italic">{cppt.subjektif}</p>
+                      </div>
+                    )}
+                    {cppt.objektif && (
+                      <div className="bg-slate-50 p-2.5 border border-slate-100">
+                        <span className="font-bold text-slate-900 block mb-1">Objektif (O):</span>
+                        <p className="text-slate-700 leading-relaxed">{cppt.objektif}</p>
+                      </div>
+                    )}
+                    {cppt.asesmen && (
+                      <div className="bg-slate-50 p-2.5 border border-slate-100">
+                        <span className="font-bold text-slate-900 block mb-1">Asesmen (A):</span>
+                        <p className="text-slate-800 font-semibold">{cppt.asesmen}</p>
+                      </div>
+                    )}
+                    {cppt.plan && (
+                      <div className="bg-slate-50 p-2.5 border border-slate-100">
+                        <span className="font-bold text-slate-900 block mb-1">Plan (P):</span>
+                        <p className="text-slate-700">{cppt.plan}</p>
+                      </div>
+                    )}
+                  </div>
+                  {cppt.instruksiMedis && (
+                    <div className="mt-3 bg-amber-50 p-2.5 border-l-2 border-amber-400 text-xs text-amber-900">
+                      <span className="font-bold">Instruksi Medis: </span>
+                      <span className="italic">{cppt.instruksiMedis}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* DIAGNOSIS ICD & TINDAKAN */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
@@ -233,6 +299,7 @@ export function DetailView({
             <div className="bg-slate-100 border-b border-slate-300 px-5 py-3">
               <h3 className="text-sm font-black text-slate-800 uppercase">Diagnosis (ICD-10)</h3>
             </div>
+
             <div className="p-4 flex-1 bg-slate-50 space-y-3">
               {selectedVisit.diagnosis && selectedVisit.diagnosis.length > 0 ? (
                 selectedVisit.diagnosis.map((d: any, idx: number) => (

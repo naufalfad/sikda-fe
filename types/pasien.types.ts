@@ -72,6 +72,16 @@ export interface Pasien {
     masaBerlakuAsuransi: string;
   };
   dataBayi?: any;
+  kunjungans?: Array<{
+    id: string;
+    noAntrian?: string;
+    jenisPelayanan?: string;
+    statusAdministrasi?: string;
+    isAnonim?: boolean;
+    namaAnonim?: string;
+    statusKunjungan?: string;
+    triase?: string;
+  }>;
 }
 
 export type PasienPayload = RegistrationFormData;

@@ -23,11 +23,18 @@ export default function TabSubjektif({
   soapData,
   setSoapData,
   setActiveTab,
-  screeningData
-}: TabSubjektifProps & { screeningData?: any }) {
+  screeningData,
+  selectedKunjungan
+}: TabSubjektifProps & { screeningData?: any; selectedKunjungan?: any }) {
   const [masterAlergis, setMasterAlergis] = useState<any[]>([]);
   const [selectedAlergenId, setSelectedAlergenId] = useState('');
   const [selectedManifestasiKode, setSelectedManifestasiKode] = useState('');
+
+  const isUgd = Boolean(
+    selectedKunjungan?.jenisPelayanan === 'UGD' || 
+    selectedKunjungan?.triase || 
+    (selectedKunjungan?.tempatTidurs && selectedKunjungan?.tempatTidurs.length > 0)
+  );
 
   useEffect(() => {
     masterService.getAlergi().then(res => {
@@ -76,6 +83,52 @@ export default function TabSubjektif({
 
   return (
     <div className="p-8 space-y-6">
+      {/* CARD ALERT PENERIMAAN PASIEN UGD (DOKTER DIRECT READ) */}
+      {isUgd && (
+        <div className="bg-rose-50 border-2 border-rose-600 p-5 rounded-none space-y-3 shadow-sm">
+          <div className="flex items-center justify-between border-b border-rose-200 pb-2">
+            <h4 className="font-black text-rose-950 text-sm flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-rose-700" />
+              Data Kedatangan & Triase Awal UGD
+            </h4>
+            <span className="bg-rose-700 text-white font-black text-[10px] uppercase px-2 py-0.5 tracking-wider">
+              Instalasi Gawat Darurat
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div className="bg-white p-2.5 border border-rose-200">
+              <span className="block text-[10px] text-gray-500 font-bold uppercase">Cara Datang</span>
+              <span className="font-extrabold text-rose-950 text-sm">{selectedKunjungan?.caraDatang || 'Datang Sendiri'}</span>
+            </div>
+
+            <div className="bg-white p-2.5 border border-rose-200">
+              <span className="block text-[10px] text-gray-500 font-bold uppercase">Bed UGD Alokasi</span>
+              <span className="font-extrabold text-blue-900 text-sm font-mono">
+                {selectedKunjungan?.tempatTidurs?.[0]?.nomorBed || 'Bed UGD'}
+              </span>
+            </div>
+
+            <div className="bg-white p-2.5 border border-rose-200">
+              <span className="block text-[10px] text-gray-500 font-bold uppercase">Kategori Triase</span>
+              <span className={`font-black text-sm uppercase ${
+                selectedKunjungan?.triase === 'MERAH' ? 'text-red-600' :
+                selectedKunjungan?.triase === 'KUNING' ? 'text-amber-600' : 'text-emerald-600'
+              }`}>
+                {selectedKunjungan?.triase || screeningData?.kategoriTriage || 'MERAH'}
+              </span>
+            </div>
+
+            <div className="bg-white p-2.5 border border-rose-200">
+              <span className="block text-[10px] text-gray-500 font-bold uppercase">Kondisi Tiba</span>
+              <span className="font-bold text-gray-800 text-xs truncate block">
+                {selectedKunjungan?.kondisiTiba || screeningData?.keluhanUtama || 'Kegawatdaruratan'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CARD ALERT SKRINING POLI GIGI (DOKTER DIRECT READ) */}
       {gigiData && (
         <div className="bg-blue-50 border-2 border-blue-600 p-5 rounded-none space-y-3 shadow-sm">
@@ -118,19 +171,36 @@ export default function TabSubjektif({
           </div>
         </div>
       )}
+
       <h3 className="text-xl font-extrabold text-gray-900 mb-6 flex items-center gap-2 border-b pb-3">
         <FileText className="w-6 h-6 text-blue-600" />
-        S - Subjektif (Anamnesis)
+        S - Subjektif {isUgd ? '(Anamnesis Kegawatdaruratan)' : '(Anamnesis)'}
       </h3>
       <div className="bg-blue-50/30 p-6 border border-blue-100 rounded-none">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Keluhan Utama</label>
-            <textarea rows={3} value={soapData.keluhanUtama || ''} onChange={e => setSoapData({...soapData, keluhanUtama: e.target.value})} className="w-full px-4 py-3 bg-white border border-blue-200 rounded-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm text-gray-900" placeholder="Contoh: Nyeri gigi geraham bawah kanan..." />
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              {isUgd ? 'Keluhan Utama Pasien UGD *' : 'Keluhan Utama'}
+            </label>
+            <textarea 
+              rows={3} 
+              value={soapData.keluhanUtama || ''} 
+              onChange={e => setSoapData({...soapData, keluhanUtama: e.target.value})} 
+              className="w-full px-4 py-3 bg-white border border-blue-200 rounded-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm text-gray-900" 
+              placeholder={isUgd ? "Keluhan kegawatdaruratan (misal: penurunan kesadaran, sesak nafas akut, luka robek kecelakaan)..." : "Contoh: Nyeri gigi geraham bawah kanan..."} 
+            />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Riwayat Penyakit Sekarang (RPS)</label>
-            <textarea rows={3} value={soapData.riwayatPenyakitSekarang || ''} onChange={e => setSoapData({...soapData, riwayatPenyakitSekarang: e.target.value})} className="w-full px-4 py-3 bg-white border border-blue-200 rounded-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm text-gray-900" placeholder="Penjabaran lebih lanjut dari keluhan utama..." />
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              {isUgd ? 'Riwayat Penyakit Sekarang & Mekanisme Trauma / Kronologi Kejadian *' : 'Riwayat Penyakit Sekarang (RPS)'}
+            </label>
+            <textarea 
+              rows={3} 
+              value={soapData.riwayatPenyakitSekarang || ''} 
+              onChange={e => setSoapData({...soapData, riwayatPenyakitSekarang: e.target.value})} 
+              className="w-full px-4 py-3 bg-white border border-blue-200 rounded-none focus:ring-2 focus:ring-blue-500 shadow-sm text-sm text-gray-900" 
+              placeholder={isUgd ? "Onset waktu kejadian, mekanisme cedera/trauma, kronologi gejala penyerta, tindakan pertolongan pertama sebelum tiba di faskes..." : "Penjabaran lebih lanjut dari keluhan utama..."} 
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className={!soapData.riwayatAlergi ? "col-span-2" : ""}>

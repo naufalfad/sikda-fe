@@ -58,7 +58,7 @@ export default function DoctorActionBar({
         className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-none shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
       >
         <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-        Selesaikan Pemeriksaan ➔
+        Simpan & Tindak Lanjut (Discharge) ➔
       </button>
     </div>
   );

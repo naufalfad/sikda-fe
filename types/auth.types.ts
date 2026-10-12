@@ -2,7 +2,7 @@ export interface User {
   id: number;
   username: string;
   email: string | null;
-  role: 'ADMINISTRASI' | 'PERAWAT' | 'DOKTER' | 'ADMIN' | 'KASIR' | 'APOTEKER' | 'LABORATORIUM' | 'PETUGAS_UKM' | 'RADIOLOGI' | 'DINKES_ADMIN' | 'DINKES_MONITORING';
+  role: 'ADMINISTRASI' | 'PERAWAT' | 'DOKTER' | 'DOKTER_UGD' | 'ADMIN' | 'KASIR' | 'APOTEKER' | 'LABORATORIUM' | 'PETUGAS_UKM' | 'RADIOLOGI' | 'DINKES_ADMIN' | 'DINKES_MONITORING';
   nama_lengkap?: string;
   namaLengkap?: string;
   status_aktif: boolean;

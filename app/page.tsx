@@ -375,182 +375,27 @@ export default function ClevelandLandingPage() {
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-transparent to-black/20 z-10 pointer-events-none"></div>
         </div>
 
-        {/* Hero Content Container */}
-        <div className="relative z-20 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-12 pb-8 sm:pt-16 sm:pb-10 flex-1 flex flex-col justify-center">
-          <div className="max-w-3xl bg-slate-950/40 backdrop-blur-xs p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl">
+        {/* Hero Content: teks saja, tepat di sudut kiri bawah banner */}
+        <div className="relative z-20 flex-1 flex items-end px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8">
+          <div className="w-full flex flex-col sm:flex-row sm:items-end justify-between gap-4">
 
-            {/* Active Video Badge / Indicator */}
-            {/* <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-emerald-300 text-xs font-bold mb-4">
-              <Video className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{activeVideo.badge}</span>
-              <span className="text-white/40">•</span>
-              <span className="text-slate-200 font-medium">{activeVideo.category}</span>
-            </div> */}
-
-            {/* Main Reassuring Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.12] tracking-tight mb-5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-              Setiap Pasien Adalah <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text text-white">
+            {/* Teks (kiri bawah) */}
+            <div className="max-w-2xl text-left">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.12] tracking-tight mb-3 drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+                Setiap Pasien Adalah <br className="hidden sm:inline" />
                 Prioritas Utama Kami.
-              </span>
-            </h1>
-
-            {/* Subtitle */}
-            <p className="text-slate-100 text-sm sm:text-base leading-relaxed mb-6 max-w-2xl font-normal drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
-              Akses pelayanan kesehatan berstandar unggul, dokter terpercaya, dan pendaftaran mandiri cepat dari rumah untuk seluruh keluarga di Kabupaten Bogor.
-            </p>
-
-            {/* ─── CLEVELAND CLINIC "FIND CARE" FLOATING SEARCH BOX ─── */}
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 sm:p-5 shadow-2xl border border-white/40 text-slate-800 max-w-2xl">
-
-              {/* Search Category Tabs */}
-              <div className="flex items-center gap-1 mb-3 border-b border-slate-200/80 pb-2 overflow-x-auto text-[11px] font-bold uppercase tracking-wider">
-                <button
-                  type="button"
-                  onClick={() => setSearchTab('ALL')}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${searchTab === 'ALL'
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                >
-                  Semua Layanan
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchTab('POLI')}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${searchTab === 'POLI'
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                >
-                  Poliklinik
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchTab('DOKTER')}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${searchTab === 'DOKTER'
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                >
-                  Dokter
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSearchTab('FASKES')}
-                  className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${searchTab === 'FASKES'
-                    ? 'bg-slate-900 text-white'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                    }`}
-                >
-                  Puskesmas
-                </button>
-              </div>
-
-              {/* Input & Search Action */}
-              <div className="flex flex-col sm:flex-row items-stretch gap-2.5">
-                <div className="relative flex-1">
-                  <Search className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Cari keluhan, poli (Umum, Gigi, KIA), atau nama dokter..."
-                    className="w-full bg-slate-50 border border-slate-300 focus:border-emerald-600 focus:bg-white rounded-xl pl-11 pr-4 py-3 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none transition-colors"
-                  />
-                </div>
-                <Link
-                  href="/booking"
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 shrink-0"
-                >
-                  <span>Cari &amp; Daftar</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </div>
-
-              {/* Quick Suggestion Chips */}
-              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px]">
-                <span className="text-slate-400 font-medium">Pilihan Cepat:</span>
-                {['Poli Umum', 'Poli Gigi', 'KIA & Imunisasi', 'UGD 24 Jam', 'Puskesmas Cibinong'].map(
-                  (tag, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSearchQuery(tag)}
-                      className="px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 font-semibold transition-colors cursor-pointer border border-slate-200/80"
-                    >
-                      {tag}
-                    </button>
-                  )
-                )}
-              </div>
+              </h1>
+              <p className="text-slate-100 text-sm sm:text-base leading-relaxed font-normal drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                Akses pelayanan kesehatan berstandar unggul, dokter terpercaya, dan pendaftaran mandiri cepat dari rumah untuk seluruh keluarga di Kabupaten Bogor.
+              </p>
             </div>
 
-          </div>
-        </div>
-
-        {/* ─── VIDEO CONTROLS & AUTO-CAROUSEL SELECTOR BAR ─── */}
-        <div className="relative z-20 bg-slate-950/90 backdrop-blur-md border-t border-white/10 px-4 sm:px-6 lg:px-8 py-3.5">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-
-            {/* Video Slide Tabs with Auto-advance Progress Line */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handlePrevVideo}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                title="Video Sebelumnya"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              {BANNER_VIDEOS.map((item, idx) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    setVideoProgress(0);
-                    setCurrentVideoIdx(idx);
-                  }}
-                  className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 overflow-hidden border ${currentVideoIdx === idx
-                    ? 'bg-emerald-600 text-white border-emerald-400 shadow-sm'
-                    : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 border-white/10'
-                    }`}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
-                  <span>{item.title}</span>
-
-                  {/* Realtime progress bar filling as video plays */}
-                  {currentVideoIdx === idx && (
-                    <span
-                      className="absolute bottom-0 left-0 h-1 bg-amber-400 transition-all duration-150"
-                      style={{ width: `${videoProgress}%` }}
-                    />
-                  )}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={handleNextVideo}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                title="Video Berikutnya"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Video Playback Tools */}
-            <div className="flex items-center gap-2">
-              {/* <span className="text-[10px] text-emerald-300 font-semibold bg-emerald-950/60 px-2.5 py-1 rounded border border-emerald-500/30 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Auto-Putar Berurutan</span>
-              </span> */}
-
+            {/* Kontrol video (kanan bawah, tanpa blur) */}
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={togglePlay}
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                className="p-2 rounded-lg bg-black/30 hover:bg-black/50 text-white transition-colors cursor-pointer"
                 title={isPlaying ? 'Jeda Video' : 'Putar Video'}
               >
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -558,7 +403,7 @@ export default function ClevelandLandingPage() {
               <button
                 type="button"
                 onClick={toggleMute}
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                className="p-2 rounded-lg bg-black/30 hover:bg-black/50 text-white transition-colors cursor-pointer"
                 title={isMuted ? 'Aktifkan Suara' : 'Bisukan Suara'}
               >
                 {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

@@ -207,7 +207,10 @@ export default function QueueSidebar({
         ) : (
           filteredAntrian.map((k) => {
             const isSelected = selectedKunjungan?.id === k.id;
-            const triage = k.screening?.kategoriTriage?.toLowerCase();
+            const isUgd = Boolean(k.jenisPelayanan === 'UGD' || k.triase || (k.tempatTidurs && k.tempatTidurs.length > 0));
+            const triage = (k.triase || k.screening?.kategoriTriage || '').toLowerCase();
+            const displayName = k.namaAnonim || k.pasien?.namaLengkap || 'Pasien';
+            const currentBed = k.tempatTidurs?.[0]?.nomorBed;
 
             return (
               <div 
@@ -217,16 +220,30 @@ export default function QueueSidebar({
                   isSelected 
                     ? 'border-l-blue-600 bg-blue-50/80 shadow-sm border-y border-r border-blue-200' 
                     : triage === 'merah'
-                      ? 'border-l-red-600 bg-red-50/50 hover:bg-red-50 border-y border-r border-red-200'
+                      ? 'border-l-red-600 bg-red-50/60 hover:bg-red-100/70 border-y border-r border-red-300'
                       : triage === 'kuning'
-                        ? 'border-l-amber-500 bg-amber-50/50 hover:bg-amber-50 border-y border-r border-amber-200'
-                        : 'border-l-transparent border-y border-r border-gray-200 hover:bg-gray-50'
+                        ? 'border-l-amber-500 bg-amber-50/60 hover:bg-amber-100/70 border-y border-r border-amber-300'
+                        : isUgd
+                          ? 'border-l-rose-500 bg-rose-50/40 hover:bg-rose-50 border-y border-r border-rose-200'
+                          : 'border-l-transparent border-y border-r border-gray-200 hover:bg-gray-50'
                 }`}
               >
                 <div className="flex flex-wrap justify-between items-center gap-1.5 mb-1.5">
-                  <span className="text-[10px] font-mono font-bold text-gray-500">
-                    {k.jamRegistrasi} • {k.pasien.noRM}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-mono font-bold text-gray-500">
+                      {k.jamRegistrasi} • {k.pasien?.noRM || 'UGD'}
+                    </span>
+                    {isUgd && (
+                      <span className="bg-red-700 text-white font-black text-[9px] px-1.5 py-0.2 uppercase tracking-wider shadow-sm">
+                        🚨 UGD
+                      </span>
+                    )}
+                    {currentBed && (
+                      <span className="bg-blue-100 text-blue-800 font-bold text-[9px] px-1.5 py-0.2 border border-blue-200 font-mono">
+                        {currentBed}
+                      </span>
+                    )}
+                  </div>
                   
                   <div className="flex items-center gap-1.5">
                     {/* Action button: Intip RME */}
@@ -234,12 +251,12 @@ export default function QueueSidebar({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (onIntipRme) {
-                          onIntipRme(k.pasien.noRM, k.pasien.namaLengkap, k);
+                        if (onIntipRme && k.pasien?.noRM) {
+                          onIntipRme(k.pasien.noRM, displayName, k);
                         }
                       }}
                       className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 shadow-sm transition-all"
-                      title={`Intip Rekam Medis (RME) Lalu: ${k.pasien.namaLengkap}`}
+                      title={`Intip Rekam Medis (RME) Lalu: ${displayName}`}
                     >
                       <FileText className="w-3 h-3 text-indigo-600" />
                       <span>RME Lalu</span>
@@ -273,28 +290,47 @@ export default function QueueSidebar({
                 <div className="flex items-start gap-2.5">
                   {/* Circle Antrean */}
                   <div className={`w-8 h-8 rounded-none font-bold flex flex-shrink-0 items-center justify-center text-xs ${
-                    isSelected ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700 border border-blue-200'
+                    isSelected ? 'bg-blue-600 text-white' : isUgd ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-blue-100 text-blue-700 border border-blue-200'
                   }`}>
                     {k.noAntrian?.split('-').pop()}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 mb-0.5">
+                    <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                       <h3 className="font-bold text-xs text-gray-900 leading-tight truncate">
-                        {k.pasien.namaLengkap}
+                        {displayName}
                       </h3>
+                      {k.isAnonim && (
+                        <span className="bg-amber-200 text-amber-900 text-[8px] font-bold px-1 py-0.2 rounded border border-amber-400">
+                          Anonim
+                        </span>
+                      )}
                       {triage === 'merah' && (
-                        <span className="animate-pulse bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">GAWAT</span>
+                        <span className="animate-pulse bg-red-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">
+                          MERAH / GAWAT
+                        </span>
                       )}
                       {triage === 'kuning' && (
-                        <span className="bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">URGENT</span>
+                        <span className="bg-amber-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">
+                          KUNING / URGENT
+                        </span>
+                      )}
+                      {triage === 'hijau' && (
+                        <span className="bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">
+                          HIJAU
+                        </span>
+                      )}
+                      {triage === 'hitam' && (
+                        <span className="bg-gray-800 text-white text-[8px] font-black px-1.5 py-0.5 rounded-none shadow-sm">
+                          HITAM
+                        </span>
                       )}
                     </div>
                     
                     <div className="text-[10px] text-gray-600 flex items-center gap-1.5 flex-wrap">
-                      <span>{getAge(k.pasien.tanggalLahir)} Thn</span>
+                      <span>{k.pasien?.tanggalLahir ? `${getAge(k.pasien.tanggalLahir)} Thn` : '-'}</span>
                       <span>•</span>
-                      <span>{k.pasien.jenisKelamin}</span>
+                      <span>{k.pasien?.jenisKelamin || '-'}</span>
                       {k.poliklinik?.namaPoli && (
                         <>
                           <span>•</span>
@@ -303,9 +339,9 @@ export default function QueueSidebar({
                       )}
                     </div>
 
-                    {k.screening?.keluhanUtama && (
+                    {(k.screening?.keluhanUtama || k.kondisiTiba || k.keluhanUtama) && (
                       <div className="text-[10px] text-slate-500 italic truncate mt-1 bg-white/70 px-1.5 py-0.5 border border-slate-200/60">
-                        &quot;{k.screening.keluhanUtama}&quot;
+                        &quot;{k.screening?.keluhanUtama || k.kondisiTiba || k.keluhanUtama}&quot;
                       </div>
                     )}
                   </div>

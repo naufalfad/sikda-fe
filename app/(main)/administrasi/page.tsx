@@ -6,13 +6,16 @@ import {
   ClipboardEdit, Activity, AlertTriangle, TrendingUp,
   Heart, Shield, Baby, ChevronRight, Calendar, Printer,
   BarChart2, ArrowUpRight, ArrowDownRight, RefreshCw,
-  Smartphone, UserCheck, QrCode, Sparkles, CheckCheck
+  Smartphone, UserCheck, QrCode, Sparkles, CheckCheck,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 
 import { kunjunganService } from '@/services/kunjungan.service';
 import { portalPasienService } from '@/services/portalPasien.service';
+import { pasienService } from '@/services/pasien.service';
+import ugdService, { KunjunganUGD } from '@/services/ugd.service';
 import { useAuthStore } from '@/store/auth.store';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -73,10 +76,42 @@ export default function AdminDashboardPage() {
 
   // State Pendaftaran Antrean Online (WhatsApp)
   const [onlineBookings, setOnlineBookings] = useState<any[]>([]);
-  const [activeQueueTab, setActiveQueueTab] = useState<'LOKET' | 'ONLINE'>('LOKET');
+  const [activeQueueTab, setActiveQueueTab] = useState<'LOKET' | 'ONLINE' | 'UGD_PENDING'>('LOKET');
   const [quickCheckInKode, setQuickCheckInKode] = useState('');
   const [isProcessingCheckIn, setIsProcessingCheckIn] = useState(false);
   const [onlineSearch, setOnlineSearch] = useState('');
+
+  // State Pending Administrasi UGD
+  const [pendingUgdList, setPendingUgdList] = useState<KunjunganUGD[]>([]);
+  const [selectedUgdKunjungan, setSelectedUgdKunjungan] = useState<KunjunganUGD | null>(null);
+  const [isModalLengkapiOpen, setIsModalLengkapiOpen] = useState(false);
+  const [pendingUgdSearch, setPendingUgdSearch] = useState('');
+  const [isSubmittingLengkapi, setIsSubmittingLengkapi] = useState(false);
+
+  // State Lookup NIK / Data Pasien Lama pada UGD
+  const [isSearchingNik, setIsSearchingNik] = useState(false);
+  const [nikLookupStatus, setNikLookupStatus] = useState<{
+    status: 'IDLE' | 'SEARCHING' | 'FOUND' | 'NOT_FOUND';
+    message: string;
+    noRM?: string;
+    pasienName?: string;
+  }>({ status: 'IDLE', message: '' });
+  const [existingPasienId, setExistingPasienId] = useState<string | null>(null);
+
+  const [formDataLengkapi, setFormDataLengkapi] = useState({
+    nik: '',
+    namaLengkap: '',
+    jenisKelamin: 'Laki-laki',
+    tempatLahir: '',
+    tanggalLahir: '1995-01-01',
+    alamatKtp: '',
+    noHp: '',
+    jenisPenjamin: 'Umum',
+    noBpjs: '',
+    kontakDarurat: '',
+    hubunganKontakDarurat: 'Keluarga',
+    noHpDarurat: ''
+  });
 
   const fetchDashboardStats = async () => {
     try {
@@ -100,6 +135,170 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.warn('Gagal memuat booking online:', err);
+    }
+  };
+
+  const fetchPendingUgd = async () => {
+    try {
+      const data = await ugdService.getPendingAdministrasi();
+      setPendingUgdList(data || []);
+    } catch (err) {
+      console.warn('Gagal memuat pending administrasi UGD:', err);
+    }
+  };
+
+  const handleOpenLengkapiModal = (item: KunjunganUGD) => {
+    setSelectedUgdKunjungan(item);
+    setExistingPasienId(null);
+    setNikLookupStatus({ status: 'IDLE', message: '' });
+
+    const currentNik = item.pasien?.nik || '';
+    setFormDataLengkapi({
+      nik: currentNik,
+      namaLengkap: item.isAnonim ? '' : (item.pasien?.namaLengkap || ''),
+      jenisKelamin: item.pasien?.jenisKelamin || 'Laki-laki',
+      tempatLahir: item.pasien?.tempatLahir || '',
+      tanggalLahir: item.pasien?.tanggalLahir ? item.pasien.tanggalLahir.split('T')[0] : '1995-01-01',
+      alamatKtp: item.pasien?.alamat?.alamatKtp || '',
+      noHp: item.pasien?.kontak?.noHp || '',
+      jenisPenjamin: item.pasien?.penjamin?.jenisPenjamin || 'Umum',
+      noBpjs: item.pasien?.penjamin?.noBpjs || '',
+      kontakDarurat: item.pasien?.kontak?.kontakDarurat || '',
+      hubunganKontakDarurat: item.pasien?.kontak?.hubunganKontakDarurat || 'Keluarga',
+      noHpDarurat: item.pasien?.kontak?.noHpDarurat || ''
+    });
+
+    // Jika pasien sudah memiliki rekam medis resmi (bukan anonim)
+    if (!item.isAnonim && item.pasien?.noRekamMedis && item.pasien?.noRekamMedis !== '-') {
+      setExistingPasienId(item.pasien.id);
+      setNikLookupStatus({
+        status: 'FOUND',
+        message: 'Data pasien terdaftar di rekam medis faskes.',
+        noRM: item.pasien.noRekamMedis,
+        pasienName: item.pasien.namaLengkap
+      });
+    }
+
+    setIsModalLengkapiOpen(true);
+  };
+
+  const handleLookupNik = async (queryInput?: string) => {
+    const q = (queryInput !== undefined ? queryInput : formDataLengkapi.nik || '').trim();
+    if (!q) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'NIK / No. RM Diperlukan',
+        text: 'Silakan ketik NIK (16 digit) atau Nomor Rekam Medis pasien terlebih dahulu untuk menarik data.'
+      });
+      return;
+    }
+
+    setIsSearchingNik(true);
+    setNikLookupStatus({ status: 'SEARCHING', message: 'Mencari data pasien di sistem...' });
+
+    try {
+      const res = await pasienService.searchPasien(q);
+      if (res && res.success && res.data) {
+        const p = res.data;
+        setExistingPasienId(p.id);
+
+        let tglLahir = '1995-01-01';
+        if (p.tanggalLahir) {
+          try {
+            tglLahir = new Date(p.tanggalLahir).toISOString().split('T')[0];
+          } catch (_) {
+            tglLahir = p.tanggalLahir;
+          }
+        }
+
+        let normGender = 'Laki-laki';
+        if (p.jenisKelamin) {
+          normGender = p.jenisKelamin.toLowerCase().startsWith('p') ? 'Perempuan' : 'Laki-laki';
+        }
+
+        setFormDataLengkapi(prev => ({
+          ...prev,
+          nik: p.nik || q,
+          namaLengkap: p.namaLengkap || '',
+          jenisKelamin: normGender,
+          tempatLahir: p.tempatLahir || '',
+          tanggalLahir: tglLahir,
+          alamatKtp: p.alamat?.alamatKtp || p.alamat?.alamatDomisili || '',
+          noHp: p.kontak?.noHp || '',
+          jenisPenjamin: p.penjamin?.jenisPenjamin || 'Umum',
+          noBpjs: p.penjamin?.noBpjs || '',
+          kontakDarurat: p.kontak?.kontakDarurat || '',
+          hubunganKontakDarurat: p.kontak?.hubunganKontakDarurat || 'Keluarga',
+          noHpDarurat: p.kontak?.noHpDarurat || ''
+        }));
+
+        setNikLookupStatus({
+          status: 'FOUND',
+          message: `Data pasien lama ditemukan. Field administrasi berhasil diisi otomatis.`,
+          noRM: p.noRM || '-',
+          pasienName: p.namaLengkap || ''
+        });
+      } else {
+        setExistingPasienId(null);
+        setNikLookupStatus({
+          status: 'NOT_FOUND',
+          message: 'Pasien belum terdaftar di faskes (Pasien Baru). Silakan lengkapi formulir administrasi secara manual.'
+        });
+      }
+    } catch (err: any) {
+      console.warn('Gagal mencari data pasien:', err);
+      setExistingPasienId(null);
+      setNikLookupStatus({
+        status: 'NOT_FOUND',
+        message: 'Pasien belum terdaftar di faskes (Pasien Baru). Silakan lengkapi formulir administrasi secara manual.'
+      });
+    } finally {
+      setIsSearchingNik(false);
+    }
+  };
+
+  const handleSubmitLengkapi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUgdKunjungan) return;
+    if (!formDataLengkapi.namaLengkap) {
+      Swal.fire({ icon: 'warning', title: 'Nama Lengkap Wajib', text: 'Silakan isi nama resmi pasien sesuai KTP.' });
+      return;
+    }
+
+    setIsSubmittingLengkapi(true);
+    try {
+      await ugdService.lengkapiAdministrasi(selectedUgdKunjungan.id, {
+        ...formDataLengkapi,
+        existingPasienId: existingPasienId || undefined
+      });
+      await Swal.fire({
+        icon: 'success',
+        title: 'Administrasi Pasien UGD Selesai!',
+        html: `
+          <div class="text-left text-sm space-y-2 mt-2">
+            <p>Pasien di Bed <strong>${selectedUgdKunjungan.tempatTidurs?.[0]?.nomorBed || 'UGD'}</strong> telah diverifikasi identitas resminya.</p>
+            <p><strong>Nama Resmi:</strong> ${formDataLengkapi.namaLengkap}</p>
+            <p><strong>NIK:</strong> ${formDataLengkapi.nik || '-'}</p>
+            ${nikLookupStatus.status === 'FOUND' && nikLookupStatus.noRM ? `<p><strong>No. Rekam Medis:</strong> <span class="bg-blue-100 text-blue-800 font-mono font-bold px-1.5 py-0.5 rounded">${nikLookupStatus.noRM}</span></p>` : ''}
+            <p><strong>Penjamin:</strong> ${formDataLengkapi.jenisPenjamin} ${formDataLengkapi.noBpjs ? `(${formDataLengkapi.noBpjs})` : ''}</p>
+            <div class="bg-blue-50 border border-blue-200 p-2 text-xs text-blue-800 mt-2">
+              ✓ Berkas administrasi kini berstatus <strong>LENGKAP</strong>.<br/>
+              ✓ Dokter UGD dapat melanjutkan penanganan dengan identitas resmi.<br/>
+              ✓ Rekam Medis & Kasir telah tersinkronisasi.
+            </div>
+          </div>
+        `
+      });
+      setIsModalLengkapiOpen(false);
+      await Promise.all([fetchPendingUgd(), fetchDashboardStats()]);
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menyimpan Administrasi',
+        text: err.response?.data?.message || err.message || 'Terjadi kesalahan sistem.'
+      });
+    } finally {
+      setIsSubmittingLengkapi(false);
     }
   };
 
@@ -129,7 +328,7 @@ export default function AdminDashboardPage() {
           confirmButtonText: 'Tutup & Lanjutkan'
         });
         setQuickCheckInKode('');
-        await Promise.all([fetchDashboardStats(), fetchOnlineBookings()]);
+        await Promise.all([fetchDashboardStats(), fetchOnlineBookings(), fetchPendingUgd()]);
       } else {
         Swal.fire({
           icon: 'error',
@@ -159,10 +358,12 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchDashboardStats();
     fetchOnlineBookings();
+    fetchPendingUgd();
     // Auto-refresh every 30 seconds
     const refreshInterval = setInterval(() => {
       fetchDashboardStats();
       fetchOnlineBookings();
+      fetchPendingUgd();
     }, 30000);
     return () => clearInterval(refreshInterval);
   }, []);
@@ -484,6 +685,28 @@ export default function AdminDashboardPage() {
                   </span>
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveQueueTab('UGD_PENDING')}
+                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
+                  activeQueueTab === 'UGD_PENDING'
+                    ? 'border-rose-600 text-rose-700 bg-white shadow-sm'
+                    : 'border-transparent text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <AlertTriangle className={`w-4 h-4 ${pendingUgdList.length > 0 ? 'text-rose-600 animate-bounce' : 'text-gray-400'}`} />
+                <span>Pending Administrasi UGD</span>
+                {pendingUgdList.length > 0 ? (
+                  <span className="bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm animate-pulse">
+                    {pendingUgdList.length} Butuh Assign
+                  </span>
+                ) : (
+                  <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    0
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* ============================================================ */}
@@ -789,10 +1012,525 @@ export default function AdminDashboardPage() {
 
               </div>
             )}
+
+            {/* ============================================================ */}
+            {/* VIEW 3: TABEL PENDING ADMINISTRASI UGD */}
+            {/* ============================================================ */}
+            {activeQueueTab === 'UGD_PENDING' && (
+              <div className="flex flex-col">
+                <div className="p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-rose-50/40">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-rose-600 text-white text-[10px] font-black uppercase tracking-wider rounded">
+                        Gawat Darurat
+                      </span>
+                      <h2 className="text-base font-bold text-gray-900">Pasien UGD Menunggu Kelengkapan Administrasi</h2>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Pasien tiba dalam kondisi gawat darurat dan langsung ditangani di Bed UGD. Petugas Loket meng-assign berkas resmi (KTP, BPJS, Kontak Darurat) berdasarkan Bed yang sedang ditempati pasien.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Cari pasien / nomor bed..."
+                        value={pendingUgdSearch}
+                        onChange={(e) => setPendingUgdSearch(e.target.value)}
+                        className="text-xs border border-gray-200 pl-8 pr-3 py-1.5 w-60 focus:outline-none focus:border-rose-500 rounded"
+                      />
+                      <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
+                    </div>
+                    <button
+                      onClick={fetchPendingUgd}
+                      className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-700 flex items-center gap-1.5 rounded shadow-sm"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" /> Refresh
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border-t border-gray-200">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3">No. Antrean & Waktu</th>
+                        <th className="px-5 py-3">Lokasi Bed Terkini</th>
+                        <th className="px-5 py-3">Triase</th>
+                        <th className="px-5 py-3">Data Pasien (Saat Tiba)</th>
+                        <th className="px-5 py-3">Tanda Vital Triase</th>
+                        <th className="px-5 py-3 text-right">Aksi Loket</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {pendingUgdList
+                        .filter(item => {
+                          const q = pendingUgdSearch.toLowerCase();
+                          const nama = item.pasien?.namaLengkap?.toLowerCase() || '';
+                          const anonim = item.namaAnonim?.toLowerCase() || '';
+                          const bed = item.tempatTidurs?.[0]?.nomorBed?.toLowerCase() || '';
+                          const noAntrian = item.noAntrian?.toLowerCase() || '';
+                          return !q || nama.includes(q) || anonim.includes(q) || bed.includes(q) || noAntrian.includes(q);
+                        })
+                        .map(item => {
+                          const bed = item.tempatTidurs?.[0];
+                          const scr = (Array.isArray(item.screening) ? item.screening[0] : item.screening) as any;
+                          return (
+                            <tr key={item.id} className="hover:bg-rose-50/20 transition-colors">
+                              <td className="px-5 py-3.5">
+                                <div className="font-extrabold text-base text-rose-700 font-mono">{item.noAntrian}</div>
+                                <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                                  <Clock className="w-3 h-3 text-gray-400" />
+                                  <span>{item.jamRegistrasi || '-'}</span>
+                                </div>
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded text-blue-900 font-bold text-xs">
+                                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                                  <span>{bed ? `${bed.nomorBed}` : 'Bed UGD'}</span>
+                                </div>
+                                <div className="text-[11px] text-gray-500 mt-0.5">
+                                  {bed?.ruangan?.namaRuangan || 'Ruang Tindakan & Gawat Darurat'}
+                                </div>
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded border shadow-sm ${
+                                  item.triase === 'MERAH' ? 'bg-red-600 text-white border-red-700' :
+                                  item.triase === 'KUNING' ? 'bg-yellow-400 text-black border-yellow-500' :
+                                  item.triase === 'HIJAU' ? 'bg-green-600 text-white border-green-700' :
+                                  'bg-gray-900 text-white border-black'
+                                }`}>
+                                  {item.triase || 'MERAH'}
+                                </span>
+                              </td>
+                              <td className="px-5 py-3.5">
+                                <div className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                                  <span>{item.namaAnonim || item.pasien?.namaLengkap}</span>
+                                  {item.isAnonim && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded">
+                                      Anonim
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {item.pasien?.jenisKelamin || '-'} • Kedatangan: {item.caraDatang || 'Ambulans'}
+                                </div>
+                                <div className="text-xs text-rose-600 font-medium mt-0.5 line-clamp-1" title={scr?.keluhanUtama || item.keluhanUtama || ''}>
+                                  {scr?.keluhanUtama || item.keluhanUtama || 'Kondisi gawat darurat'}
+                                </div>
+                              </td>
+                              <td className="px-5 py-3.5 text-xs text-gray-600">
+                                {scr ? (
+                                  <div className="space-y-0.5">
+                                    <div>TD: <span className="font-semibold text-gray-900">{scr.tekananDarahSistolik || '-'}/{scr.tekananDarahDiastolik || '-'} mmHg</span></div>
+                                    <div>Nadi: <span className="font-semibold text-gray-900">{scr.nadi || '-'} bpm</span> | SpO2: <span className="font-semibold text-gray-900">{scr.saturasiOksigen || '-'}%</span></div>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic">Pemeriksaan di bed...</span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3.5 text-right">
+                                <button
+                                  onClick={() => handleOpenLengkapiModal(item)}
+                                  className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 ml-auto rounded"
+                                >
+                                  <ClipboardEdit className="w-3.5 h-3.5" />
+                                  Lengkapi Administrasi
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      {pendingUgdList.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
+                            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500" />
+                            <p className="font-semibold text-gray-700">Semua Pasien UGD Telah Lengkap Administrasinya</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Tidak ada antrean pending administrasi UGD yang tertahan saat ini.</p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-4 bg-gray-50 border border-gray-200 flex items-center justify-between text-xs text-gray-500">
+                  <span>Total <strong className="text-gray-700">{pendingUgdList.length}</strong> pasien UGD butuh kelengkapan data</span>
+                  <span className="text-rose-700 font-bold">Sinkronisasi otomatis dengan Bed & Dokter UGD</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
       </div>
+
+      {/* ============================================================ */}
+      {/* MODAL LENGKAPI ADMINISTRASI UGD */}
+      {/* ============================================================ */}
+      {isModalLengkapiOpen && selectedUgdKunjungan && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-none shadow-2xl max-w-2xl w-full border border-gray-300 overflow-hidden my-8">
+            <div className="bg-rose-700 text-white px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-lg tracking-tight flex items-center gap-2">
+                  <ClipboardEdit className="w-5 h-5 text-rose-200" />
+                  Lengkapi Administrasi Pasien UGD
+                </h3>
+                <p className="text-xs text-rose-100 mt-0.5">
+                  Verifikasi identitas resmi pasien yang sedang dirawat di Bed UGD
+                </p>
+              </div>
+              <button
+                onClick={() => setIsModalLengkapiOpen(false)}
+                className="text-rose-200 hover:text-white text-sm font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Bed & Current Status Info */}
+            <div className="bg-rose-50/70 p-4 border-b border-rose-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <span className="text-gray-500 block">Nomor Bed:</span>
+                <span className="font-extrabold text-blue-700 text-sm">
+                  {selectedUgdKunjungan.tempatTidurs?.[0]?.nomorBed || 'BED-UGD'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 block">Antrean UGD:</span>
+                <span className="font-extrabold text-gray-900 font-mono text-sm">
+                  {selectedUgdKunjungan.noAntrian}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 block">Kategori Triase:</span>
+                <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] uppercase text-white ${
+                  selectedUgdKunjungan.triase === 'MERAH' ? 'bg-red-600' :
+                  selectedUgdKunjungan.triase === 'KUNING' ? 'bg-yellow-500 text-black' : 'bg-green-600'
+                }`}>
+                  {selectedUgdKunjungan.triase}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 block">Nama Sementara:</span>
+                <span className="font-bold text-gray-900 truncate block">
+                  {selectedUgdKunjungan.namaAnonim || selectedUgdKunjungan.pasien?.namaLengkap}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitLengkapi} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* Box Penarikan Data NIK (Pasien Lama vs Pasien Baru) */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-600 text-white rounded">
+                      <Search className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-gray-900">
+                        Penarikan Data Pasien Otomatis (NIK / No. RM)
+                      </h4>
+                      <p className="text-[11px] text-gray-600">
+                        Cek data pasien di master faskes untuk auto-fill seluruh formulir
+                      </p>
+                    </div>
+                  </div>
+                  {nikLookupStatus.status === 'FOUND' && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Pasien Lama Ditemukan
+                    </span>
+                  )}
+                  {nikLookupStatus.status === 'NOT_FOUND' && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full">
+                      <UserPlus className="w-3.5 h-3.5 text-amber-600" /> Pasien Baru (Manual)
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 mt-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      maxLength={16}
+                      value={formDataLengkapi.nik}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setFormDataLengkapi({ ...formDataLengkapi, nik: val });
+                        if (nikLookupStatus.status !== 'IDLE') {
+                          setNikLookupStatus({ status: 'IDLE', message: '' });
+                          setExistingPasienId(null);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleLookupNik();
+                        }
+                      }}
+                      placeholder="Masukkan 16 digit NIK atau Nomor RM pasien..."
+                      className="w-full text-xs font-mono font-medium border border-blue-300 p-2.5 rounded focus:border-blue-600 focus:ring-1 focus:ring-blue-600 focus:outline-none bg-white"
+                    />
+                    {formDataLengkapi.nik && (
+                      <span className="absolute right-2.5 top-2.5 text-[10px] text-gray-400 font-mono">
+                        {formDataLengkapi.nik.length}/16
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isSearchingNik || !formDataLengkapi.nik}
+                    onClick={() => handleLookupNik()}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-xs font-bold rounded flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                  >
+                    {isSearchingNik ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Menarik Data...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Tarik Data Pasien</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Banner Notifikasi Status Pencarian */}
+                {nikLookupStatus.status === 'FOUND' && (
+                  <div className="mt-3 p-3 bg-emerald-50 border border-emerald-300 rounded text-xs text-emerald-900 flex items-start gap-2.5 animate-in fade-in duration-200">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong className="text-emerald-950 text-sm">
+                          {nikLookupStatus.pasienName}
+                        </strong>
+                        <span className="bg-emerald-200/80 text-emerald-900 text-[10px] font-mono font-black px-2 py-0.5 rounded">
+                          No. RM: {nikLookupStatus.noRM}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-emerald-800 mt-1">
+                        ✓ Pasien lama terverifikasi di faskes. Semua field administrasi di bawah telah terisi secara otomatis. Anda tetap dapat menyesuaikan nomor HP atau alamat jika terdapat pembaruan.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {nikLookupStatus.status === 'NOT_FOUND' && (
+                  <div className="mt-3 p-3 bg-amber-50 border border-amber-300 rounded text-xs text-amber-900 flex items-start gap-2.5 animate-in fade-in duration-200">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <strong className="text-amber-950 block text-xs">
+                        Pasien Baru (Belum Terdaftar di Faskes)
+                      </strong>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        Data dengan NIK tersebut tidak ditemukan di master pasien faskes. Silakan lengkapi seluruh formulir di bawah secara manual untuk mendaftarkan pasien baru.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {nikLookupStatus.status === 'IDLE' && (
+                  <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1.5">
+                    <span>💡</span>
+                    <span>
+                      Jika pasien pernah berobat, masukkan NIK lalu klik <strong>Tarik Data Pasien</strong> (atau tekan Enter). Jika pasien baru, Anda dapat langsung mengisi form di bawah secara manual.
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {/* Grid Formulir Administrasi */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Nama Resmi Pasien Sesuai KTP *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formDataLengkapi.namaLengkap}
+                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, namaLengkap: e.target.value })}
+                    placeholder="Nama lengkap resmi pasien"
+                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Tempat Lahir
+                  </label>
+                  <input
+                    type="text"
+                    value={formDataLengkapi.tempatLahir}
+                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, tempatLahir: e.target.value })}
+                    placeholder="Kota / Tempat Lahir"
+                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Tanggal Lahir
+                  </label>
+                  <input
+                    type="date"
+                    value={formDataLengkapi.tanggalLahir}
+                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, tanggalLahir: e.target.value })}
+                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Jenis Kelamin *
+                  </label>
+                  <select
+                    value={formDataLengkapi.jenisKelamin}
+                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, jenisKelamin: e.target.value })}
+                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                  >
+                    <option value="Laki-laki">Laki-laki</option>
+                    <option value="Perempuan">Perempuan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Nomor HP / WhatsApp Pasien
+                  </label>
+                  <input
+                    type="text"
+                    value={formDataLengkapi.noHp}
+                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, noHp: e.target.value })}
+                    placeholder="08..."
+                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Alamat KTP / Domisili
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={formDataLengkapi.alamatKtp}
+                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, alamatKtp: e.target.value })}
+                    placeholder="Alamat tempat tinggal pasien"
+                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Data Penjamin */}
+                <div className="sm:col-span-2 pt-2 border-t border-gray-200">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Penjamin Biaya</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Jenis Penjamin
+                      </label>
+                      <select
+                        value={formDataLengkapi.jenisPenjamin}
+                        onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, jenisPenjamin: e.target.value })}
+                        className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                      >
+                        <option value="Umum">Umum / Mandiri</option>
+                        <option value="BPJS">BPJS Kesehatan</option>
+                        <option value="Asuransi">Asuransi Lain</option>
+                        <option value="Jaminan Daerah">Jamkesda</option>
+                      </select>
+                    </div>
+
+                    {formDataLengkapi.jenisPenjamin === 'BPJS' && (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Nomor Kartu BPJS (13 Digit)
+                        </label>
+                        <input
+                          type="text"
+                          maxLength={13}
+                          value={formDataLengkapi.noBpjs}
+                          onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, noBpjs: e.target.value })}
+                          placeholder="0001..."
+                          className="w-full text-xs border border-gray-300 p-2.5 rounded font-mono focus:border-rose-500 focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Kontak Darurat / Keluarga */}
+                <div className="sm:col-span-2 pt-2 border-t border-gray-200">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-2">Penanggung Jawab / Kontak Keluarga</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Nama Keluarga / Pengantar
+                      </label>
+                      <input
+                        type="text"
+                        value={formDataLengkapi.kontakDarurat}
+                        onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, kontakDarurat: e.target.value })}
+                        placeholder="Contoh: Siti"
+                        className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Hubungan
+                      </label>
+                      <select
+                        value={formDataLengkapi.hubunganKontakDarurat}
+                        onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, hubunganKontakDarurat: e.target.value })}
+                        className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                      >
+                        <option value="Keluarga">Keluarga</option>
+                        <option value="Suami">Suami</option>
+                        <option value="Istri">Istri</option>
+                        <option value="Orang Tua">Orang Tua</option>
+                        <option value="Anak">Anak</option>
+                        <option value="Kerabat">Kerabat / Teman</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        No. HP Keluarga
+                      </label>
+                      <input
+                        type="text"
+                        value={formDataLengkapi.noHpDarurat}
+                        onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, noHpDarurat: e.target.value })}
+                        placeholder="08..."
+                        className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalLengkapiOpen(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingLengkapi}
+                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  {isSubmittingLengkapi ? 'Menyimpan...' : 'Simpan & Verifikasi Administrasi'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

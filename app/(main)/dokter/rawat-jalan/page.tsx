@@ -11,7 +11,7 @@ import { laboratoriumService } from '@/services/laboratorium.service';
 import { kunjunganService } from '@/services/kunjungan.service';
 import { useRawatJalanStore } from '@/store/rawatJalan.store';
 import { SOAPPayload } from '@/types/rawatJalan.types';
-import { AVAILABLE_LAB_TESTS, fillDokterDummyDataHelper } from './rawatJalan.constants';
+import { AVAILABLE_LAB_TESTS, fillDokterDummyDataHelper, parseUgdPemeriksaanFisik } from './rawatJalan.constants';
 import Swal from 'sweetalert2';
 import QueueSidebar from './components/QueueSidebar';
 import PatientHeader from './components/PatientHeader';
@@ -237,6 +237,9 @@ function DokterRawatJalanContent() {
   // Sync SOAP data when rekamMedis or screeningData is loaded
   useEffect(() => {
     if (rekamMedis || screeningData) {
+      const rawFisik = rekamMedis?.pemeriksaanFisik || '';
+      const parsedUgd = parseUgdPemeriksaanFisik(rawFisik);
+
       setSoapData(prev => ({
         ...prev,
         keluhanUtama: rekamMedis?.keluhanUtama || screeningData?.keluhanUtama || prev.keluhanUtama || '',
@@ -254,7 +257,13 @@ function DokterRawatJalanContent() {
           : (prev.alergiArr || []),
         keadaanUmum: rekamMedis?.keadaanUmum || 'Tampak Sakit Ringan',
         kesadaran: rekamMedis?.kesadaran || screeningData?.dataTambahan?.triage?.kesadaran || 'Compos Mentis (Sadar Penuh)',
-        pemeriksaanFisik: rekamMedis?.pemeriksaanFisik || prev.pemeriksaanFisik || '',
+        pemeriksaanFisik: rawFisik || prev.pemeriksaanFisik || '',
+        primarySurvey: (prev.primarySurvey?.airway || prev.primarySurvey?.breathing || prev.primarySurvey?.circulation) 
+          ? prev.primarySurvey 
+          : parsedUgd.primarySurvey,
+        secondarySurvey: (prev.secondarySurvey !== undefined && prev.secondarySurvey !== '')
+          ? prev.secondarySurvey
+          : parsedUgd.secondarySurvey,
         diagnosisKlinis: rekamMedis?.diagnosisKlinis || prev.diagnosisKlinis || '',
         rencanaTerapi: rekamMedis?.rencanaTerapi || prev.rencanaTerapi || '',
         instruksiMedis: rekamMedis?.instruksiMedis || prev.instruksiMedis || '',
@@ -335,7 +344,16 @@ function DokterRawatJalanContent() {
     }
   }, [activeTab]);
 
-  const fillDokterDummyData = () => fillDokterDummyDataHelper(setSoapData);
+  const fillDokterDummyData = () => {
+    const isUgd = Boolean(
+      selectedKunjungan?.jenisPelayanan === 'UGD' || 
+      selectedKunjungan?.triase || 
+      selectedKunjungan?.poliklinik?.namaPoli?.toUpperCase().includes('UGD') ||
+      selectedKunjungan?.poliklinik?.namaPoli?.toUpperCase().includes('IGD') ||
+      (selectedKunjungan?.tempatTidurs && selectedKunjungan?.tempatTidurs.length > 0)
+    );
+    fillDokterDummyDataHelper(setSoapData, isUgd);
+  };
 
   // ─── Handlers ───
   const handlePilihPasien = (kunjungan: any) => {
@@ -438,12 +456,18 @@ function DokterRawatJalanContent() {
   };
 
   const handleSelesaikan = async () => {
+    const isUgd = selectedKunjungan?.jenisPelayanan === 'UGD' || 
+                  selectedKunjungan?.poliklinik?.namaPoli?.toUpperCase().includes('UGD') || 
+                  selectedKunjungan?.poliklinik?.namaPoli?.toUpperCase().includes('IGD');
+
     const confirm = await Swal.fire({
       icon: 'question',
-      title: 'Selesaikan Pemeriksaan?',
-      text: 'Pastikan semua data SOAP dan diagnosa sudah lengkap.',
+      title: 'Simpan SOAP & Lanjut Tindak Lanjut?',
+      text: isUgd 
+        ? 'Data pemeriksaan SOAP UGD akan disimpan. Anda akan diarahkan ke tahap Keputusan Tindak Lanjut UGD (Boleh Pulang, Rawat Inap, Rujuk RS, atau Kematian).'
+        : 'Data SOAP, diagnosa, dan terapi akan disimpan. Anda akan diarahkan ke tahap Rencana Tindak Lanjut Pasien.',
       showCancelButton: true,
-      confirmButtonText: 'Ya, Selesaikan',
+      confirmButtonText: 'Ya, Lanjut Tindak Lanjut',
       cancelButtonText: 'Batal',
       confirmButtonColor: '#4f46e5',
     });
@@ -488,17 +512,20 @@ function DokterRawatJalanContent() {
         }));
         await simpanResep(rPayload);
       }
-      // Selesaikan
-      await selesaikanPemeriksaan();
-      setSelectedObat([]);
-      setSelectedProsedur([]);
-      setSoapData({});
-      setActiveTab('SOAP_S');
-      setIsQueueCollapsed(false);
-      setShowSideRmePanel(false);
-      Swal.fire({ icon: 'success', title: 'Pemeriksaan Berhasil Disimpan!', text: 'Data rekam medis tersimpan. Pasien diteruskan ke antrian Kasir & Farmasi.', timer: 2500, showConfirmButton: false });
-    } catch {
-      Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyelesaikan pemeriksaan' });
+
+      // Alihkan ke Fase 2: Tindak Lanjut / Discharge Planning
+      setFase(2);
+
+      Swal.fire({ 
+        icon: 'success', 
+        title: 'Pemeriksaan SOAP Tersimpan!', 
+        text: 'Silakan pilih keputusan tindak lanjut pasien.', 
+        timer: 1800, 
+        showConfirmButton: false 
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Gagal menyimpan pemeriksaan';
+      Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
     }
   };
 
@@ -517,8 +544,9 @@ function DokterRawatJalanContent() {
       }));
       await simpanResep(rPayload);
       Swal.fire({ icon: 'success', title: 'Resep Tersimpan!', text: 'e-Resep pasien berhasil diteruskan ke Farmasi.', timer: 1500, showConfirmButton: false });
-    } catch {
-      Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan e-resep.' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || 'Gagal menyimpan e-resep.';
+      Swal.fire({ icon: 'error', title: 'Gagal', text: msg });
     }
   };
 
@@ -665,7 +693,13 @@ function DokterRawatJalanContent() {
                       
                       {/* TAB S: Subjektif */}
                       {activeTab === 'SOAP_S' && (
-                        <TabSubjektif soapData={soapData} setSoapData={setSoapData} setActiveTab={setActiveTab} screeningData={screeningData} />
+                        <TabSubjektif 
+                          soapData={soapData} 
+                          setSoapData={setSoapData} 
+                          setActiveTab={setActiveTab} 
+                          screeningData={screeningData}
+                          selectedKunjungan={selectedKunjungan}
+                        />
                       )}
 
                       {/* TAB O: Objektif */}
@@ -675,9 +709,11 @@ function DokterRawatJalanContent() {
                           setSoapData={setSoapData} 
                           setActiveTab={setActiveTab} 
                           openLabModal={openLabModal} 
-                        isPoliGigi={Boolean(selectedKunjungan?.poliklinik?.namaPoli?.toLowerCase().includes('gigi'))}
-                      />
-                    )}
+                          isPoliGigi={Boolean(selectedKunjungan?.poliklinik?.namaPoli?.toLowerCase().includes('gigi'))}
+                          screeningData={screeningData}
+                          selectedKunjungan={selectedKunjungan}
+                        />
+                      )}
 
                     {/* TAB A: Asesmen */}
                     {activeTab === 'SOAP_A' && (

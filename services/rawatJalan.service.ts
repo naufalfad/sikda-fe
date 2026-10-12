@@ -116,10 +116,69 @@ export const rawatJalanService = {
     return response.data;
   },
 
+  /** POST /rawat-jalan/:kunjunganId/rawat-inap — Assign pasien ke Bed Rawat Inap */
+  assignRawatInap: async (kunjunganId: string, payload: { tempatTidurId: string; alasanRawatInap?: string; instruksiMedis?: string }): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/rawat-jalan/${kunjunganId}/rawat-inap`, payload);
+    return response.data;
+  },
+
   /** POST /rawat-jalan/:kunjunganId/pulang — Pasien pulang */
   pulang: async (kunjunganId: string): Promise<ApiResponse<any>> => {
     const response = await api.post(`/rawat-jalan/${kunjunganId}/pulang`);
     return response.data;
   },
+
+  /** POST /rawat-jalan/:kunjunganId/meninggal — Pasien meninggal dunia (UGD / Kedaruratan) */
+  catatMeninggal: async (kunjunganId: string, catatan?: string): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/rawat-jalan/${kunjunganId}/meninggal`, { catatan });
+    return response.data;
+  },
+
+  /** POST /rawat-jalan/:kunjunganId/discharge-rawat-inap — Pulangkan pasien rawat inap & finalisasi kasir */
+  dischargeRawatInap: async (
+    kunjunganId: string, 
+    payload: { caraKeluar?: string; kondisiDischarge?: string; edukasiPulang?: string; rencanaKontrol?: string; faskesTujuan?: string; alasanRujukan?: string; poliTujuan?: string }
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/rawat-jalan/${kunjunganId}/discharge-rawat-inap`, payload);
+    return response.data;
+  },
+
+  /** POST /rawat-jalan/:kunjunganId/cppt — Simpan Catatan Perkembangan (CPPT) & sinkronkan ke Rekam Medis (RME) */
+  simpanCPPT: async (
+    kunjunganId: string,
+    payload: {
+      profesi?: string;
+      tanggalCatatan?: string;
+      subjektif?: string;
+      objektif?: string;
+      tandaVital?: any;
+      asesmen?: string;
+      plan?: string;
+      instruksiMedis?: string;
+      resep?: ResepPayloadItem[];
+    }
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/rawat-jalan/${kunjunganId}/cppt`, payload);
+    return response.data;
+  },
+
+  /** GET /rawat-jalan/:kunjunganId/cppt — Ambil riwayat seluruh CPPT kunjungan rawat inap */
+  getRiwayatCPPT: async (kunjunganId: string): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/rawat-jalan/${kunjunganId}/cppt`);
+    return response.data;
+  },
+
+  /** GET /rawat-jalan/:kunjunganId/rekam-medis-sebelumnya — Ambil rekam medis sebelumnya untuk preview & basis CPPT */
+  getRekamMedisSebelumnya: async (kunjunganId: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/rawat-jalan/${kunjunganId}/rekam-medis-sebelumnya`);
+    return response.data;
+  },
+
+  /** GET /rawat-jalan/:kunjunganId/resep — Ambil riwayat resep obat untuk kunjungan */
+  getResepByKunjungan: async (kunjunganId: string): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/rawat-jalan/${kunjunganId}/resep`);
+    return response.data;
+  },
 };
+
 

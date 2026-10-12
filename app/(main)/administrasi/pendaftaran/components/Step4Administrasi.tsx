@@ -6,6 +6,7 @@ import { RegistrationFormData } from '../schema';
 import { useKlinikStore } from '@/store/klinik.store';
 
 import { referensiService, RefItem } from '@/services/referensi.service';
+import ugdService, { BedUGD } from '@/services/ugd.service';
 
 interface Step4Props {
   register: UseFormRegister<RegistrationFormData>;
@@ -23,11 +24,17 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
   const [caraDatangList, setCaraDatangList] = React.useState<RefItem[]>([]);
   const [jenisPelayananList, setJenisPelayananList] = React.useState<RefItem[]>([]);
   const [prioritasList, setPrioritasList] = React.useState<RefItem[]>([]);
+  const [bedUgdList, setBedUgdList] = React.useState<BedUGD[]>([]);
 
   useEffect(() => {
     referensiService.getByType('cara-datang').then(data => data && data.length > 0 && setCaraDatangList(data)).catch(() => {});
     referensiService.getByType('jenis-pelayanan').then(data => data && data.length > 0 && setJenisPelayananList(data)).catch(() => {});
     referensiService.getByType('prioritas').then(data => data && data.length > 0 && setPrioritasList(data)).catch(() => {});
+    
+    // Ambil Bed UGD
+    ugdService.getBeds().then(beds => {
+      setBedUgdList(beds || []);
+    }).catch(() => {});
   }, []);
 
   const defaultCaraDatang = [
@@ -40,16 +47,10 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
     : defaultCaraDatang;
 
   const defaultJenisPelayanan = [
-    { label: 'Rawat Jalan', value: 'Rawat Jalan' },
-    { label: 'Rawat Inap', value: 'Rawat Inap' },
-    { label: 'UGD', value: 'UGD' },
+    { label: 'Rawat Jalan (Puskesmas FKTP)', value: 'Rawat Jalan' },
+    { label: 'UGD / Gawat Darurat (Emergency)', value: 'UGD' },
   ];
-  const jenisPelayananOptions = [
-    { label: '-- Pilih Jenis --', value: '' },
-    ...(jenisPelayananList.length > 0
-      ? jenisPelayananList.map(j => ({ label: j.label, value: j.label.includes('IGD') ? 'UGD' : j.label }))
-      : defaultJenisPelayanan)
-  ];
+  const jenisPelayananOptions = defaultJenisPelayanan;
 
   const defaultPrioritas = [
     { label: 'Umum', value: 'Umum' },
@@ -81,27 +82,15 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
     }
   }, [poliTujuan, fetchLayananByPoli, fetchDokterByPoli]);
 
-  const filteredPolikliniks = polikliniks.filter(p => {
-    if (jenisPelayanan === 'UGD') return p.kodePoli === 'UGD';
-    if (jenisPelayanan === 'Rawat Inap') return p.kodePoli === 'INAP';
-    // Jika Rawat Jalan, tampilkan poli reguler (hindari UGD dan INAP)
-    return p.kodePoli !== 'UGD' && p.kodePoli !== 'INAP';
-  });
+  // Hanya tampilkan poli reguler Rawat Jalan (hindari poli UGD dan INAP)
+  const filteredPolikliniks = polikliniks.filter(p => p.kodePoli !== 'UGD' && p.kodePoli !== 'INAP');
 
   useEffect(() => {
-    if (jenisPelayanan === 'UGD') {
-      const ugdPoli = polikliniks.find(p => p.kodePoli === 'UGD');
-      if (ugdPoli && poliTujuan !== ugdPoli.id && setValue) setValue('poliTujuan', ugdPoli.id);
-    } else if (jenisPelayanan === 'Rawat Inap') {
-      const inapPoli = polikliniks.find(p => p.kodePoli === 'INAP');
-      if (inapPoli && poliTujuan !== inapPoli.id && setValue) setValue('poliTujuan', inapPoli.id);
-    } else {
-      const currentPoli = polikliniks.find(p => p.id === poliTujuan);
-      if (currentPoli && (currentPoli.kodePoli === 'UGD' || currentPoli.kodePoli === 'INAP')) {
-        if (setValue) setValue('poliTujuan', '');
-      }
+    const currentPoli = polikliniks.find(p => p.id === poliTujuan);
+    if (currentPoli && (currentPoli.kodePoli === 'UGD' || currentPoli.kodePoli === 'INAP')) {
+      if (setValue) setValue('poliTujuan', '');
     }
-  }, [jenisPelayanan, polikliniks, setValue, poliTujuan]);
+  }, [polikliniks, setValue, poliTujuan]);
 
   // Set current date & time on mount for Tanggal & Jam Registrasi
   const now = new Date();
@@ -183,33 +172,71 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
           options={jenisPelayananOptions}
         />
         
-        <Select
-          label="Poli/Unit Tujuan *"
-          {...register('poliTujuan')}
-          error={errors.poliTujuan?.message}
-          options={[
-            { label: '-- Pilih Unit/Poli --', value: '' },
-            ...filteredPolikliniks.map(p => ({ label: p.namaPoli, value: p.id }))
-          ]}
-        />
+        {jenisPelayanan === 'UGD' ? (
+          <>
+            <div className="md:col-span-2 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800 flex items-start gap-2">
+              <span className="font-bold text-red-600 uppercase tracking-wider">Layanan UGD:</span>
+              <span>Pasien Gawat Darurat langsung dialokasikan ke Bed UGD tanpa harus memilih poliklinik rawat jalan. Antrean EMG-XXX akan dibuat secara otomatis dan ditangani oleh Dokter UGD.</span>
+            </div>
 
-        <div>
-          <Select
-            label="Dokter Tujuan *"
-            {...register('dokterTujuan')}
-            error={errors.dokterTujuan?.message}
-            disabled={!poliTujuan || isLoadingDokter}
-            options={[
-              { label: isLoadingDokter ? 'Memuat Dokter...' : (poliTujuan ? '-- Pilih Dokter Bertugas * --' : '-- Pilih Poli Terlebih Dahulu --'), value: '' },
-              ...(poliTujuan && dokters[poliTujuan] ? dokters[poliTujuan].map(d => ({ label: d.namaLengkap || d.username, value: d.id })) : [])
-            ]}
-          />
-          {poliTujuan && (!dokters[poliTujuan] || dokters[poliTujuan].length === 0) && !isLoadingDokter && (
-            <p className="text-[11px] text-amber-600 mt-1 font-semibold">
-              Belum ada dokter yang bertugas di poli/unit ini.
-            </p>
-          )}
-        </div>
+            <Select
+              label="Alokasi Tempat Tidur UGD *"
+              {...register('tempatTidurId')}
+              error={errors.tempatTidurId?.message}
+              options={[
+                { label: '-- Pilih Bed UGD Tersedia --', value: '' },
+                ...bedUgdList
+                  .filter(b => b.statusBed === 'TERSEDIA')
+                  .map(b => ({
+                    label: `${b.nomorBed} (${b.ruangan?.namaRuangan || 'UGD'})`,
+                    value: b.id
+                  }))
+              ]}
+            />
+
+            <Select
+              label="Kategori Triase Awal *"
+              {...register('triase')}
+              error={errors.triase?.message}
+              options={[
+                { label: 'MERAH - Kritis / Resusitasi', value: 'MERAH' },
+                { label: 'KUNING - Urgent / Gawat Tidak Darurat', value: 'KUNING' },
+                { label: 'HIJAU - Non-Urgent / Tidak Gawat', value: 'HIJAU' },
+                { label: 'HITAM - Meninggal Dunia (DOA)', value: 'HITAM' }
+              ]}
+            />
+          </>
+        ) : (
+          <>
+            <Select
+              label="Poli/Unit Tujuan *"
+              {...register('poliTujuan')}
+              error={errors.poliTujuan?.message}
+              options={[
+                { label: '-- Pilih Unit/Poli --', value: '' },
+                ...filteredPolikliniks.map(p => ({ label: p.namaPoli, value: p.id }))
+              ]}
+            />
+
+            <div>
+              <Select
+                label="Dokter Tujuan *"
+                {...register('dokterTujuan')}
+                error={errors.dokterTujuan?.message}
+                disabled={!poliTujuan || isLoadingDokter}
+                options={[
+                  { label: isLoadingDokter ? 'Memuat Dokter...' : (poliTujuan ? '-- Pilih Dokter Bertugas * --' : '-- Pilih Poli Terlebih Dahulu --'), value: '' },
+                  ...(poliTujuan && dokters[poliTujuan] ? dokters[poliTujuan].map(d => ({ label: d.namaLengkap || d.username, value: d.id })) : [])
+                ]}
+              />
+              {poliTujuan && (!dokters[poliTujuan] || dokters[poliTujuan].length === 0) && !isLoadingDokter && (
+                <p className="text-[11px] text-amber-600 mt-1 font-semibold">
+                  Belum ada dokter yang bertugas di poli/unit ini.
+                </p>
+              )}
+            </div>
+          </>
+        )}
         
         <Select
           label="Prioritas Pasien *"

@@ -39,7 +39,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [role, setRole] = useState<'ADMINISTRASI' | 'PERAWAT' | 'DOKTER' | 'ADMIN' | 'APOTEKER' | 'LABORATORIUM' | 'RADIOLOGI' | 'KASIR' | 'PETUGAS_UKM' | 'DINKES_ADMIN' | 'DINKES_MONITORING'>('ADMINISTRASI');
+  const [role, setRole] = useState<'ADMINISTRASI' | 'PERAWAT' | 'DOKTER' | 'DOKTER_UGD' | 'ADMIN' | 'APOTEKER' | 'LABORATORIUM' | 'RADIOLOGI' | 'KASIR' | 'PETUGAS_UKM' | 'DINKES_ADMIN' | 'DINKES_MONITORING'>('ADMINISTRASI');
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, checkSession, logout } = useAuthStore();
@@ -212,7 +212,12 @@ export default function DashboardLayout({
 
               <Link href="/perawat/screening" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/perawat/screening' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/perawat/screening' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Screening & Triage</span>
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Screening & Triage Poli</span>
+              </Link>
+
+              <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-700 bg-rose-50 border-r-4 border-rose-600' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-700'}`}>
+                <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-600' : 'text-gray-400 md:group-hover:text-rose-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Triase & Bed UGD</span>
               </Link>
 
               <Link href="/dokter/rawat-jalan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -223,6 +228,39 @@ export default function DashboardLayout({
               <Link href="#" className="flex items-center px-6 py-3 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors">
                 <Users className="w-7 h-7 text-gray-400 md:group-hover:text-blue-600 flex-shrink-0 transition-colors" />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Jadwal Poliklinik</span>
+              </Link>
+            </>
+          )}
+
+          {/* Menu Khusus DOKTER UGD */}
+          {role === 'DOKTER_UGD' && (
+            <>
+              <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-700 bg-rose-50 border-r-4 border-rose-600' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-700'}`}>
+                <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-600' : 'text-gray-400 md:group-hover:text-rose-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard UGD</span>
+              </Link>
+
+              <Link href="/dokter/rawat-jalan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Stethoscope className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Pemeriksaan SOAP UGD</span>
+              </Link>
+
+              <Link href="/dokter/rawatinap" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <BedDouble className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Visit Rawat Inap</span>
+              </Link>
+
+              <Link href="/dokter/rme-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Rekam Medis (RME)</span>
+              </Link>
+
+              <div className="mt-4 mb-1 px-6">
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Surat & Dokumen</span>
+              </div>
+              <Link href="/dokter/surat-rujukan" onClick={closeMobileMenu} className={`flex items-center px-6 py-2.5 text-sm font-medium transition-colors ${pathname === '/dokter/surat-rujukan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <FileText className={`w-6 h-6 flex-shrink-0 ml-1 transition-colors ${pathname === '/dokter/surat-rujukan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Surat Rujukan</span>
               </Link>
             </>
           )}
@@ -244,20 +282,15 @@ export default function DashboardLayout({
                   </Link>
                 )}
 
-              {(user?.poliklinik?.namaPoli?.toUpperCase().includes('IGD') ||
-                user?.poliklinik?.namaPoli?.toUpperCase().includes('UGD')) && (
-                  <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
-                    <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                    <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">UGD / Gawat Darurat</span>
-                  </Link>
-                )}
+              <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-700 bg-rose-50 border-r-4 border-rose-600' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-700'}`}>
+                <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-600' : 'text-gray-400 md:group-hover:text-rose-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">UGD / Gawat Darurat</span>
+              </Link>
 
-              {(user?.poliklinik?.namaPoli?.toUpperCase().includes('INAP')) && (
-                <Link href="/dokter/rawatinap" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
-                  <Users className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                  <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Visit Rawat Inap</span>
-                </Link>
-              )}
+              <Link href="/dokter/rawatinap" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <BedDouble className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawatinap' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Visit Rawat Inap</span>
+              </Link>
 
               <Link href="/dokter/rme-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />

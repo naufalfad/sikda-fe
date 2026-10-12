@@ -12,7 +12,6 @@ import Step2Triage from './Step2Triage';
 import Step3RisikoPTM from './Step3RisikoPTM';
 import Step4InfeksiJiwa from './Step4InfeksiJiwa';
 import StepHeadToToe from './StepHeadToToe';
-import Step5Hasil from './Step5Hasil';
 
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
@@ -94,16 +93,15 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
     { id: 3, title: 'Risiko & PTM', skipped: shouldSkipPTM },
     { id: 4, title: 'Infeksi & Jiwa', skipped: false },
     { id: 5, title: 'Head to Toe', skipped: false },
-    { id: 6, title: 'Hasil & Rujukan', skipped: false },
   ];
 
   // Helper to find the next valid step
   const getNextStepId = (currentId: number) => {
     let nextId = currentId + 1;
-    while (nextId <= 6 && stepsDef.find(s => s.id === nextId)?.skipped) {
+    while (nextId <= 5 && stepsDef.find(s => s.id === nextId)?.skipped) {
       nextId++;
     }
-    return Math.min(nextId, 6);
+    return Math.min(nextId, 5);
   };
 
   // Helper to find the previous valid step
@@ -115,17 +113,23 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
     return Math.max(prevId, 1);
   };
 
-  const nextStep = async () => {
-    // Validasi sementara dimatikan untuk memudahkan pengetesan
-    setCurrentStep(getNextStepId(currentStep));
-    window.scrollTo(0, 0);
+  const nextStep = () => {
+    setCurrentStep((prev) => getNextStepId(prev));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
-    setCurrentStep(getPrevStepId(currentStep));
-    window.scrollTo(0, 0);
+    setCurrentStep((prev) => getPrevStepId(prev));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const goToStep = (stepId: number) => {
+    const target = stepsDef.find(s => s.id === stepId);
+    if (target && !target.skipped) {
+      setCurrentStep(stepId);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const toTitleCase = (str: string | undefined | null): string | undefined => {
     if (!str) return undefined;
@@ -136,6 +140,33 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
   };
 
   const onSubmit = async (data: any) => {
+    // Pastikan tidak tersimpan sebelum pengguna menyelesaikan Step 5 (Head to Toe)
+    if (currentStep < 5) {
+      nextStep();
+      return;
+    }
+
+    // Otomatisasi status kesehatan & prioritas pelayanan berdasarkan Triage & TTV
+    let derivedStatusKesehatan = data.statusKesehatan || 'Rendah';
+    let derivedPrioritas = data.prioritasPelayanan || 'Rutin';
+    
+    if (data.kategoriTriage === 'Merah' || (data.tekananDarahSistolik && data.tekananDarahSistolik >= 180)) {
+      derivedStatusKesehatan = 'Tinggi';
+      derivedPrioritas = 'Gawat Darurat';
+    } else if (
+      data.kategoriTriage === 'Kuning' || 
+      data.hasilTB === 'Suspek TB' || 
+      (data.tekananDarahSistolik && data.tekananDarahSistolik >= 140) ||
+      (data.gulaDarahSewaktu && data.gulaDarahSewaktu >= 200)
+    ) {
+      derivedStatusKesehatan = 'Sedang';
+      derivedPrioritas = 'Penting';
+    }
+
+    const derivedTindakLanjut = (data.tindakLanjut && data.tindakLanjut.length > 0)
+      ? data.tindakLanjut
+      : [`Pemeriksaan Dokter ${kunjungan?.poliklinik?.namaPoli || 'Poli'}`];
+
     const payload: CreateScreeningPayload = {
       pasienId: kunjungan.pasienId,
       kunjunganId: kunjungan.id,
@@ -205,12 +236,12 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
       jiwaRiwayat: data.jiwaRiwayat || [],
       catatanSkriningTB: toTitleCase(data.catatanSkriningTB),
       catatanKesehatanJiwa: toTitleCase(data.catatanKesehatanJiwa),
-      // Step 5: Hasil & Head to Toe
+      // Step 5: Head to Toe & Otomatisasi Kesimpulan Klinis
       headToToe: data.headToToe,
-      statusKesehatan: data.statusKesehatan,
-      prioritasPelayanan: data.prioritasPelayanan,
-      tindakLanjut: data.tindakLanjut || [],
-      catatanPetugas: toTitleCase(data.catatanPetugas),
+      statusKesehatan: derivedStatusKesehatan,
+      prioritasPelayanan: derivedPrioritas,
+      tindakLanjut: derivedTindakLanjut,
+      catatanPetugas: toTitleCase(data.catatanPetugas) || 'Skrining awal dan pemeriksaan fisik Head to Toe selesai. Pasien diteruskan ke antrean dokter.',
       // Poli Gigi & Mulut Fields (SATUSEHAT & OHIS)
       golonganDarah: data.golonganDarah,
       rhesus: data.rhesus,
@@ -355,19 +386,52 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
 
   if (isSuccess) {
     return (
-      <div className="py-16 text-center">
-        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-green-100 mb-6">
-          <CheckCircle2 className="h-12 w-12 text-green-600" />
+      <div className="py-12 text-center max-w-xl mx-auto">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 mb-5">
+          <CheckCircle2 className="h-10 w-10 text-emerald-600" />
         </div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">Screening Berhasil Disimpan!</h2>
-        <p className="text-gray-600 mb-8 max-w-md mx-auto">
-          Data klinis pasien telah di-input ke Rekam Medis Elektronik (RME) dan rujukan internal telah dikirimkan.
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Screening Berhasil Disimpan!</h2>
+        <p className="text-gray-600 mb-6 text-sm">
+          Pemeriksaan fisik Head to Toe dan kesimpulan hasil & rujukan telah berhasil dicatat ke Rekam Medis Elektronik (RME). Pasien kini siap diperiksa dokter di ruang poli.
         </p>
+
+        {/* Info Pasien & Nomor Antrean */}
+        <div className="bg-blue-50/80 border border-blue-200 p-5 rounded-none text-left mb-8 shadow-sm">
+          <div className="flex justify-between items-center border-b border-blue-200 pb-3 mb-3">
+            <div>
+              <p className="text-[11px] text-blue-700 font-bold uppercase tracking-wider">Nomor Antrean Pasien</p>
+              <p className="text-2xl font-black text-blue-950 font-mono">{kunjungan.noAntrian || '-'}</p>
+            </div>
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">
+              Status: Menunggu Dokter
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-xs text-gray-700">
+            <div>
+              <span className="text-gray-500 block">Nama Pasien:</span>
+              <strong className="text-gray-900">{kunjungan.pasien?.namaLengkap}</strong>
+            </div>
+            <div>
+              <span className="text-gray-500 block">No. Rekam Medis:</span>
+              <strong className="text-gray-900">{kunjungan.pasien?.noRM}</strong>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Poli Tujuan:</span>
+              <strong className="text-gray-900">{kunjungan.poliklinik?.namaPoli}</strong>
+            </div>
+            <div>
+              <span className="text-gray-500 block">Prioritas Layanan:</span>
+              <strong className="text-gray-900">{kunjungan.prioritas}</strong>
+            </div>
+          </div>
+        </div>
+
         <button 
+          type="button"
           onClick={() => router.push('/perawat/screening')}
-          className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
+          className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all"
         >
-          Screening Pasien Lain
+          Kembali ke Antrean Screening Pasien
         </button>
       </div>
     );
@@ -375,6 +439,17 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
 
   // Filter steps that are not skipped for the Stepper UI
   const visibleSteps = stepsDef;
+
+  const onInvalid = (err: any) => {
+    const errList = Object.keys(err).map(k => `${k}: ${err[k]?.message || 'Wajib diisi / Tidak valid'}`);
+    console.error('Validation Errors keys:', Object.keys(err));
+    console.error('Validation Errors messages:', errList);
+    Swal.fire({
+      icon: 'warning',
+      title: 'Form Belum Lengkap',
+      html: `<div class="text-left"><p class="font-bold">Harap periksa kembali isian form Anda:</p><ul class="list-disc pl-5 text-xs mt-2 max-h-40 overflow-y-auto">${errList.map(e => `<li>${e}</li>`).join('')}</ul></div>`,
+    });
+  };
 
   return (
     <div className="w-full">
@@ -392,7 +467,7 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
         </button>
       </div>
 
-      {/* Stepper UI */}
+      {/* Stepper UI (Clickable Step Navigation) */}
       <div className="mb-10">
         <div className="flex items-center justify-between relative">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded-full -z-10"></div>
@@ -408,38 +483,41 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
             else if (isPast) circleColor = 'bg-blue-600 border-white text-white';
 
             return (
-              <div key={step.id} className={`flex flex-col items-center ${isSkipped ? 'opacity-50' : ''}`}>
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => goToStep(step.id)}
+                disabled={isSkipped}
+                className={`flex flex-col items-center group transition-transform ${isSkipped ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
+                title={isSkipped ? `${step.title} (Dilewati)` : `Buka ${step.title}`}
+              >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-4 transition-all duration-300 ${circleColor}`}>
                   {isSkipped ? '-' : (isPast ? <CheckCircle2 className="w-5 h-5" /> : step.id)}
                 </div>
-                <span className={`mt-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-center hidden sm:block ${isCurrent || isPast ? 'text-blue-600' : 'text-gray-400'}`}>
+                <span className={`mt-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-center hidden sm:block ${isCurrent || isPast ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-600'}`}>
                   {step.title}
                 </span>
                 {isSkipped && <span className="text-[10px] text-gray-400 hidden sm:block italic">(Bypass)</span>}
-              </div>
+              </button>
             );
           })}
         </div>
       </div>
 
-      {/* Form Area */}
+      {/* Form Area - Cegah accidental submit dengan preventDefault pada form */}
       <form 
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && currentStep < 6 && e.target instanceof HTMLInputElement) {
+          if (e.key === 'Enter') {
             e.preventDefault();
-            nextStep();
+            if (currentStep < 5 && e.target instanceof HTMLInputElement) {
+              nextStep();
+            }
           }
         }}
-        onSubmit={handleSubmit(onSubmit, (err) => {
-          const errList = Object.keys(err).map(k => `${k}: ${err[k]?.message || 'Wajib diisi / Tidak valid'}`);
-          console.error('Validation Errors keys:', Object.keys(err));
-          console.error('Validation Errors messages:', errList);
-          Swal.fire({
-            icon: 'warning',
-            title: 'Form Belum Lengkap',
-            html: `<div class="text-left"><p class="font-bold">Harap periksa kembali isian form Anda:</p><ul class="list-disc pl-5 text-xs mt-2 max-h-40 overflow-y-auto">${errList.map(e => `<li>${e}</li>`).join('')}</ul></div>`,
-          });
-        })}>
+      >
         <div className="min-h-[400px]">
           <div className={currentStep === 1 ? 'block' : 'hidden'}>
             <Step1Umum 
@@ -462,14 +540,12 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
           <div className={currentStep === 5 ? 'block' : 'hidden'}>
             <StepHeadToToe register={register} watch={watch} setValue={setValue} />
           </div>
-          <div className={currentStep === 6 ? 'block' : 'hidden'}>
-            <Step5Hasil register={register} errors={errors} watch={watch} />
-          </div>
         </div>
 
         {/* Navigation Buttons */}
         <div className="mt-10 flex items-center justify-between pt-6 border-t border-gray-100">
           <button
+            key="btn-prev"
             type="button"
             onClick={prevStep}
             disabled={currentStep === 1 || isSubmitting}
@@ -483,8 +559,9 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
             Kembali
           </button>
           
-          {currentStep < 6 ? (
+          {currentStep < 5 ? (
             <button
+              key="btn-next"
               type="button"
               onClick={nextStep}
               className="inline-flex items-center px-6 py-2.5 rounded-none font-medium text-sm text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -494,11 +571,13 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
             </button>
           ) : (
             <button
-              type="submit"
+              key="btn-submit"
+              type="button"
+              onClick={handleSubmit(onSubmit, onInvalid)}
               disabled={isSubmitting}
               className="inline-flex items-center px-8 py-2.5 rounded-none font-medium text-sm text-white bg-green-600 hover:bg-green-700 shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-70"
             >
-              {isSubmitting ? 'Menyimpan...' : 'Simpan Hasil Screening'}
+              {isSubmitting ? 'Menyimpan...' : 'Simpan & Selesai Screening'}
             </button>
           )}
         </div>

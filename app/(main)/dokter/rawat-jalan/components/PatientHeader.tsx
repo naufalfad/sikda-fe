@@ -34,6 +34,15 @@ export default function PatientHeader({
   const pasien = selectedKunjungan.pasien;
   const isFemale = pasien?.jenisKelamin?.toLowerCase().startsWith('p') || pasien?.jenisKelamin?.toLowerCase().startsWith('f');
   
+  const isUgd = Boolean(
+    selectedKunjungan.jenisPelayanan === 'UGD' || 
+    selectedKunjungan.triase || 
+    (selectedKunjungan.tempatTidurs && selectedKunjungan.tempatTidurs.length > 0)
+  );
+  const triage = (selectedKunjungan.triase || screeningData?.kategoriTriage || '').toUpperCase();
+  const currentBed = selectedKunjungan.tempatTidurs?.[0]?.nomorBed;
+  const displayName = selectedKunjungan.namaAnonim || pasien?.namaLengkap;
+
   // Extract TTV Quick View
   const td = screeningData?.tekananDarahSistolik && screeningData?.tekananDarahDiastolik 
     ? `${screeningData.tekananDarahSistolik}/${screeningData.tekananDarahDiastolik}` 
@@ -42,24 +51,54 @@ export default function PatientHeader({
   const suhu = screeningData?.suhuTubuh;
 
   return (
-    <div className="bg-white border-b border-gray-200 p-4 shadow-sm relative">
+    <div className={`border-b p-4 shadow-sm relative ${isUgd ? 'bg-rose-50/40 border-rose-200' : 'bg-white border-gray-200'}`}>
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         
         {/* PASIEN INFO & BADGES */}
         <div className="flex items-center gap-4 min-w-0">
           <div className={`w-12 h-12 rounded-none flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-sm border ${
-            isFemale 
-              ? 'bg-pink-50 text-pink-700 border-pink-200' 
-              : 'bg-blue-50 text-blue-700 border-blue-200'
+            isUgd
+              ? 'bg-rose-700 text-white border-rose-800'
+              : isFemale 
+                ? 'bg-pink-50 text-pink-700 border-pink-200' 
+                : 'bg-blue-50 text-blue-700 border-blue-200'
           }`}>
-            {pasien?.namaLengkap?.charAt(0) || 'P'}
+            {displayName?.charAt(0) || 'P'}
           </div>
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-gray-900 tracking-tight truncate">
-                {pasien?.namaLengkap}
+                {displayName}
               </h1>
+
+              {isUgd && (
+                <span className="bg-red-700 text-white font-black text-[10px] px-2 py-0.5 rounded-none uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  🚨 UGD / GAWAT DARURAT
+                </span>
+              )}
+
+              {selectedKunjungan.isAnonim && (
+                <span className="bg-amber-400 text-amber-950 font-bold text-[10px] px-2 py-0.5 rounded-none uppercase tracking-wider shadow-sm border border-amber-500">
+                  Pasien Anonim (Mr./Mrs. X)
+                </span>
+              )}
+
+              {triage && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-none uppercase tracking-wider shadow-sm ${
+                  triage === 'MERAH' ? 'bg-red-600 text-white animate-pulse' :
+                  triage === 'KUNING' ? 'bg-amber-500 text-white' :
+                  triage === 'HIJAU' ? 'bg-emerald-600 text-white' : 'bg-gray-800 text-white'
+                }`}>
+                  TRIASE: {triage}
+                </span>
+              )}
+
+              {currentBed && (
+                <span className="bg-blue-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-none uppercase tracking-wider shadow-sm font-mono flex items-center gap-1">
+                  <Activity className="w-3 h-3" /> BED: {currentBed}
+                </span>
+              )}
 
               {/* Status Badge */}
               <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-none uppercase border ${
@@ -92,13 +131,13 @@ export default function PatientHeader({
             {/* Sub Detail Info */}
             <div className="text-xs text-gray-600 flex flex-wrap items-center gap-2 font-medium">
               <span className="font-mono bg-gray-100 px-2 py-0.5 rounded-none border border-gray-200 text-gray-800 font-bold">
-                RM: {pasien?.noRM}
+                RM: {pasien?.noRM || 'UGD'}
               </span>
-              <span>{getAge(pasien?.tanggalLahir)} Thn</span>
+              <span>{pasien?.tanggalLahir ? `${getAge(pasien.tanggalLahir)} Thn` : '-'}</span>
               <span className="text-gray-400">•</span>
               <span>{pasien?.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
               <span className="text-gray-400">•</span>
-              <span className="text-blue-700 font-bold">{selectedKunjungan.poliklinik?.namaPoli || 'Poli Umum'}</span>
+              <span className="text-blue-700 font-bold">{isUgd ? 'Instalasi Gawat Darurat (UGD)' : (selectedKunjungan.poliklinik?.namaPoli || 'Poli Umum')}</span>
               {pasien?.noIHS && (
                 <>
                   <span className="text-gray-400">•</span>

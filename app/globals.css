@@ -41,3 +41,17 @@ input, textarea, select {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Animasi maskot asisten virtual (landing page) */
+@keyframes sikda-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes sikda-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[sikda-"] { animation: none !important; }
+}
