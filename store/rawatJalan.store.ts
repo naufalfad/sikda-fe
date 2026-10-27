@@ -297,8 +297,6 @@ export const useRawatJalanStore = create<RawatJalanState>((set, get) => ({
     try {
       await rawatJalanService.simpanResep(selectedKunjungan.id, resep);
       set({ isSaving: false });
-      get().clearSelection();
-      get().fetchAntrian();
     } catch (err: any) {
       set({ error: err?.response?.data?.message || 'Gagal menyimpan resep', isSaving: false });
       throw err;

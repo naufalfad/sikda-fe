@@ -158,7 +158,7 @@ export default function ScreeningPage() {
                   <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{k.pasien?.namaLengkap}</h3>
                   <div className="flex items-center text-sm text-gray-500 mt-1 gap-2">
                     <User className="w-3.5 h-3.5" />
-                    <span>{k.pasien?.jenisKelamin === 'Laki-laki' ? 'L' : 'P'}, {calculateAge(k.pasien?.tanggalLahir)} Thn</span>
+                    <span>{k.pasien?.jenisKelamin?.toLowerCase().startsWith('l') ? 'L' : 'P'}, {calculateAge(k.pasien?.tanggalLahir)} Thn</span>
                   </div>
                 </div>
               </div>

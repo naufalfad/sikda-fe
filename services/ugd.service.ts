@@ -23,7 +23,8 @@ export interface BedUGD {
     pasien: {
       id: string;
       namaLengkap: string;
-      noRekamMedis: string;
+      noRekamMedis?: string;
+      noRM?: string;
       nik?: string;
       jenisKelamin: string;
       tanggalLahir: string;
@@ -50,7 +51,8 @@ export interface KunjunganUGD {
   pasienId: string;
   pasien: {
     id: string;
-    noRekamMedis: string;
+    noRekamMedis?: string;
+    noRM?: string;
     namaLengkap: string;
     nik?: string;
     jenisKelamin: string;

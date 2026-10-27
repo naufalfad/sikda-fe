@@ -348,6 +348,14 @@ function KatalogObatContent() {
             Perbarui
           </button>
 
+          <Link
+            href="/apoteker/riwayat"
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 text-xs font-bold transition-all shadow-xs"
+          >
+            <Clock className="w-4 h-4 text-teal-600" />
+            Log Riwayat Keluar-Masuk
+          </Link>
+
           <button
             onClick={() => openKeluarModal(kategoriTab === 'vaksin' ? 'vaksin' : 'obat')}
             className="inline-flex items-center gap-2 px-3.5 py-2.5 bg-rose-50 border border-rose-300 text-rose-700 hover:bg-rose-100 text-xs font-bold transition-all shadow-xs"

@@ -2,6 +2,7 @@ import React, { Dispatch, SetStateAction, useMemo } from 'react';
 import { FileText, Stethoscope, AlertCircle, Heart, Thermometer, Activity, ShieldAlert, Zap, RotateCcw, Info } from 'lucide-react';
 import { SOAPPayload } from '@/types/rawatJalan.types';
 import OdontogramChart from './OdontogramChart';
+import FotoObjektifSection from './FotoObjektifSection';
 import { buildUgdPemeriksaanFisik, parseUgdPemeriksaanFisik, PrimarySurveyUGDValues } from '../rawatJalan.constants';
 
 interface TabObjektifProps {
@@ -546,6 +547,9 @@ export default function TabObjektif({
           />
         </div>
       </div>
+
+      {/* DOKUMENTASI FOTO OBJEKTIF / KLINIS (LUKA, LESI, JAHITAN) */}
+      <FotoObjektifSection soapData={soapData} setSoapData={setSoapData} />
 
       <div className="flex justify-end pt-4 border-t border-gray-200">
         <button 

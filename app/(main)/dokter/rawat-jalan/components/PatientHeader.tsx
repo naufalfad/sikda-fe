@@ -1,4 +1,4 @@
-import { User, Clock, Heart, Activity, Thermometer, ShieldAlert, Sparkles, Columns, Users } from 'lucide-react';
+import { User, Clock, Heart, Activity, Thermometer, ShieldAlert, Sparkles, Columns, Users, TestTubes, X } from 'lucide-react';
 
 interface PatientHeaderProps {
   selectedKunjungan: any;
@@ -13,6 +13,9 @@ interface PatientHeaderProps {
   isQueueCollapsed?: boolean;
   onToggleQueue?: () => void;
   queueCount?: number;
+  riwayatLabCount?: number;
+  onOpenLabModal?: () => void;
+  onCloseSelection?: () => void;
 }
 
 export default function PatientHeader({
@@ -28,6 +31,9 @@ export default function PatientHeader({
   isQueueCollapsed = false,
   onToggleQueue,
   queueCount = 0,
+  riwayatLabCount = 0,
+  onOpenLabModal,
+  onCloseSelection,
 }: PatientHeaderProps) {
   if (!selectedKunjungan) return null;
 
@@ -196,6 +202,22 @@ export default function PatientHeader({
               </button>
             )}
 
+            {onOpenLabModal && (
+              <button 
+                type="button"
+                onClick={onOpenLabModal}
+                className={`px-3 py-1.5 rounded-none font-bold text-xs flex items-center transition-all shadow-sm border ${
+                  riwayatLabCount > 0 
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200 animate-pulse' 
+                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                }`}
+                title="Buka Lembar Hasil Laboratorium Pasien"
+              >
+                <TestTubes className={`w-3.5 h-3.5 mr-1.5 ${riwayatLabCount > 0 ? 'text-amber-700' : 'text-slate-500'}`} />
+                <span>Hasil Lab {riwayatLabCount > 0 ? `(${riwayatLabCount})` : ''}</span>
+              </button>
+            )}
+
             <button 
               onClick={() => {
                 if (onOpenRiwayatTab) {
@@ -212,10 +234,23 @@ export default function PatientHeader({
             </button>
           </div>
 
-          {/* Antrian Card */}
-          <div className="bg-blue-600 text-white px-3 py-1 rounded-none text-center shadow-sm border border-blue-700 min-w-[70px]">
-            <span className="block text-[9px] font-bold text-blue-100 uppercase tracking-widest">Antrean</span>
-            <span className="text-base font-black font-mono leading-none">{selectedKunjungan.noAntrian}</span>
+          {/* Antrian Card & Close Selection */}
+          <div className="flex items-center gap-1.5">
+            <div className="bg-blue-600 text-white px-3 py-1 rounded-none text-center shadow-sm border border-blue-700 min-w-[70px]">
+              <span className="block text-[9px] font-bold text-blue-100 uppercase tracking-widest">Antrean</span>
+              <span className="text-base font-black font-mono leading-none">{selectedKunjungan.noAntrian}</span>
+            </div>
+
+            {onCloseSelection && (
+              <button 
+                type="button"
+                onClick={onCloseSelection}
+                className="p-1.5 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 border border-slate-300 hover:border-rose-300 transition-colors shadow-sm"
+                title="Tutup Pemeriksaan Pasien Ini (Kembali ke Antrean Kosong)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
 
         </div>

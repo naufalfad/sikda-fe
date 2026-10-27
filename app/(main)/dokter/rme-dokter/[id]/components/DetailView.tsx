@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity, Stethoscope, AlertCircle, Pill, TestTube2, FileText } from 'lucide-react';
+import FotoObjektifViewer from '@/app/(main)/dokter/rawat-jalan/components/FotoObjektifViewer';
 
 interface DetailViewProps {
   selectedVisit: any;
@@ -186,6 +187,9 @@ export function DetailView({
                        </div>
                     )}
                     <p className="text-sm font-bold text-slate-900 leading-relaxed whitespace-pre-wrap">{selectedVisit.rekamMedis.pemeriksaanFisik || '-'}</p>
+                    {selectedVisit.rekamMedis.fotoObjektif && Array.isArray(selectedVisit.rekamMedis.fotoObjektif) && selectedVisit.rekamMedis.fotoObjektif.length > 0 && (
+                      <FotoObjektifViewer fotoList={selectedVisit.rekamMedis.fotoObjektif} />
+                    )}
                   </div>
                 </div>
 

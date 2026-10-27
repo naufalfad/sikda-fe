@@ -101,6 +101,7 @@ export const AVAILABLE_LAB_TESTS = [
   { category: 'HEMATOLOGI', defaultOpen: true, tests: ['Hematologi Rutin/CBC', 'Hematologi Lengkap (CBC, LED, Hitung Jenis)', 'Hemoglobin', 'LED', 'Eritrosit', 'Leukosit', 'Trombosit', 'Hematokrit', 'Golongan Darah A,B,O & Rh', 'Gambaran Darah Tepi'] },
   { category: 'URINALISA & FAECES', defaultOpen: true, tests: ['Urine Rutin', 'Protein Total (Urine 24 jam)', 'Faeces Rutin', 'Darah Samar (FIT)'] },
   { category: 'KIMIA DARAH DASAR', defaultOpen: true, tests: ['Glukosa Puasa', 'Glukosa 2 Jam PP', 'Glukosa Sewaktu', 'Ureum', 'Kreatinin', 'Cholesterol Total', 'Trigliserida', 'SGOT', 'SGPT'] },
+  { category: 'INFEKSI & HEPATITIS', defaultOpen: true, tests: ['HBsAg', 'Anti-HBs', 'Anti-HCV', 'Anti-HAV IgM', 'Widal', 'Dengue NS1 Antigen', 'Anti-Dengue IgG & IgM', 'Malaria (Mikroskopik)', 'Anti-HIV', 'VDRL/RPR'] },
   { category: 'ANEMIA', defaultOpen: false, tests: ['Hematologi Rutin + Retikulosit', 'Retikulosit', 'Besi', 'UIBC Direk', 'TIBC', 'Ferritin', 'Transferrin'] },
   { category: 'FAAL HEMOSTASIS', defaultOpen: false, tests: ['Waktu Perdarahan', 'Waktu Pembekuan', 'Waktu Protrombin', 'Waktu Trombin', 'APTT', 'Fibrinogen', 'D-Dimer', 'AT III'] },
   { category: 'FAAL HATI (Lanjutan)', defaultOpen: false, tests: ['Gamma GT', 'Fosfatase Alkali', 'CHE', 'Bilirubin Total', 'Bilirubin Direk', 'Protein Total', 'Albumin', 'Globulin'] },
@@ -109,11 +110,67 @@ export const AVAILABLE_LAB_TESTS = [
   { category: 'JANTUNG', defaultOpen: false, tests: ['CK', 'CK-MB', 'Troponin I', 'hs-Troponin I Kuantitatif', 'LDH', 'NT-Pro BNP'] },
   { category: 'GINJAL - HIPERTENSI (Lanjutan)', defaultOpen: false, tests: ['Asam Urat', 'Cystatin-C', 'Albumin Urine Kuantitatif', 'Rasio Albumin-Kreatinin', 'Renin (PRA)', 'Aldosteron'] },
   { category: 'ELEKTROLIT - GAS DARAH', defaultOpen: false, tests: ['Na, K, Cl', 'Kalsium', 'Fosfor Anorganik', 'Magnesium', 'Analisis Gas Darah'] },
-  { category: 'INFEKSI & HEPATITIS', defaultOpen: false, tests: ['HBsAg', 'Anti-HBs', 'Anti-HCV', 'Anti-HAV IgM', 'Widal', 'Dengue NS1 Antigen', 'Anti-Dengue IgG & IgM', 'Malaria (Mikroskopik)', 'Anti-HIV', 'VDRL/RPR'] },
   { category: 'TIROID', defaultOpen: false, tests: ['FT3', 'FT4', 'TSHs', 'T3 (Total)', 'T4 (Total)'] },
   { category: 'TUMOR MARKER', defaultOpen: false, tests: ['AFP', 'CEA', 'PSA', 'CA 125', 'CA 15-3', 'CA 19-9'] },
   { category: 'IMUNOLOGI', defaultOpen: false, tests: ['ASTO', 'RF', 'CRP Kualitatif', 'hs-CRP', 'ANA (IF)', 'Anti-dsDNA'] }
 ];
+
+export interface QuickLabPackage {
+  id: string;
+  name: string;
+  badge: string;
+  color: string;
+  description: string;
+  tests: string[];
+}
+
+export const QUICK_LAB_PACKAGES: QuickLabPackage[] = [
+  {
+    id: 'ANC_TRIPLE',
+    name: 'Paket ANC Bumil (Triple Eliminasi)',
+    badge: 'Program KIA',
+    color: 'border-pink-300 bg-pink-50/80 text-pink-900 hover:bg-pink-100',
+    description: 'Skrining K1/K4: Hb, Gol. Darah, Urine Rutin, HIV, Sifilis, HBsAg',
+    tests: ['Hemoglobin', 'Golongan Darah A,B,O & Rh', 'Urine Rutin', 'Anti-HIV', 'HBsAg', 'VDRL/RPR']
+  },
+  {
+    id: 'SKRINING_PTM',
+    name: 'Paket Skrining PTM / Prolanis',
+    badge: 'DM & Hipertensi',
+    color: 'border-emerald-300 bg-emerald-50/80 text-emerald-900 hover:bg-emerald-100',
+    description: 'Skrining Metabolik: Glukosa Sewaktu, Kolesterol Total, Asam Urat, Urine Rutin',
+    tests: ['Glukosa Sewaktu', 'Cholesterol Total', 'Asam Urat', 'Urine Rutin']
+  },
+  {
+    id: 'FEBRIS_DBD',
+    name: 'Paket Febris / Suspek DBD & Tipoid',
+    badge: 'Demam Akut',
+    color: 'border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100',
+    description: 'Pemeriksaan Demam: Hematologi Lengkap, Dengue NS1, Widal',
+    tests: ['Hematologi Lengkap (CBC, LED, Hitung Jenis)', 'Dengue NS1 Antigen', 'Widal']
+  },
+  {
+    id: 'DARAH_RUTIN',
+    name: 'Paket Darah Lengkap (CBC)',
+    badge: 'Hematologi',
+    color: 'border-indigo-300 bg-indigo-50/80 text-indigo-900 hover:bg-indigo-100',
+    description: 'Skrining Infeksi & Anemia: Hematologi Rutin/CBC',
+    tests: ['Hematologi Rutin/CBC']
+  }
+];
+
+export const isInternalLabTest = (testName: string = ''): boolean => {
+  const t = testName.toLowerCase();
+  const internalKeywords = [
+    'hematologi rutin', 'hematologi lengkap', 'hemoglobin', 'led', 'eritrosit',
+    'leukosit', 'trombosit', 'hematokrit', 'golongan darah',
+    'urine rutin', 'faeces rutin', 'darah samar',
+    'glukosa', 'asam urat', 'cholesterol total', 'trigliserida',
+    'widal', 'dengue', 'malaria', 'hiv', 'hbsag', 'vdrl', 'sifilis',
+    'sgot', 'sgpt', 'ureum', 'kreatinin'
+  ];
+  return internalKeywords.some(k => t.includes(k));
+};
 
 export interface PrimarySurveyUGDValues {
   airway?: string;

@@ -60,6 +60,23 @@ const ADMIN_MODULES: AdminModule[] = [
     highlight: 'Integrasi IHS NIK'
   },
   {
+    id: 'monitoring-dokter',
+    title: 'Monitoring Kinerja Dokter',
+    href: '/admin/monitoring-dokter',
+    category: 'sdm',
+    categoryLabel: 'SDM & Tenaga Medis',
+    description: 'Pantau beban kerja harian, jumlah pasien yang ditangani per shift (pagi/siang/malam), serta status kapasitas beban kerja dokter.',
+    icon: Activity,
+    colorScheme: {
+      bg: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
+      text: 'text-emerald-600',
+      badgeBg: 'bg-emerald-50',
+      badgeText: 'text-emerald-700 border-emerald-200',
+      borderHover: 'hover:border-emerald-500'
+    },
+    highlight: 'Beban Kerja Shift'
+  },
+  {
     id: 'master-pasien',
     title: 'Master Data Pasien',
     href: '/admin/master-pasien',

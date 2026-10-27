@@ -24,5 +24,15 @@ export const laboratoriumService = {
   getOrderByKunjungan: async (kunjunganId: string): Promise<any> => {
     const res = await api.get(`/laboratorium/order/kunjungan/${kunjunganId}`);
     return res.data;
+  },
+
+  getDashboardStats: async (): Promise<any> => {
+    const res = await api.get('/laboratorium/dashboard-stats');
+    return res.data;
+  },
+
+  getRiwayatLabByPasien: async (pasienId: string): Promise<any> => {
+    const res = await api.get(`/laboratorium/riwayat-pasien/${pasienId}`);
+    return res.data;
   }
 };

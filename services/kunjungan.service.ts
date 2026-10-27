@@ -30,5 +30,15 @@ export const kunjunganService = {
   getDokterDashboardStats: async (): Promise<any> => {
     const response = await api.get('/kunjungan/dokter/dashboard-stats');
     return response.data.data;
+  },
+
+  getDokterKinerjaHarian: async (params?: { tanggal?: string; dokterId?: string }): Promise<any> => {
+    const response = await api.get('/kunjungan/dokter/kinerja-harian', { params });
+    return response.data.data;
+  },
+
+  getAdminMonitoringDokter: async (params?: { tanggal?: string; poliklinikId?: string }): Promise<any> => {
+    const response = await api.get('/kunjungan/admin/monitoring-dokter', { params });
+    return response.data.data;
   }
 };

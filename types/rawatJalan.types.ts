@@ -70,6 +70,7 @@ export interface RekamMedis {
   oralFindings?: any;
   primarySurvey?: any;
   secondarySurvey?: string | null;
+  fotoObjektif?: FotoObjektifItem[] | null;
 
   // A - Asesmen
   diagnosisKlinis?: string | null;
@@ -83,6 +84,15 @@ export interface RekamMedis {
   updatedAt: string;
 }
 
+export interface FotoObjektifItem {
+  id?: string;
+  url: string;
+  namaFile?: string;
+  keterangan?: string;
+  waktuAmbil?: string;
+  size?: number;
+}
+
 /** Payload untuk simpan SOAP */
 export interface SOAPPayload {
   keluhanUtama?: string;
@@ -94,6 +104,7 @@ export interface SOAPPayload {
   kesadaran?: string;
   pemeriksaanFisik?: string;
   hasilPenunjang?: string;
+  fotoObjektif?: FotoObjektifItem[];
   diagnosisKlinis?: string;
   diagnosisArr?: DiagnosaItem[];
   prognosisKode?: string;

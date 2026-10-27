@@ -60,34 +60,65 @@ export default function RMEDokterViewerPage() {
 
   const getMonthAbbr = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleString('id-ID', { month: 'short' });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.toLocaleString('id-ID', { month: 'short' });
+    } catch {
+      return '';
+    }
   };
 
   const getYear = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.getFullYear().toString();
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.getFullYear().toString();
+    } catch {
+      return '';
+    }
   };
 
   const getDay = (dateString: string) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.getDate().toString().padStart(2, '0');
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.getDate().toString().padStart(2, '0');
+    } catch {
+      return '';
+    }
   };
 
   const calculateAge = (dob: string) => {
     if (!dob) return '-';
-    const diff_ms = Date.now() - new Date(dob).getTime();
-    const age_dt = new Date(diff_ms); 
-    return Math.abs(age_dt.getUTCFullYear() - 1970) + ' Tahun';
+    try {
+      const birth = new Date(dob);
+      if (isNaN(birth.getTime())) return '-';
+      const now = new Date();
+      let age = now.getFullYear() - birth.getFullYear();
+      const m = now.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+        age--;
+      }
+      return `${Math.max(0, age)} Tahun`;
+    } catch {
+      return '-';
+    }
   };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-      day: 'numeric', month: 'long', year: 'numeric'
-    });
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric', month: 'long', year: 'numeric'
+      });
+    } catch {
+      return '-';
+    }
   };
 
   const getTriageColor = (triage: string | undefined | null) => {

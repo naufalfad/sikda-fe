@@ -159,5 +159,59 @@ export const farmasiService = {
   }) => {
     const response = await api.post('/farmasi/vaksin/keluar', payload);
     return response.data;
+  },
+
+  /** GET /farmasi/mutasi — Ambil daftar log riwayat mutasi stok keluar-masuk (Obat, Vaksin, BMHP) */
+  getRiwayatMutasi: async (params?: {
+    kategori?: string;
+    jenisMutasi?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    status: string;
+    data: MutasiStokItem[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+    summaryToday?: any[];
+  }> => {
+    const response = await api.get('/farmasi/mutasi', { params });
+    return response.data;
+  },
+
+  /** GET /farmasi/mutasi/kartu-stok/:itemId — Ambil kartu stok spesifik 1 item */
+  getKartuStokItem: async (itemId: string, jenis: 'OBAT' | 'VAKSIN' = 'OBAT'): Promise<{
+    status: string;
+    data: MutasiStokItem[];
+  }> => {
+    const response = await api.get(`/farmasi/mutasi/kartu-stok/${itemId}`, { params: { jenis } });
+    return response.data;
   }
 };
+
+export interface MutasiStokItem {
+  id: string;
+  faskesId: string;
+  kategoriItem: 'OBAT' | 'BMHP' | 'VAKSIN';
+  obatId?: string | null;
+  vaksinId?: string | null;
+  namaItem: string;
+  sediaan?: string | null;
+  noBatch: string;
+  tanggalExpired?: string | null;
+  jenisMutasi: 'MASUK' | 'KELUAR' | 'PENYESUAIAN' | 'OPNAME';
+  jumlahPerubahan: number;
+  stokAwal: number;
+  stokAkhir: number;
+  referensi?: string | null;
+  keterangan?: string | null;
+  petugasId?: string | null;
+  petugasNama?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  faskes?: { namaFaskes: string; kodeFaskes: string };
+  obat?: { kodeObat: string; kategori: string; sediaan: string };
+  vaksin?: { kodeKfa: string; namaVaksin: string };
+}
+

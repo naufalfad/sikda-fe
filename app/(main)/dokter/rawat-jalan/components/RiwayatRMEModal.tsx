@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { 
   X, Clock, Calendar, Activity, FileText, Pill, AlertCircle, Syringe,
-  Stethoscope, Loader2, RefreshCw, ChevronDown, ChevronUp
+  Stethoscope, Loader2, RefreshCw, ChevronDown, ChevronUp, TestTubes, Building2
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import FotoObjektifViewer from './FotoObjektifViewer';
 
 interface RiwayatRMEModalProps {
   isOpen: boolean;
@@ -18,6 +19,17 @@ interface RiwayatRMEModalProps {
 
 function KunjunganCard({ kunjungan }: { kunjungan: any }) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const getFormattedDate = () => {
+    try {
+      const raw = kunjungan.tanggalRegistrasi || kunjungan.createdAt || new Date();
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return '-';
+      return format(d, 'dd MMMM yyyy', { locale: id });
+    } catch {
+      return '-';
+    }
+  };
 
   return (
     <div className="relative flex items-start justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -35,9 +47,17 @@ function KunjunganCard({ kunjungan }: { kunjungan: any }) {
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div>
-            <div className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-1">
-              {format(new Date(kunjungan.tanggalRegistrasi || kunjungan.createdAt || new Date()), 'dd MMMM yyyy', { locale: id })}
-              {kunjungan.jamRegistrasi ? `, ${kunjungan.jamRegistrasi}` : ', 00:00'}
+            <div className="flex flex-wrap items-center gap-1.5 text-xs font-black text-indigo-600 uppercase tracking-widest mb-1">
+              <span>{getFormattedDate()}{kunjungan.jamRegistrasi ? `, ${kunjungan.jamRegistrasi}` : ', 00:00'}</span>
+              {kunjungan.faskes?.namaFaskes && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <span className="inline-flex items-center gap-1 bg-sky-100 text-sky-800 text-[10px] font-black px-1.5 py-0.5 border border-sky-300">
+                    <Building2 className="w-3 h-3 text-sky-600" />
+                    {kunjungan.faskes.namaFaskes}
+                  </span>
+                </>
+              )}
             </div>
             <h4 className="font-black text-slate-800 text-lg flex items-center gap-2">
               <Stethoscope className="w-5 h-5 text-slate-400" />
@@ -71,6 +91,9 @@ function KunjunganCard({ kunjungan }: { kunjungan: any }) {
                 <div>
                   <strong className="block text-xs font-black text-slate-900 uppercase tracking-widest mb-1 text-emerald-600">O (Objektif)</strong>
                   <p className="bg-white p-2 border border-slate-200 min-h-[60px] shadow-sm whitespace-pre-wrap">{kunjungan.rekamMedis.pemeriksaanFisik || '-'}</p>
+                  {kunjungan.rekamMedis.fotoObjektif && Array.isArray(kunjungan.rekamMedis.fotoObjektif) && kunjungan.rekamMedis.fotoObjektif.length > 0 && (
+                    <FotoObjektifViewer fotoList={kunjungan.rekamMedis.fotoObjektif} compact />
+                  )}
                 </div>
                 <div>
                   <strong className="block text-xs font-black text-slate-900 uppercase tracking-widest mb-1 text-orange-600">A (Asesmen)</strong>
@@ -129,10 +152,10 @@ function KunjunganCard({ kunjungan }: { kunjungan: any }) {
                 </strong>
                 {kunjungan.resep && kunjungan.resep.length > 0 ? (
                   <ul className="space-y-1">
-                    {kunjungan.resep.flatMap((r: any) => r.details).map((d: any, i: number) => (
+                    {kunjungan.resep.flatMap((r: any) => r.details || []).map((d: any, i: number) => (
                       <li key={i} className="text-xs bg-white p-2 border border-slate-200 shadow-sm flex flex-col">
                         <span className="font-bold text-slate-700">{d.obat?.namaObat}</span>
-                        <span className="font-mono text-slate-500 mt-0.5">{d.jumlah} {d.obat?.satuan} - {d.aturanPakai}</span>
+                        <span className="font-mono text-slate-500 mt-0.5">{d.jumlah} {d.obat?.satuan || 'Pcs'} - {d.aturanPakai || d.signa || '-'}</span>
                       </li>
                     ))}
                   </ul>
@@ -140,6 +163,30 @@ function KunjunganCard({ kunjungan }: { kunjungan: any }) {
               </div>
 
             </div>
+
+            {/* Laboratorium jika ada */}
+            {kunjungan.orderLab && (
+              <div className="border-t border-slate-200 pt-3 mt-4">
+                <strong className="block text-xs font-black text-slate-700 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <TestTubes className="w-3.5 h-3.5 text-amber-500" /> Hasil Laboratorium ({kunjungan.orderLab.details?.length || 0} Parameter)
+                </strong>
+                {kunjungan.orderLab.details && kunjungan.orderLab.details.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {kunjungan.orderLab.details.map((d: any) => (
+                      <div key={d.id} className="text-xs bg-white p-2 border border-slate-200 shadow-sm flex justify-between items-center">
+                        <span className="font-bold text-slate-800">{d.parameter}</span>
+                        <div className="text-right">
+                          <span className={`font-mono font-black ${d.kritis ? 'text-red-600' : 'text-slate-800'}`}>
+                            {d.hasil || '-'} {d.satuan || ''}
+                          </span>
+                          {d.nilaiRujukan && <span className="block text-[9px] text-slate-400">Ruj: {d.nilaiRujukan}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <span className="text-xs text-slate-400 italic">Pemeriksaan masih diproses.</span>}
+              </div>
+            )}
           </div>
         )}
       </div>

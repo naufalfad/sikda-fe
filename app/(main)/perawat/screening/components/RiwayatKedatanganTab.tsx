@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, User, Stethoscope, FileText, 
-  Activity, Eye, CheckCircle2, Loader2, AlertCircle, Search, ChevronRight
+  Activity, Eye, CheckCircle2, Loader2, AlertCircle, Search, ChevronRight, Building2
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 
@@ -117,6 +117,12 @@ export default function RiwayatKedatanganTab({ noRM }: RiwayatKedatanganTabProps
                     <span className="text-xs font-semibold px-2 py-0.5 bg-gray-100 text-gray-700">
                       {v.poliklinik?.namaPoli || 'Poli'}
                     </span>
+                    {v.faskes?.namaFaskes && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-sky-50 text-sky-800 border border-sky-200">
+                        <Building2 className="w-3 h-3 text-sky-600" />
+                        {v.faskes.namaFaskes}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">

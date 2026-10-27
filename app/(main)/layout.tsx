@@ -26,7 +26,8 @@ import {
   Radio,
   BedDouble,
   Syringe,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -102,7 +103,12 @@ export default function DashboardLayout({
             <>
               <Link href="/administrasi" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Antrian</span>
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Statistik</span>
+              </Link>
+
+              <Link href="/administrasi/antrean" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/antrean' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Layers className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi/antrean' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Pusat Antrean Loket</span>
               </Link>
 
               <Link href="/administrasi/pendaftaran" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/pendaftaran' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -125,6 +131,11 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Antrean Rujukan</span>
               </Link>
 
+              <Link href="/admin/monitoring-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/monitoring-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/monitoring-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Monitoring Beban Dokter</span>
+              </Link>
+
               <Link href="#" className="flex items-center px-6 py-3 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors">
                 <FileText className="w-7 h-7 text-gray-400 md:group-hover:text-blue-600 flex-shrink-0 transition-colors" />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Laporan Kunjungan</span>
@@ -138,6 +149,11 @@ export default function DashboardLayout({
               <Link href="/admin" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Admin</span>
+              </Link>
+
+              <Link href="/admin/monitoring-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/monitoring-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/monitoring-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Monitoring Kinerja Dokter</span>
               </Link>
 
               {/* <Link href="/admin/perusahaan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -188,6 +204,11 @@ export default function DashboardLayout({
               <Link href="/apoteker/stok" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname.startsWith('/apoteker/stok') ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Package className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname.startsWith('/apoteker/stok') ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Logistik Obat & Vaksin</span>
+              </Link>
+
+              <Link href="/apoteker/riwayat" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <History className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Log Keluar-Masuk (Mutasi)</span>
               </Link>
 
               <Link href="/admin/master-alergi" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-alergi' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -333,9 +354,9 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Logistik Obat & Vaksin</span>
               </Link>
 
-              <Link href="#" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+              <Link href="/apoteker/riwayat" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <History className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/apoteker/riwayat' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Riwayat Obat Keluar</span>
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Log Keluar-Masuk (Mutasi)</span>
               </Link>
             </>
           )}

@@ -85,7 +85,7 @@ export default function AsetRuanganPage() {
   const [bedForm, setBedForm] = useState({
     ruanganId: '',
     nomorBed: '',
-    kelasKamar: 'NON_KELAS_IGD',
+    kelasKamar: 'NON_KELAS_UGD',
     statusBed: 'TERSEDIA' as const,
     gambarUrl: ''
   });
@@ -709,7 +709,7 @@ export default function AsetRuanganPage() {
                 setBedForm({
                   ruanganId: ruangans[0]?.id || '',
                   nomorBed: `BED-${Math.floor(10 + Math.random() * 90)}`,
-                  kelasKamar: 'NON_KELAS_IGD',
+                  kelasKamar: 'NON_KELAS_UGD',
                   statusBed: 'TERSEDIA',
                   gambarUrl: ''
                 });
@@ -776,7 +776,7 @@ export default function AsetRuanganPage() {
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Kelas:</span>
                         <span className="font-bold text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded text-[10px]">
-                          {b.kelasKamar.replace(/_/g, ' ')}
+                          {b.kelasKamar === 'NON_KELAS_UGD' || b.kelasKamar === 'NON_KELAS_IGD' ? 'Non-Kelas (UGD)' : b.kelasKamar.replace(/_/g, ' ')}
                         </span>
                       </div>
                       {b.statusBed === 'TERISI' && b.kunjunganAktif ? (
@@ -1279,7 +1279,7 @@ export default function AsetRuanganPage() {
                   >
                     <option value="RAWAT_JALAN">Rawat Jalan / Poli</option>
                     <option value="RAWAT_INAP">Rawat Inap / Bangsal</option>
-                    <option value="IGD">Gawat Darurat (IGD)</option>
+                    <option value="UGD">Unit Gawat Darurat (UGD)</option>
                     <option value="PENUNJANG_MEDIS">Penunjang Medis (Lab/Rad/Apotek)</option>
                     <option value="ADMINISTRASI">Administrasi</option>
                     <option value="GUDANG">Gudang</option>
@@ -1392,7 +1392,7 @@ export default function AsetRuanganPage() {
                     onChange={(e) => setBedForm({ ...bedForm, kelasKamar: e.target.value })}
                     className="w-full border p-2 rounded text-sm text-black"
                   >
-                    <option value="NON_KELAS_IGD">Non-Kelas (IGD)</option>
+                    <option value="NON_KELAS_UGD">Non-Kelas (UGD)</option>
                     <option value="KELAS_1">Kelas 1</option>
                     <option value="KELAS_2">Kelas 2</option>
                     <option value="KELAS_3">Kelas 3</option>

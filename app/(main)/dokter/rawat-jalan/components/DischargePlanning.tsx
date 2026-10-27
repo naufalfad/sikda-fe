@@ -1339,7 +1339,7 @@ export default function DischargePlanning() {
                             {bed.ruangan?.gedung || 'Gedung Utama'} • {bed.ruangan?.lantai || 'Lantai 1'}
                           </div>
                           <div className="text-[11px] font-semibold text-teal-700">
-                            Kelas: {bed.kelasKamar || 'NON_KELAS_IGD'}
+                            Kelas: {bed.kelasKamar === 'NON_KELAS_UGD' || bed.kelasKamar === 'NON_KELAS_IGD' ? 'Non-Kelas (UGD)' : (bed.kelasKamar?.replace(/_/g, ' ') || 'Rawat Inap')}
                           </div>
                         </div>
                         <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">

@@ -56,6 +56,14 @@ export default function RegistrationForm() {
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
     mode: 'onSubmit',
+    defaultValues: {
+      statusPasien: 'Baru',
+      isBayi: false,
+      kewarganegaraan: 'WNI',
+      agama: 'Islam',
+      statusPerkawinan: 'Belum Kawin',
+      rtRw: '001/001',
+    }
   });
 
 

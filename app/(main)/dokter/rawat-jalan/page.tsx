@@ -51,8 +51,31 @@ function DokterRawatJalanContent() {
     setFase, simpanResep, simpanRujukan, pulang, clearSelection,
   } = useRawatJalanStore();
 
+  const getCleanSoapData = (): SOAPPayload => ({
+    keluhanUtama: '',
+    riwayatPenyakitSekarang: '',
+    riwayatPenyakitDahulu: '',
+    riwayatAlergi: '',
+    alergiArr: [],
+    keadaanUmum: 'Tampak Sakit Ringan',
+    kesadaran: 'Compos Mentis (Sadar Penuh)',
+    pemeriksaanFisik: '',
+    primarySurvey: undefined,
+    secondarySurvey: undefined,
+    diagnosisKlinis: '',
+    rencanaTerapi: '',
+    tujuanPerawatan: '',
+    instruksiMedis: '',
+    odontogram: {},
+    dmft: undefined,
+    oralFindings: {},
+    diagnosisArr: [],
+    fotoObjektif: [],
+  });
+
   // SOAP local form state
-  const [soapData, setSoapData] = useState<SOAPPayload>({});
+  const [soapData, setSoapData] = useState<SOAPPayload>(getCleanSoapData());
+  const hasHandledUrlParam = useRef(false);
 
   // Removed separate ICD10 states since TabAsesmen handles it now
   
@@ -120,8 +143,29 @@ function DokterRawatJalanContent() {
   // Lab Modal & Print Ref
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
   const [orderLabData, setOrderLabData] = useState<any>(null);
+  const [riwayatLabList, setRiwayatLabList] = useState<any[]>([]);
   const [isLoadingLab, setIsLoadingLab] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Otomatis fetch riwayat lab selesai milik pasien ketika pasien aktif dipilih
+  useEffect(() => {
+    if (selectedKunjungan?.pasien?.id) {
+      laboratoriumService.getRiwayatLabByPasien(selectedKunjungan.pasien.id)
+        .then(res => {
+          if (res.success && res.data) {
+            setRiwayatLabList(res.data);
+          } else {
+            setRiwayatLabList([]);
+          }
+        })
+        .catch(err => {
+          console.error('Gagal mengambil riwayat lab pasien:', err);
+          setRiwayatLabList([]);
+        });
+    } else {
+      setRiwayatLabList([]);
+    }
+  }, [selectedKunjungan?.pasien?.id]);
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -151,11 +195,20 @@ function DokterRawatJalanContent() {
     setIsLabModalOpen(true);
     setIsLoadingLab(true);
     try {
+      // 1. Ambil order lab spesifik kunjungan saat ini
       const res = await laboratoriumService.getOrderByKunjungan(selectedKunjungan.id);
       if (res.success && res.data) {
         setOrderLabData(res.data);
       } else {
         setOrderLabData(null);
+      }
+
+      // 2. Ambil seluruh riwayat lab selesai pasien (menyusul / kontrol lanjutan)
+      if (selectedKunjungan.pasien?.id) {
+        const histRes = await laboratoriumService.getRiwayatLabByPasien(selectedKunjungan.pasien.id);
+        if (histRes.success && histRes.data) {
+          setRiwayatLabList(histRes.data);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch order lab', error);
@@ -175,30 +228,56 @@ function DokterRawatJalanContent() {
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(384);
 
-  // Fetch antrian on mount
+  // Fetch antrian on mount & clear selection on unmount
   useEffect(() => {
     fetchAntrian();
-  }, [fetchAntrian]);
+    return () => {
+      clearSelection();
+    };
+  }, [fetchAntrian, clearSelection]);
 
-  // Auto-select kunjungan jika ada parameter kunjunganId (dari Dashboard Dokter)
+  // Auto-select kunjungan jika ada parameter kunjunganId (dari Dashboard Dokter) HANYA SEKALI
   useEffect(() => {
-    if (kunjunganIdParam && (!selectedKunjungan || selectedKunjungan.id !== kunjunganIdParam)) {
+    if (kunjunganIdParam && !hasHandledUrlParam.current) {
       if (antrian.length > 0) {
         const found = antrian.find((k: any) => k.id === kunjunganIdParam);
         if (found) {
+          hasHandledUrlParam.current = true;
           pilihPasien(found);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
           return;
         }
       }
 
       // Jika belum ditemukan di antrian lokal, ambil langsung via API
+      hasHandledUrlParam.current = true;
       kunjunganService.getKunjunganById(kunjunganIdParam).then((k) => {
         if (k) {
           pilihPasien(k as any);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
         }
       }).catch(console.error);
     }
-  }, [kunjunganIdParam, antrian, selectedKunjungan, pilihPasien]);
+  }, [kunjunganIdParam, antrian, pilihPasien]);
+
+  // Handler menutup pemeriksaan pasien saat ini
+  const handleCloseSelection = () => {
+    clearSelection();
+    setSoapData(getCleanSoapData());
+    setSelectedObat([]);
+    setSelectedProsedur([]);
+    setLabOrders([]);
+    setLabNote('');
+    setObatQuery('');
+    setRujukanData({ faskesTujuan: '', poliTujuan: '', alasanRujukan: '' });
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  };
 
   // Order Lab State
   const [labOrders, setLabOrders] = useState<string[]>([]);
@@ -226,26 +305,33 @@ function DokterRawatJalanContent() {
     }
   };
 
-  // Reset local prescription & procedure state when patient changes
+  // Reset ALL local form states whenever selected patient changes or is cleared
   useEffect(() => {
+    setSoapData(getCleanSoapData());
     setSelectedObat([]);
     setSelectedProsedur([]);
     setObatQuery('');
     setRujukanData({ faskesTujuan: '', poliTujuan: '', alasanRujukan: '' });
+    setLabOrders([]);
+    setLabNote('');
   }, [selectedKunjungan?.id]);
 
-  // Sync SOAP data when rekamMedis or screeningData is loaded
+  // Sync SOAP data when rekamMedis or screeningData is loaded for current active patient
   useEffect(() => {
+    if (!selectedKunjungan) {
+      setSoapData(getCleanSoapData());
+      return;
+    }
+
     if (rekamMedis || screeningData) {
       const rawFisik = rekamMedis?.pemeriksaanFisik || '';
       const parsedUgd = parseUgdPemeriksaanFisik(rawFisik);
 
-      setSoapData(prev => ({
-        ...prev,
-        keluhanUtama: rekamMedis?.keluhanUtama || screeningData?.keluhanUtama || prev.keluhanUtama || '',
-        riwayatPenyakitSekarang: rekamMedis?.riwayatPenyakitSekarang || screeningData?.dataTambahan?.riwayat?.riwayatPenyakitSekarang || prev.riwayatPenyakitSekarang || '',
-        riwayatPenyakitDahulu: rekamMedis?.riwayatPenyakitDahulu || screeningData?.dataTambahan?.riwayat?.riwayatPenyakitDahulu || prev.riwayatPenyakitDahulu || '',
-        riwayatAlergi: rekamMedis?.riwayatAlergi || screeningData?.dataTambahan?.riwayat?.riwayatAlergi || prev.riwayatAlergi || '',
+      setSoapData({
+        keluhanUtama: rekamMedis?.keluhanUtama || screeningData?.keluhanUtama || '',
+        riwayatPenyakitSekarang: rekamMedis?.riwayatPenyakitSekarang || screeningData?.dataTambahan?.riwayat?.riwayatPenyakitSekarang || '',
+        riwayatPenyakitDahulu: rekamMedis?.riwayatPenyakitDahulu || screeningData?.dataTambahan?.riwayat?.riwayatPenyakitDahulu || '',
+        riwayatAlergi: rekamMedis?.riwayatAlergi || screeningData?.dataTambahan?.riwayat?.riwayatAlergi || '',
         alergiArr: (alergiList && alergiList.length > 0) 
           ? alergiList.map(a => ({
               alergiId: a.alergiId,
@@ -254,25 +340,31 @@ function DokterRawatJalanContent() {
               manifestasiNama: a.manifestasiNama,
               tingkatKeparahan: a.tingkatKeparahan
             }))
-          : (prev.alergiArr || []),
+          : [],
         keadaanUmum: rekamMedis?.keadaanUmum || 'Tampak Sakit Ringan',
         kesadaran: rekamMedis?.kesadaran || screeningData?.dataTambahan?.triage?.kesadaran || 'Compos Mentis (Sadar Penuh)',
-        pemeriksaanFisik: rawFisik || prev.pemeriksaanFisik || '',
-        primarySurvey: (prev.primarySurvey?.airway || prev.primarySurvey?.breathing || prev.primarySurvey?.circulation) 
-          ? prev.primarySurvey 
-          : parsedUgd.primarySurvey,
-        secondarySurvey: (prev.secondarySurvey !== undefined && prev.secondarySurvey !== '')
-          ? prev.secondarySurvey
-          : parsedUgd.secondarySurvey,
-        diagnosisKlinis: rekamMedis?.diagnosisKlinis || prev.diagnosisKlinis || '',
-        rencanaTerapi: rekamMedis?.rencanaTerapi || prev.rencanaTerapi || '',
-        instruksiMedis: rekamMedis?.instruksiMedis || prev.instruksiMedis || '',
-        odontogram: rekamMedis?.odontogram || prev.odontogram || {},
-        dmft: rekamMedis?.dmft || prev.dmft || undefined,
-        oralFindings: rekamMedis?.oralFindings || prev.oralFindings || {},
-      }));
+        pemeriksaanFisik: rawFisik || '',
+        primarySurvey: parsedUgd.primarySurvey,
+        secondarySurvey: parsedUgd.secondarySurvey,
+        diagnosisKlinis: rekamMedis?.diagnosisKlinis || '',
+        rencanaTerapi: rekamMedis?.rencanaTerapi || '',
+        tujuanPerawatan: (rekamMedis as any)?.tujuanPerawatan || '',
+        instruksiMedis: rekamMedis?.instruksiMedis || '',
+        odontogram: rekamMedis?.odontogram || {},
+        dmft: rekamMedis?.dmft || undefined,
+        oralFindings: rekamMedis?.oralFindings || {},
+        diagnosisArr: (diagnosaList && diagnosaList.length > 0)
+          ? diagnosaList.map(d => ({
+              icd10Id: d.icd10.id_icd10,
+              kode_icd10: d.icd10.kode_icd10,
+              nama_diagnosis: d.icd10.nama_diagnosis,
+              jenisDiagnosis: d.jenisDiagnosis,
+            }))
+          : [],
+        fotoObjektif: Array.isArray((rekamMedis as any)?.fotoObjektif) ? (rekamMedis as any).fotoObjektif : [],
+      });
     }
-  }, [rekamMedis, screeningData, alergiList]);
+  }, [selectedKunjungan?.id, rekamMedis, screeningData, alergiList, diagnosaList]);
 
   // Sync order lab data when loaded
   useEffect(() => {
@@ -303,21 +395,6 @@ function DokterRawatJalanContent() {
       setSelectedObat([]);
     }
   }, [selectedKunjungan]);
-
-  // Sync diagnosa from store when loaded (put it into soapData.diagnosisArr instead of selectedDiagnoses)
-  useEffect(() => {
-    if (diagnosaList.length > 0) {
-      setSoapData(prev => ({
-        ...prev,
-        diagnosisArr: diagnosaList.map(d => ({
-          icd10Id: d.icd10.id_icd10,
-          kode_icd10: d.icd10.kode_icd10,
-          nama_diagnosis: d.icd10.nama_diagnosis,
-          jenisDiagnosis: d.jenisDiagnosis,
-        }))
-      }));
-    }
-  }, [diagnosaList]);
 
   // Sync tindakan from store when loaded
   useEffect(() => {
@@ -565,6 +642,10 @@ function DokterRawatJalanContent() {
           await tundaPemeriksaan(soapData);
           setIsQueueCollapsed(false);
           setShowSideRmePanel(false);
+          setSoapData(getCleanSoapData());
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
           Swal.fire({ icon: 'success', title: 'Ditunda', text: 'Pemeriksaan berhasil ditunda.', timer: 1500, showConfirmButton: false });
         } catch {
           Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menunda pemeriksaan.' });
@@ -637,6 +718,9 @@ function DokterRawatJalanContent() {
               isQueueCollapsed={isQueueCollapsed}
               onToggleQueue={() => setIsQueueCollapsed(!isQueueCollapsed)}
               queueCount={antrian.length}
+              riwayatLabCount={riwayatLabList.length}
+              onOpenLabModal={openLabModal}
+              onCloseSelection={handleCloseSelection}
             />
 
             {/* Status Banner Penunjang & Loading Overlay Component */}
@@ -743,6 +827,8 @@ function DokterRawatJalanContent() {
                         clearSelection={clearSelection} 
                         fetchAntrian={fetchAntrian} 
                         setActiveTab={setActiveTab} 
+                        existingLabCount={riwayatLabList.length}
+                        onViewExistingLab={openLabModal}
                       />
                     )}
 
@@ -948,6 +1034,8 @@ function DokterRawatJalanContent() {
         onClose={() => setIsLabModalOpen(false)}
         isLoading={isLoadingLab}
         orderLabData={orderLabData}
+        orderList={riwayatLabList}
+        pasienData={selectedKunjungan?.pasien}
         handlePrint={handlePrint}
         handleDownloadPdf={handleDownloadPdf}
         printRef={printRef}

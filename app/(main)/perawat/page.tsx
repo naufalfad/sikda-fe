@@ -221,7 +221,7 @@ export default function PerawatDashboardPage() {
                         }
                       }
                       
-                      const genderStr = item.pasien?.jenisKelamin === 'Laki-Laki' ? 'L' : 'P';
+                      const genderStr = item.pasien?.jenisKelamin?.toLowerCase().startsWith('l') ? 'L' : 'P';
                       
                       return (
                       <tr key={item.id} className="hover:bg-blue-50/50 transition-colors group">

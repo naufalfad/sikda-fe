@@ -57,11 +57,13 @@ export function LabModal({
                 <CetakHasilLab 
                   ref={labPrintRef} 
                   data={{
+                    ...selectedVisit.orderLab,
                     id: selectedVisit.orderLab.id || '-',
-                    tanggalOrder: selectedVisit.tanggalRegistrasi,
-                    pasien: pasienData,
-                    dokter: selectedVisit.dokterTujuan,
-                    details: selectedVisit.orderLab.details
+                    tanggalOrder: selectedVisit.orderLab.tanggalOrder || selectedVisit.tanggalRegistrasi || selectedVisit.createdAt,
+                    pasien: selectedVisit.orderLab.pasien || pasienData,
+                    dokter: selectedVisit.orderLab.dokter || selectedVisit.dokterTujuan || { namaLengkap: 'dr. Pemeriksa' },
+                    kunjungan: selectedVisit,
+                    details: selectedVisit.orderLab.details || []
                   }}
                 />
              </div>

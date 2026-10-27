@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, Eye, Check, ChevronUp, ChevronDown } from 'lucide-react';
+import { Printer, Eye, Check, ChevronUp, ChevronDown, Building2 } from 'lucide-react';
 
 interface TimelineViewProps {
   visits: any[];
@@ -62,9 +62,17 @@ export function TimelineView({
 
                     {/* Info Column */}
                     <div className="flex-1 space-y-1.5 w-full">
-                      <p className="text-sm font-medium text-slate-700">
-                        {item.poliklinik?.namaPoli || 'Poli'} dengan <span className="text-blue-600 font-semibold">{item.dokterTujuan?.namaLengkap || 'Dokter'}</span>
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-slate-700">
+                          {item.poliklinik?.namaPoli || 'Poli'} dengan <span className="text-blue-600 font-semibold">{item.dokterTujuan?.namaLengkap || 'Dokter'}</span>
+                        </p>
+                        {item.faskes?.namaFaskes && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-800 bg-sky-50 px-2 py-0.5 border border-sky-200">
+                            <Building2 className="w-3 h-3 text-sky-600" />
+                            {item.faskes.namaFaskes}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-slate-500">
                         Penjamin: <span className="font-semibold text-slate-700">{pasienData?.jenisPenjamin || 'Umum'}</span>
                       </p>

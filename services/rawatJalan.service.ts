@@ -11,9 +11,16 @@ import {
   MasterObat,
   ResepPayloadItem,
   RujukanPayload,
+  FotoObjektifItem,
 } from '../types/rawatJalan.types';
 
 export const rawatJalanService = {
+  /** POST /rawat-jalan/upload-foto-klinis — Upload foto klinis / luka (multipart atau kamera) */
+  uploadFotoKlinis: async (payload: FormData | { base64Image: string; namaFile?: string; keterangan?: string }): Promise<ApiResponse<FotoObjektifItem[]>> => {
+    const headers = payload instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
+    const response = await api.post('/rawat-jalan/upload-foto-klinis', payload, { headers });
+    return response.data;
+  },
   /** GET /rawat-jalan/antrian — Ambil antrian pasien untuk dokter */
   getAntrian: async (): Promise<ApiResponse<AntrianDokter[]>> => {
     const response = await api.get('/rawat-jalan/antrian');
@@ -137,7 +144,16 @@ export const rawatJalanService = {
   /** POST /rawat-jalan/:kunjunganId/discharge-rawat-inap — Pulangkan pasien rawat inap & finalisasi kasir */
   dischargeRawatInap: async (
     kunjunganId: string, 
-    payload: { caraKeluar?: string; kondisiDischarge?: string; edukasiPulang?: string; rencanaKontrol?: string; faskesTujuan?: string; alasanRujukan?: string; poliTujuan?: string }
+    payload: { 
+      caraKeluar?: string; 
+      kondisiDischarge?: string; 
+      edukasiPulang?: string; 
+      rencanaKontrol?: string; 
+      faskesTujuan?: string; 
+      alasanRujukan?: string; 
+      poliTujuan?: string;
+      resepPulang?: ResepPayloadItem[];
+    }
   ): Promise<ApiResponse<any>> => {
     const response = await api.post(`/rawat-jalan/${kunjunganId}/discharge-rawat-inap`, payload);
     return response.data;

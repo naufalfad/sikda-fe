@@ -7,11 +7,13 @@ import {
   ChevronUp, Search, Filter, Printer, Maximize2, Minimize2, 
   X, ArrowLeft, User, MapPin, Phone, CreditCard, Sparkles, 
   Heart, Thermometer, RefreshCw, Loader2, Info, ChevronRight,
-  Eye, Check, Copy
+  Eye, Check, Copy, Building2
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import LabResultModal from './LabResultModal';
+import FotoObjektifViewer from './FotoObjektifViewer';
 
 interface BerkasRMEPasienViewProps {
   noRM: string;
@@ -40,8 +42,11 @@ export default function BerkasRMEPasienView({
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPoli, setSelectedPoli] = useState('ALL');
+  const [selectedFaskes, setSelectedFaskes] = useState('ALL');
   const [expandedVisits, setExpandedVisits] = useState<Record<string, boolean>>({});
   const [isFullWidth, setIsFullWidth] = useState(false);
+  const [isLabModalOpen, setIsLabModalOpen] = useState(false);
+  const [selectedLabOrder, setSelectedLabOrder] = useState<any>(null);
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   // Fetch full patient history
@@ -86,6 +91,16 @@ export default function BerkasRMEPasienView({
     return Array.from(set);
   }, [kunjungans]);
 
+  // Extract unique faskes for cross-faskes filter & banner
+  const faskesOptions = useMemo(() => {
+    const set = new Set<string>();
+    kunjungans.forEach((k) => {
+      const fName = k.faskes?.namaFaskes;
+      if (fName) set.add(fName);
+    });
+    return Array.from(set);
+  }, [kunjungans]);
+
   // Filtered visits
   const filteredKunjungans = useMemo(() => {
     return kunjungans.filter((k) => {
@@ -95,10 +110,17 @@ export default function BerkasRMEPasienView({
         if (poliName !== selectedPoli) return false;
       }
 
+      // Faskes Filter
+      if (selectedFaskes !== 'ALL') {
+        const fName = k.faskes?.namaFaskes || '';
+        if (fName !== selectedFaskes) return false;
+      }
+
       // Keyword Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const poliMatch = (k.poliklinik?.namaPoli || k.poliTujuan || '').toLowerCase().includes(q);
+        const faskesMatch = (k.faskes?.namaFaskes || '').toLowerCase().includes(q);
         const dokterMatch = (k.dokterTujuan?.namaLengkap || '').toLowerCase().includes(q);
         const keluhanMatch = (k.rekamMedis?.keluhanUtama || k.screening?.keluhanUtama || '').toLowerCase().includes(q);
         const diagKlinisMatch = (k.rekamMedis?.diagnosisKlinis || '').toLowerCase().includes(q);
@@ -114,12 +136,12 @@ export default function BerkasRMEPasienView({
           (r.details || []).some((d: any) => (d.obat?.namaObat || '').toLowerCase().includes(q))
         );
 
-        return poliMatch || dokterMatch || keluhanMatch || diagKlinisMatch || icd10Match || icd9Match || obatMatch;
+        return poliMatch || faskesMatch || dokterMatch || keluhanMatch || diagKlinisMatch || icd10Match || icd9Match || obatMatch;
       }
 
       return true;
     });
-  }, [kunjungans, selectedPoli, searchQuery]);
+  }, [kunjungans, selectedPoli, selectedFaskes, searchQuery]);
 
   // Toggle single visit accordion
   const toggleVisit = (id: string) => {
@@ -327,6 +349,31 @@ export default function BerkasRMEPasienView({
               <span className="text-lg font-black text-slate-800 font-mono">{kunjungans.length}</span>
             </div>
 
+            {/* Riwayat Lab Selesai Pasien */}
+            {effectivePatient.orderLabs && effectivePatient.orderLabs.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const firstOrder = effectivePatient.orderLabs[0];
+                  setSelectedLabOrder({
+                    ...firstOrder,
+                    pasien: firstOrder.pasien || effectivePatient,
+                  });
+                  setIsLabModalOpen(true);
+                }}
+                className="bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3.5 py-1.5 text-left transition-colors cursor-pointer group shadow-xs"
+                title="Buka Berkas Lembar Hasil Laboratorium Pasien"
+              >
+                <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                  <TestTubes className="w-3.5 h-3.5 text-amber-600" />
+                  {effectivePatient.orderLabs.length} Hasil Lab Selesai
+                </span>
+                <span className="text-xs font-bold text-amber-900 group-hover:underline block">
+                  Buka Lembar Hasil ➔
+                </span>
+              </button>
+            )}
+
             {/* Riwayat Alergi Alert */}
             {effectivePatient.riwayatAlergi ? (
               <div className="bg-rose-50 border border-rose-200 px-3 py-1.5 text-left max-w-xs">
@@ -391,6 +438,23 @@ export default function BerkasRMEPasienView({
                 ))}
               </select>
             </div>
+
+            {/* Faskes selector jika terdapat kunjungan lintas faskes */}
+            {faskesOptions.length > 1 && (
+              <div className="flex items-center gap-1 shrink-0">
+                <Building2 className="w-3.5 h-3.5 text-sky-600" />
+                <select
+                  value={selectedFaskes}
+                  onChange={(e) => setSelectedFaskes(e.target.value)}
+                  className="bg-white border border-sky-300 rounded-none py-1.5 px-2 text-xs font-bold text-sky-900 focus:outline-none focus:border-indigo-600 shadow-inner"
+                >
+                  <option value="ALL">Semua Faskes ({faskesOptions.length})</option>
+                  {faskesOptions.map((fName) => (
+                    <option key={fName} value={fName}>{fName}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Quick Expand / Collapse controls */}
@@ -422,6 +486,27 @@ export default function BerkasRMEPasienView({
       {/* ─── MAIN DOSSIER SCROLLABLE CONTENT ─── */}
       <div className={`flex-1 overflow-y-auto ${isSidePanel ? 'p-2.5 sm:p-3' : 'p-4 sm:p-6'} bg-slate-100`}>
         <div className="max-w-7xl mx-auto space-y-5" ref={printAreaRef}>
+          
+          {/* Banner Interoperabilitas Lintas Faskes */}
+          {faskesOptions.length > 1 && !isLoading && (
+            <div className="bg-sky-50 border border-sky-200 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-sky-900 shadow-sm animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-sky-600 shrink-0" />
+                <span>
+                  <strong>Interoperabilitas Lintas Faskes:</strong> Pasien ini memiliki riwayat kunjungan di {faskesOptions.length} faskes ({faskesOptions.join(', ')}).
+                </span>
+              </div>
+              {selectedFaskes !== 'ALL' && (
+                <button 
+                  type="button"
+                  onClick={() => setSelectedFaskes('ALL')}
+                  className="text-[11px] font-bold text-sky-700 hover:underline shrink-0"
+                >
+                  Tampilkan Semua Faskes
+                </button>
+              )}
+            </div>
+          )}
           
           {isLoading ? (
             <div className="h-96 flex flex-col items-center justify-center bg-white border border-slate-200 p-8 shadow-sm">
@@ -522,6 +607,15 @@ export default function BerkasRMEPasienView({
                           <span className="text-xs font-bold text-slate-500 font-mono">
                             {kunjungan.jamRegistrasi || '08:00'} WIB
                           </span>
+                          {kunjungan.faskes?.namaFaskes && (
+                            <>
+                              <span className="text-xs text-slate-400">•</span>
+                              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 text-[10px] font-black px-2 py-0.5 border border-sky-300 uppercase tracking-wider">
+                                <Building2 className="w-3 h-3 text-sky-600" />
+                                {kunjungan.faskes.namaFaskes}
+                              </span>
+                            </>
+                          )}
                           {index === 0 && (
                             <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 border border-emerald-300 uppercase">
                               Kunjungan Terakhir
@@ -740,6 +834,9 @@ export default function BerkasRMEPasienView({
                                     </span>
                                   </div>
                                 )}
+                                {soap.fotoObjektif && Array.isArray(soap.fotoObjektif) && soap.fotoObjektif.length > 0 && (
+                                  <FotoObjektifViewer fotoList={soap.fotoObjektif} />
+                                )}
                               </div>
                             </div>
 
@@ -879,9 +976,29 @@ export default function BerkasRMEPasienView({
                               <TestTubes className="w-3.5 h-3.5 text-amber-600" />
                               Pemeriksaan Laboratorium
                             </span>
-                            <span className="font-mono text-[10px] text-slate-500 font-bold">
-                              {labOrders.length} Parameter
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {kunjungan.orderLab && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedLabOrder({
+                                      ...kunjungan.orderLab,
+                                      pasien: kunjungan.orderLab.pasien || effectivePatient,
+                                      dokter: kunjungan.orderLab.dokter || kunjungan.dokterTujuan || { namaLengkap: 'dr. Pemeriksa' }
+                                    });
+                                    setIsLabModalOpen(true);
+                                  }}
+                                  className="text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2 py-0.5 flex items-center gap-1 transition-colors"
+                                  title="Lihat / Cetak Lembar Hasil Lengkap"
+                                >
+                                  <FileText className="w-3 h-3" /> Lembar Hasil
+                                </button>
+                              )}
+                              <span className="font-mono text-[10px] text-slate-500 font-bold">
+                                {labOrders.length} Parameter
+                              </span>
+                            </div>
                           </h4>
 
                           {labOrders.length > 0 ? (
@@ -893,8 +1010,8 @@ export default function BerkasRMEPasienView({
                                     {d.satuan && <span className="text-slate-400 text-[10px] ml-1">({d.satuan})</span>}
                                   </div>
                                   <div className="text-right">
-                                    <span className={`font-mono font-black ${d.statusKritis ? 'text-red-600' : 'text-slate-800'}`}>
-                                      {d.nilaiHasil || 'Menunggu Hasil'}
+                                    <span className={`font-mono font-black ${d.kritis || d.statusKritis ? 'text-red-600 font-black' : 'text-slate-800'}`}>
+                                      {d.hasil || d.nilaiHasil || (kunjungan.orderLab?.status === 'SELESAI' ? '-' : 'Menunggu Hasil')}
                                     </span>
                                     {d.nilaiRujukan && (
                                       <span className="block text-[9px] text-slate-400">Ruj: {d.nilaiRujukan}</span>
@@ -961,6 +1078,15 @@ export default function BerkasRMEPasienView({
 
         </div>
       </div>
+
+      {/* LAB RESULT MODAL INSIDE DOSSIER */}
+      <LabResultModal
+        isOpen={isLabModalOpen}
+        onClose={() => setIsLabModalOpen(false)}
+        orderLabData={selectedLabOrder}
+        orderList={effectivePatient?.orderLabs || []}
+        pasienData={effectivePatient}
+      />
 
     </div>
   );

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const registrationSchema = z.object({
   // Identitas & Alamat
+  pasienId: z.string().optional().or(z.literal('')),
   noRekamMedis: z.string().min(1, 'Nomor Rekam Medis wajib diisi'),
   noIHS: z.string().optional().or(z.literal('')),
   nik: z.string().optional().or(z.literal('')),

@@ -50,9 +50,19 @@ export default function MasterPasienAdminPage() {
 
   // Helper mendeteksi apakah pasien adalah Pasien Darurat Sementara UGD
   const isPasienDaruratSementara = (p: any) => {
-    if (p.noRM && p.noRM.startsWith('RM-EMG-')) return true;
-    if (p.kunjungans && p.kunjungans.some((k: any) => k.isAnonim || k.statusAdministrasi === 'PENDING')) return true;
-    if (!p.nik && (p.namaLengkap.includes('Mr. X') || p.namaLengkap.includes('Mrs. X') || p.namaLengkap.includes('Anonim'))) return true;
+    // 1. Jika masih ada kunjungan aktif yang berstatus PENDING di loket atau anonim
+    if (p.kunjungans && p.kunjungans.some((k: any) => k.statusAdministrasi === 'PENDING' || k.isAnonim)) {
+      return true;
+    }
+    // 2. Jika nama pasien masih nama anonim darurat (Mr./Mrs. X / Anonim) dan belum memiliki NIK
+    const isAnonName = p.namaLengkap && (p.namaLengkap.includes('Mr. X') || p.namaLengkap.includes('Mrs. X') || p.namaLengkap.includes('Anonim'));
+    if (!p.nik && isAnonName) {
+      return true;
+    }
+    // 3. Jika noRM masih berawalan RM-EMG- dan belum memiliki NIK atau masih nama anonim
+    if (p.noRM && p.noRM.startsWith('RM-EMG-') && (!p.nik || isAnonName)) {
+      return true;
+    }
     return false;
   };
 

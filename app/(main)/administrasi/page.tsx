@@ -7,7 +7,7 @@ import {
   Heart, Shield, Baby, ChevronRight, Calendar, Printer,
   BarChart2, ArrowUpRight, ArrowDownRight, RefreshCw,
   Smartphone, UserCheck, QrCode, Sparkles, CheckCheck,
-  Loader2
+  Loader2, Layers, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -100,6 +100,7 @@ export default function AdminDashboardPage() {
 
   const [formDataLengkapi, setFormDataLengkapi] = useState({
     nik: '',
+    noRM: '',
     namaLengkap: '',
     jenisKelamin: 'Laki-laki',
     tempatLahir: '',
@@ -153,8 +154,10 @@ export default function AdminDashboardPage() {
     setNikLookupStatus({ status: 'IDLE', message: '' });
 
     const currentNik = item.pasien?.nik || '';
+    const currentRM = item.pasien?.noRM && !item.pasien.noRM.startsWith('RM-EMG-') ? item.pasien.noRM : '';
     setFormDataLengkapi({
       nik: currentNik,
+      noRM: currentRM,
       namaLengkap: item.isAnonim ? '' : (item.pasien?.namaLengkap || ''),
       jenisKelamin: item.pasien?.jenisKelamin || 'Laki-laki',
       tempatLahir: item.pasien?.tempatLahir || '',
@@ -168,13 +171,14 @@ export default function AdminDashboardPage() {
       noHpDarurat: item.pasien?.kontak?.noHpDarurat || ''
     });
 
-    // Jika pasien sudah memiliki rekam medis resmi (bukan anonim)
-    if (!item.isAnonim && item.pasien?.noRekamMedis && item.pasien?.noRekamMedis !== '-') {
+    // Jika pasien sudah memiliki rekam medis resmi faskes (bukan anonim dan bukan RM-EMG-)
+    const existingRM = item.pasien?.noRM || (item.pasien as any)?.noRekamMedis;
+    if (!item.isAnonim && existingRM && !existingRM.startsWith('RM-EMG-') && existingRM !== '-') {
       setExistingPasienId(item.pasien.id);
       setNikLookupStatus({
         status: 'FOUND',
         message: 'Data pasien terdaftar di rekam medis faskes.',
-        noRM: item.pasien.noRekamMedis,
+        noRM: existingRM,
         pasienName: item.pasien.namaLengkap
       });
     }
@@ -267,10 +271,11 @@ export default function AdminDashboardPage() {
 
     setIsSubmittingLengkapi(true);
     try {
-      await ugdService.lengkapiAdministrasi(selectedUgdKunjungan.id, {
+      const res: any = await ugdService.lengkapiAdministrasi(selectedUgdKunjungan.id, {
         ...formDataLengkapi,
         existingPasienId: existingPasienId || undefined
       });
+      const generatedRM = res?.pasien?.noRM || res?.data?.pasien?.noRM || (nikLookupStatus.status === 'FOUND' && nikLookupStatus.noRM ? nikLookupStatus.noRM : formDataLengkapi.noRM || null);
       await Swal.fire({
         icon: 'success',
         title: 'Administrasi Pasien UGD Selesai!',
@@ -279,11 +284,11 @@ export default function AdminDashboardPage() {
             <p>Pasien di Bed <strong>${selectedUgdKunjungan.tempatTidurs?.[0]?.nomorBed || 'UGD'}</strong> telah diverifikasi identitas resminya.</p>
             <p><strong>Nama Resmi:</strong> ${formDataLengkapi.namaLengkap}</p>
             <p><strong>NIK:</strong> ${formDataLengkapi.nik || '-'}</p>
-            ${nikLookupStatus.status === 'FOUND' && nikLookupStatus.noRM ? `<p><strong>No. Rekam Medis:</strong> <span class="bg-blue-100 text-blue-800 font-mono font-bold px-1.5 py-0.5 rounded">${nikLookupStatus.noRM}</span></p>` : ''}
+            ${generatedRM ? `<p><strong>No. Rekam Medis Resmi:</strong> <span class="bg-blue-100 text-blue-800 font-mono font-bold px-2 py-0.5 rounded border border-blue-200">${generatedRM}</span></p>` : ''}
             <p><strong>Penjamin:</strong> ${formDataLengkapi.jenisPenjamin} ${formDataLengkapi.noBpjs ? `(${formDataLengkapi.noBpjs})` : ''}</p>
-            <div class="bg-blue-50 border border-blue-200 p-2 text-xs text-blue-800 mt-2">
+            <div class="bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-900 mt-2">
               ✓ Berkas administrasi kini berstatus <strong>LENGKAP</strong>.<br/>
-              ✓ Dokter UGD dapat melanjutkan penanganan dengan identitas resmi.<br/>
+              ✓ Data pasien otomatis terdaftar sebagai <strong>Pasien Terverifikasi Resmi</strong> di Master Data Faskes.<br/>
               ✓ Rekam Medis & Kasir telah tersinkronisasi.
             </div>
           </div>
@@ -384,13 +389,13 @@ export default function AdminDashboardPage() {
     const nama = p.pasien?.namaLengkap || '';
     const noAntrian = p.noAntrian || '';
     const noRm = p.pasien?.noRM || '';
-    const matchSearch = nama.toLowerCase().includes(search.toLowerCase()) || 
-                        noAntrian.toLowerCase().includes(search.toLowerCase()) || 
-                        noRm.toLowerCase().includes(search.toLowerCase());
-    
+    const matchSearch = nama.toLowerCase().includes(search.toLowerCase()) ||
+      noAntrian.toLowerCase().includes(search.toLowerCase()) ||
+      noRm.toLowerCase().includes(search.toLowerCase());
+
     const mappedSt = mapStatus(p.statusKunjungan);
     const matchStatus = filterStatus === 'Semua' || mappedSt === filterStatus;
-    
+
     return matchSearch && matchStatus;
   });
 
@@ -424,22 +429,19 @@ export default function AdminDashboardPage() {
 
           {/* RIGHT: Action Buttons */}
           <div className="flex flex-wrap gap-3">
-            <button
-              onClick={() => {
-                setActiveQueueTab('ONLINE');
-                const el = document.getElementById('antrean-table-section');
-                if (el) el.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm transition-colors shadow-md relative"
+            <Link
+              href="/administrasi/antrean"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-sm transition-all shadow-md rounded-none"
+              title="Buka Halaman Khusus Antrean Loket, Online & UGD Pending Tanpa Perlu Scroll"
             >
-              <Smartphone className="w-4 h-4" />
-              <span>Antrean Online (WA)</span>
-              {onlineBookings.filter(b => b.statusBooking === 'TERKONFIRMASI').length > 0 && (
-                <span className="w-5 h-5 bg-white text-emerald-700 font-extrabold text-[11px] rounded-full flex items-center justify-center">
-                  {onlineBookings.filter(b => b.statusBooking === 'TERKONFIRMASI').length}
+              <Layers className="w-4 h-4 text-slate-950" />
+              <span>Buka Pusat Antrean (Full Screen)</span>
+              {pendingUgdList.length > 0 && (
+                <span className="w-5 h-5 bg-rose-600 text-white font-extrabold text-[11px] rounded-full flex items-center justify-center animate-pulse">
+                  {pendingUgdList.length}
                 </span>
               )}
-            </button>
+            </Link>
             <Link href="/administrasi/pendaftaran"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-blue-700 font-bold text-sm hover:bg-blue-50 transition-colors shadow-md">
               <UserPlus className="w-4 h-4" />
@@ -610,7 +612,7 @@ export default function AdminDashboardPage() {
                   const persen = totalPembayaran === 0 ? 0 : Math.round((item.value / totalPembayaran) * 100);
                   const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-violet-500', 'bg-amber-500', 'bg-rose-500', 'bg-teal-500'];
                   const color = colors[idx % colors.length];
-                  
+
                   return (
                     <div key={item.label} className="mb-4">
                       <div className="flex justify-between items-center mb-1.5">
@@ -652,17 +654,16 @@ export default function AdminDashboardPage() {
 
           {/* TABEL ANTRIAN */}
           <div id="antrean-table-section" className="lg:col-span-3 bg-white border border-gray-200 shadow-sm flex flex-col">
-            
+
             {/* TAB TOGGLE: LOKET vs ONLINE WHATSAPP */}
             <div className="flex border-b border-gray-200 bg-gray-50/70">
               <button
                 type="button"
                 onClick={() => setActiveQueueTab('LOKET')}
-                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
-                  activeQueueTab === 'LOKET'
-                    ? 'border-blue-600 text-blue-700 bg-white shadow-sm'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
-                }`}
+                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${activeQueueTab === 'LOKET'
+                  ? 'border-blue-600 text-blue-700 bg-white shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
               >
                 <Users className="w-4 h-4" />
                 <span>Antrean Loket Faskes ({filtered.length})</span>
@@ -671,11 +672,10 @@ export default function AdminDashboardPage() {
               <button
                 type="button"
                 onClick={() => setActiveQueueTab('ONLINE')}
-                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
-                  activeQueueTab === 'ONLINE'
-                    ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
-                }`}
+                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${activeQueueTab === 'ONLINE'
+                  ? 'border-emerald-600 text-emerald-700 bg-white shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
               >
                 <Smartphone className="w-4 h-4 text-emerald-600" />
                 <span>Antrean Online WhatsApp ({onlineBookings.length})</span>
@@ -689,11 +689,10 @@ export default function AdminDashboardPage() {
               <button
                 type="button"
                 onClick={() => setActiveQueueTab('UGD_PENDING')}
-                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${
-                  activeQueueTab === 'UGD_PENDING'
-                    ? 'border-rose-600 text-rose-700 bg-white shadow-sm'
-                    : 'border-transparent text-gray-500 hover:text-gray-900'
-                }`}
+                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 border-b-2 transition-all ${activeQueueTab === 'UGD_PENDING'
+                  ? 'border-rose-600 text-rose-700 bg-white shadow-sm'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
               >
                 <AlertTriangle className={`w-4 h-4 ${pendingUgdList.length > 0 ? 'text-rose-600 animate-bounce' : 'text-gray-400'}`} />
                 <span>Pending Administrasi UGD</span>
@@ -707,6 +706,15 @@ export default function AdminDashboardPage() {
                   </span>
                 )}
               </button>
+
+              <Link
+                href={`/administrasi/antrean?tab=${activeQueueTab}`}
+                className="ml-auto px-4 py-2 text-xs font-bold text-blue-700 hover:text-blue-800 hover:bg-blue-50 flex items-center gap-1.5 transition-colors self-center mr-2 rounded border border-blue-200 bg-white shadow-2xs"
+                title="Buka tampilan luas tanpa scroll di Pusat Antrean Loket"
+              >
+                <span>Buka di Halaman Penuh</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
 
             {/* ============================================================ */}
@@ -739,94 +747,94 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                  <tr>
-                    <th className="px-5 py-3">No. Antrian</th>
-                    <th className="px-5 py-3">Pasien</th>
-                    <th className="px-5 py-3">Poli Tujuan</th>
-                    <th className="px-5 py-3">Pembayaran</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3 text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filtered.map((p) => (
-                    <tr key={p.id} className="hover:bg-blue-50/40 transition-colors group">
-                      <td className="px-5 py-3.5">
-                        <div className="flex flex-col gap-1">
-                          <span className="font-bold text-gray-800 text-sm">{p.noAntrian}</span>
-                          <span className="text-xs text-gray-400">{new Date(p.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="font-semibold text-gray-900 flex items-center gap-1.5">
-                          {p.pasien?.namaLengkap}
-                          {p.prioritas !== 'Umum' && (
-                            <span className={`text-xs px-1.5 py-0.5 font-bold ${getPrioritasBadge(p.prioritas)}`}>{p.prioritas}</span>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
-                          <span>{getAge(p.pasien?.tanggalLahir)} th, {p.pasien?.jenisKelamin === 'Laki-Laki' ? 'L' : 'P'}</span>
-                          <span className={`px-1.5 py-0.5 text-xs font-medium ${p.statusPasien === 'Baru' ? 'bg-sky-100 text-sky-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {p.statusPasien}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-400">{p.pasien?.noRM || 'Pasien Baru'}</div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className="text-gray-700 font-medium text-sm">{p.poliklinik?.namaPoli || '-'}</span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getBayarStyle(p.pasien?.penjamin?.jenisPenjamin || 'Umum')}`}>
-                          {p.pasien?.penjamin?.jenisPenjamin || 'Umum'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${getStatusStyle(mapStatus(p.statusKunjungan))}`}>
-                          {mapStatus(p.statusKunjungan)}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {mapStatus(p.statusKunjungan) === 'Menunggu' && (
-                            <>
-                              <button className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors" title="Panggil Pasien">
-                                <Volume2 className="w-4 h-4" />
-                              </button>
-                              <Link 
-                                href={`/administrasi/pendaftaran?nik=${p.pasien?.nik || ''}&noRM=${p.pasien?.noRM || ''}&skenario=Lama`} 
-                                className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center gap-1 shadow-sm"
-                              >
-                                <ClipboardEdit className="w-3.5 h-3.5" />
-                                Proses
-                              </Link>
-                            </>
-                          )}
-                          {mapStatus(p.statusKunjungan) === 'Selesai' && (
-                            <button className="p-2 text-gray-500 hover:bg-gray-100 transition-colors" title="Cetak Bukti">
-                              <Printer className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center">
-                        <div className="flex flex-col items-center gap-2 text-gray-400">
-                          <Search className="w-8 h-8" />
-                          <p className="font-medium">Tidak ada data yang ditemukan</p>
-                          <p className="text-xs">Coba ubah kata kunci pencarian atau filter status</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                <div className="overflow-x-auto flex-1">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <tr>
+                        <th className="px-5 py-3">No. Antrian</th>
+                        <th className="px-5 py-3">Pasien</th>
+                        <th className="px-5 py-3">Poli Tujuan</th>
+                        <th className="px-5 py-3">Pembayaran</th>
+                        <th className="px-5 py-3">Status</th>
+                        <th className="px-5 py-3 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {filtered.map((p) => (
+                        <tr key={p.id} className="hover:bg-blue-50/40 transition-colors group">
+                          <td className="px-5 py-3.5">
+                            <div className="flex flex-col gap-1">
+                              <span className="font-bold text-gray-800 text-sm">{p.noAntrian}</span>
+                              <span className="text-xs text-gray-400">{new Date(p.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                              {p.pasien?.namaLengkap}
+                              {p.prioritas !== 'Umum' && (
+                                <span className={`text-xs px-1.5 py-0.5 font-bold ${getPrioritasBadge(p.prioritas)}`}>{p.prioritas}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                              <span>{getAge(p.pasien?.tanggalLahir)} th, {p.pasien?.jenisKelamin?.toLowerCase().startsWith('l') ? 'L' : 'P'}</span>
+                              <span className={`px-1.5 py-0.5 text-xs font-medium ${p.statusPasien === 'Baru' ? 'bg-sky-100 text-sky-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {p.statusPasien}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-400">{p.pasien?.noRM || 'Pasien Baru'}</div>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-gray-700 font-medium text-sm">{p.poliklinik?.namaPoli || '-'}</span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getBayarStyle(p.pasien?.penjamin?.jenisPenjamin || 'Umum')}`}>
+                              {p.pasien?.penjamin?.jenisPenjamin || 'Umum'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${getStatusStyle(mapStatus(p.statusKunjungan))}`}>
+                              {mapStatus(p.statusKunjungan)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {mapStatus(p.statusKunjungan) === 'Menunggu' && (
+                                <>
+                                  <button className="p-2 text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors" title="Panggil Pasien">
+                                    <Volume2 className="w-4 h-4" />
+                                  </button>
+                                  <Link
+                                    href={`/administrasi/pendaftaran?nik=${p.pasien?.nik || ''}&noRM=${p.pasien?.noRM || ''}&skenario=Lama`}
+                                    className="px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center gap-1 shadow-sm"
+                                  >
+                                    <ClipboardEdit className="w-3.5 h-3.5" />
+                                    Proses
+                                  </Link>
+                                </>
+                              )}
+                              {mapStatus(p.statusKunjungan) === 'Selesai' && (
+                                <button className="p-2 text-gray-500 hover:bg-gray-100 transition-colors" title="Cetak Bukti">
+                                  <Printer className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {filtered.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-12 text-center">
+                            <div className="flex flex-col items-center gap-2 text-gray-400">
+                              <Search className="w-8 h-8" />
+                              <p className="font-medium">Tidak ada data yang ditemukan</p>
+                              <p className="text-xs">Coba ubah kata kunci pencarian atau filter status</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
                 {/* Footer Table */}
                 <div className="p-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
@@ -843,7 +851,7 @@ export default function AdminDashboardPage() {
             {/* ============================================================ */}
             {activeQueueTab === 'ONLINE' && (
               <div className="p-5 space-y-4">
-                
+
                 {/* QUICK SCAN / INPUT KODE BOOKING BAR */}
                 <div className="bg-emerald-50 border border-emerald-200 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -856,14 +864,14 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
 
-                  <form 
+                  <form
                     onSubmit={(e) => {
                       e.preventDefault();
                       handleCheckIn(quickCheckInKode);
                     }}
                     className="flex items-center gap-2"
                   >
-                    <input 
+                    <input
                       type="text"
                       placeholder="Kode Booking (e.g. BK-...) atau NIK..."
                       value={quickCheckInKode}
@@ -948,9 +956,8 @@ export default function AdminDashboardPage() {
                                   <span className="text-emerald-700 font-semibold">+{b.akunPasien?.nomorWa}</span>
                                 </div>
                                 <div className="mt-1">
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 ${
-                                    b.jenisPasien === 'LAMA' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
-                                  }`}>
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 ${b.jenisPasien === 'LAMA' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                                    }`}>
                                     {b.jenisPasien === 'LAMA' ? `Pasien Lama (${b.noRM || 'Ada RM'})` : 'Pasien Baru'}
                                   </span>
                                 </div>
@@ -1094,12 +1101,11 @@ export default function AdminDashboardPage() {
                                 </div>
                               </td>
                               <td className="px-5 py-3.5">
-                                <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded border shadow-sm ${
-                                  item.triase === 'MERAH' ? 'bg-red-600 text-white border-red-700' :
+                                <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded border shadow-sm ${item.triase === 'MERAH' ? 'bg-red-600 text-white border-red-700' :
                                   item.triase === 'KUNING' ? 'bg-yellow-400 text-black border-yellow-500' :
-                                  item.triase === 'HIJAU' ? 'bg-green-600 text-white border-green-700' :
-                                  'bg-gray-900 text-white border-black'
-                                }`}>
+                                    item.triase === 'HIJAU' ? 'bg-green-600 text-white border-green-700' :
+                                      'bg-gray-900 text-white border-black'
+                                  }`}>
                                   {item.triase || 'MERAH'}
                                 </span>
                               </td>
@@ -1205,10 +1211,9 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <span className="text-gray-500 block">Kategori Triase:</span>
-                <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] uppercase text-white ${
-                  selectedUgdKunjungan.triase === 'MERAH' ? 'bg-red-600' :
+                <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] uppercase text-white ${selectedUgdKunjungan.triase === 'MERAH' ? 'bg-red-600' :
                   selectedUgdKunjungan.triase === 'KUNING' ? 'bg-yellow-500 text-black' : 'bg-green-600'
-                }`}>
+                  }`}>
                   {selectedUgdKunjungan.triase}
                 </span>
               </div>
@@ -1344,18 +1349,35 @@ export default function AdminDashboardPage() {
 
               {/* Grid Formulir Administrasi */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Nama Resmi Pasien Sesuai KTP *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formDataLengkapi.namaLengkap}
-                    onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, namaLengkap: e.target.value })}
-                    placeholder="Nama lengkap resmi pasien"
-                    className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
-                  />
+                <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      Nama Resmi Pasien Sesuai KTP *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formDataLengkapi.namaLengkap}
+                      onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, namaLengkap: e.target.value })}
+                      placeholder="Nama lengkap resmi pasien"
+                      className="w-full text-xs border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                      No. Rekam Medis
+                    </label>
+                    <input
+                      type="text"
+                      value={formDataLengkapi.noRM}
+                      onChange={(e) => setFormDataLengkapi({ ...formDataLengkapi, noRM: e.target.value })}
+                      placeholder="Auto (Otomatis Faskes)"
+                      className="w-full text-xs font-mono border border-gray-300 p-2.5 rounded focus:border-rose-500 focus:outline-none bg-slate-50"
+                    />
+                    <span className="text-[10px] text-gray-500 mt-0.5 block leading-tight">
+                      * Otomatis dibuat jika kosong
+                    </span>
+                  </div>
                 </div>
 
                 <div>

@@ -27,14 +27,14 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
   const [bedUgdList, setBedUgdList] = React.useState<BedUGD[]>([]);
 
   useEffect(() => {
-    referensiService.getByType('cara-datang').then(data => data && data.length > 0 && setCaraDatangList(data)).catch(() => {});
-    referensiService.getByType('jenis-pelayanan').then(data => data && data.length > 0 && setJenisPelayananList(data)).catch(() => {});
-    referensiService.getByType('prioritas').then(data => data && data.length > 0 && setPrioritasList(data)).catch(() => {});
-    
+    referensiService.getByType('cara-datang').then(data => data && data.length > 0 && setCaraDatangList(data)).catch(() => { });
+    referensiService.getByType('jenis-pelayanan').then(data => data && data.length > 0 && setJenisPelayananList(data)).catch(() => { });
+    referensiService.getByType('prioritas').then(data => data && data.length > 0 && setPrioritasList(data)).catch(() => { });
+
     // Ambil Bed UGD
     ugdService.getBeds().then(beds => {
       setBedUgdList(beds || []);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const defaultCaraDatang = [
@@ -157,7 +157,7 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
           {...register('jamRegistrasi')}
           error={errors.jamRegistrasi?.message}
         />
-        
+
         <Select
           label="Cara Datang *"
           {...register('caraDatang')}
@@ -171,7 +171,7 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
           error={errors.jenisPelayanan?.message}
           options={jenisPelayananOptions}
         />
-        
+
         {jenisPelayanan === 'UGD' ? (
           <>
             <div className="md:col-span-2 p-3 bg-red-50 border border-red-200 rounded text-xs text-red-800 flex items-start gap-2">
@@ -237,7 +237,7 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
             </div>
           </>
         )}
-        
+
         <Select
           label="Prioritas Pasien *"
           {...register('prioritas')}
@@ -255,13 +255,13 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
             <Input label="Tanggal Rujukan" type="date" {...register('tanggalRujukan')} />
             <Input label="Fasilitas Perujuk" placeholder="Misal: Puskesmas / RSUD" {...fasilitasRest} onChange={(e) => onFasilitasChange(formatPascalCase(e))} />
             <Input label="Diagnosa Awal" placeholder="Diagnosa dokter sebelumnya" className="md:col-span-2" {...diagnosaRest} onChange={(e) => onDiagnosaChange(formatPascalCase(e))} />
-            <Select 
-              label="Jenis Rujukan" 
-              {...register('jenisRujukan')} 
+            <Select
+              label="Jenis Rujukan"
+              {...register('jenisRujukan')}
               options={[
-                {label: 'Parsial', value: 'Parsial'}, 
-                {label: 'Penuh', value: 'Penuh'}
-              ]} 
+                { label: 'Parsial', value: 'Parsial' },
+                { label: 'Penuh', value: 'Penuh' }
+              ]}
             />
           </div>
         </div>

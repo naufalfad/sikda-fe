@@ -14,6 +14,16 @@ export const pasienService = {
     }
   },
 
+  getPasienSuggestions: async (query: string, limit: number = 15): Promise<any[]> => {
+    try {
+      const response = await api.get('/pasien/suggestions', { params: { query, limit } });
+      return response.data?.data || [];
+    } catch (error: any) {
+      console.error('Gagal mengambil saran pencarian pasien:', error);
+      return [];
+    }
+  },
+
   searchPasien: async (query: string): Promise<any> => {
     try {
       const response = await api.get('/pasien/search', { params: { query } });

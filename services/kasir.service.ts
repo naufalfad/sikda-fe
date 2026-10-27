@@ -17,6 +17,11 @@ export const kasirService = {
     return response.data;
   },
 
+  previewTagihan: async (kunjunganId: string, options: any = {}) => {
+    const response = await api.post('/kasir/preview', { kunjunganId, ...options });
+    return response.data;
+  },
+
   prosesPembayaran: async (tagihanId: string, metodePembayaran: string, jumlahBayar: number) => {
     const response = await api.post(`/kasir/${tagihanId}/bayar`, {
       metodePembayaran,

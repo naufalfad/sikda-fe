@@ -36,15 +36,19 @@ export default function DokterDashboardPage() {
     selesai: 0
   });
 
+  const [kinerja, setKinerja] = useState<any>(null);
+
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const [antrianRes, statsData] = await Promise.all([
+      const [antrianRes, statsData, kinerjaData] = await Promise.all([
         rawatJalanService.getAntrian(),
-        kunjunganService.getDokterDashboardStats()
+        kunjunganService.getDokterDashboardStats(),
+        kunjunganService.getDokterKinerjaHarian()
       ]);
       setAntrian(antrianRes.data || []);
       setStats(statsData);
+      setKinerja(kinerjaData);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -116,61 +120,99 @@ export default function DokterDashboardPage() {
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1 */}
-          <div className="bg-white border border-gray-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between">
-            {/* Top Right Icon */}
-            <div className="absolute top-6 right-6 w-10 h-10 bg-blue-100 flex items-center justify-center rounded">
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-blue-100 flex items-center justify-center rounded">
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             
             <div className="relative z-10">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Total Kunjungan</p>
-              <h3 className="text-4xl font-extrabold text-gray-900">{stats.totalHariIni}</h3>
-              <p className="text-sm text-gray-500 mt-1">Hari ini</p>
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Total Antrean Poli</p>
+              <h3 className="text-3xl font-extrabold text-gray-900">{stats.totalHariIni}</h3>
+              <p className="text-xs text-gray-500 mt-1">Kunjungan masuk poli hari ini</p>
             </div>
             
-            <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <div className="relative z-10 mt-4 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
               <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>+12% vs kemarin</span>
+              <span>Hari ini</span>
             </div>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-white border border-gray-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between">
-            {/* Top Right Icon */}
-            <div className="absolute top-6 right-6 w-10 h-10 bg-amber-100 flex items-center justify-center rounded">
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-amber-100 flex items-center justify-center rounded">
               <Clock className="w-5 h-5 text-amber-600" />
             </div>
             
             <div className="relative z-10">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Menunggu Dokter</p>
-              <h3 className="text-4xl font-extrabold text-gray-900">{stats.menunggu}</h3>
-              <p className="text-sm text-gray-500 mt-1">Menunggu pemeriksaan</p>
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Menunggu Dokter</p>
+              <h3 className="text-3xl font-extrabold text-gray-900">{stats.menunggu}</h3>
+              <p className="text-xs text-gray-500 mt-1">Antrean siap diperiksa</p>
             </div>
             
-            <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-bold text-amber-500">
+            <div className="relative z-10 mt-4 flex items-center gap-1.5 text-xs font-bold text-amber-600">
               <div className="w-2 h-2 rounded-full bg-amber-400"></div>
-              <span>{stats.sedangDilayani} pasien sedang dilayani</span>
+              <span>{stats.sedangDilayani} sedang dilayani</span>
             </div>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-white border border-gray-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between">
-            {/* Top Right Icon */}
-            <div className="absolute top-6 right-6 w-10 h-10 bg-emerald-100 flex items-center justify-center rounded">
+          {/* Card 3: Total Ditangani Hari Ini */}
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-emerald-100 flex items-center justify-center rounded">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
             
             <div className="relative z-10">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Selesai Diperiksa</p>
-              <h3 className="text-4xl font-extrabold text-gray-900">{stats.selesai}</h3>
-              <p className="text-sm text-gray-500 mt-1">Telah ditangani</p>
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Ditangani Hari Ini</p>
+              <h3 className="text-3xl font-extrabold text-emerald-700">
+                {kinerja?.totalSelesaiHariIni ?? stats.selesai}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Pasien selesai Anda periksa</p>
             </div>
             
-            <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
-              <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>{stats.totalHariIni > 0 ? Math.round((stats.selesai / stats.totalHariIni) * 100) : 0}% dari total kunjungan</span>
+            <div className="relative z-10 mt-4">
+              {kinerja?.statusBebanKerja === 'TINGGI' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  Beban Tinggi (&gt;40)
+                </span>
+              ) : kinerja?.statusBebanKerja === 'OPTIMAL' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  Optimal (31-40)
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  Normal (≤30 Kemenkes)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Card 4: Shift Berjalan & Breakdown */}
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-indigo-100 flex items-center justify-center rounded">
+              <Activity className="w-5 h-5 text-indigo-600" />
+            </div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                <span>{kinerja?.currentShift?.label || 'Shift Jaga'}</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-extrabold text-indigo-700">
+                  {kinerja?.totalSelesaiShiftIni ?? 0}
+                </span>
+                <span className="text-xs font-semibold text-gray-500">pasien selesai</span>
+              </div>
+            </div>
+            
+            <div className="relative z-10 mt-3 border-t border-gray-100 pt-2 flex items-center justify-between text-[11px] text-gray-600">
+              <span>Pagi: <strong className="font-mono text-gray-900">{kinerja?.shiftBreakdown?.pagi?.count ?? 0}</strong></span>
+              <span>Siang: <strong className="font-mono text-gray-900">{kinerja?.shiftBreakdown?.siang?.count ?? 0}</strong></span>
+              <span>Malam: <strong className="font-mono text-gray-900">{kinerja?.shiftBreakdown?.malam?.count ?? 0}</strong></span>
             </div>
           </div>
         </div>
@@ -287,16 +329,23 @@ export default function DokterDashboardPage() {
               </div>
             </div>
 
-            {/* SELESAI SECTION */}
+            {/* SELESAI SECTION (RIWAYAT PASIEN DITANGANI HARI INI) */}
             <div className="bg-white border border-gray-200 shadow-sm rounded-none overflow-hidden mt-6">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                    Pasien Selesai Pemeriksaan (Hari Ini)
+                    Pasien Selesai Ditangani Hari Ini ({kinerja?.totalSelesaiHariIni ?? 0})
                   </h2>
-                  <p className="text-xs text-gray-500 mt-1">Daftar pasien yang sudah selesai diperiksa dan RME-nya terkunci.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Daftar pasien yang telah selesai Anda periksa dan tercatat dalam resume rekam medis.
+                  </p>
                 </div>
+                {kinerja?.rataRataWaktuMenit > 0 && (
+                  <span className="text-xs font-medium text-gray-600 bg-white border border-gray-200 px-3 py-1">
+                    Rata-rata: <strong className="font-mono text-emerald-700">{kinerja.rataRataWaktuMenit} menit</strong> / pasien
+                  </span>
+                )}
               </div>
 
               <div className="overflow-x-auto">
@@ -305,8 +354,8 @@ export default function DokterDashboardPage() {
                     <tr>
                       <th className="px-6 py-3">No. Antrian</th>
                       <th className="px-6 py-3">Pasien</th>
-                      <th className="px-6 py-3">Keluhan Awal</th>
-                      <th className="px-6 py-3">Status</th>
+                      <th className="px-6 py-3">Shift & Waktu</th>
+                      <th className="px-6 py-3">Diagnosa Utama</th>
                       <th className="px-6 py-3 text-right">Aksi</th>
                     </tr>
                   </thead>
@@ -314,67 +363,56 @@ export default function DokterDashboardPage() {
                     {isLoading ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                          Memuat data...
+                          Memuat data riwayat pasien...
                         </td>
                       </tr>
-                    ) : antrian.filter(a => a.statusKunjungan === 'SELESAI' || a.statusKunjungan === 'MENUNGGU_FARMASI').length === 0 ? (
+                    ) : !kinerja?.daftarPasienSelesai || kinerja.daftarPasienSelesai.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                          Belum ada pasien yang selesai hari ini.
+                          Belum ada pasien yang selesai ditangani hari ini.
                         </td>
                       </tr>
                     ) : (
-                      antrian
-                        .filter(a => a.statusKunjungan === 'SELESAI' || a.statusKunjungan === 'MENUNGGU_FARMASI')
-                        .map((item) => (
-                        <tr key={item.id} className={`transition-colors group ${
-                          item.screening?.kategoriTriage?.toLowerCase() === 'merah' ? 'bg-red-50/80 hover:bg-red-100/80' :
-                          item.screening?.kategoriTriage?.toLowerCase() === 'kuning' ? 'bg-amber-50/80 hover:bg-amber-100/80' :
-                          'hover:bg-emerald-50/30'
-                        }`}>
+                      kinerja.daftarPasienSelesai.map((item: any) => (
+                        <tr key={item.id} className="hover:bg-emerald-50/30 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`font-bold px-2 py-1 ${
-                               item.screening?.kategoriTriage?.toLowerCase() === 'merah' ? 'text-red-700 bg-red-200/50' :
-                               item.screening?.kategoriTriage?.toLowerCase() === 'kuning' ? 'text-amber-700 bg-amber-200/50' :
-                               'text-gray-500 bg-gray-100'
-                            }`}>{item.noAntrian}</span>
-                            <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> {item.jamRegistrasi}
+                            <span className="font-bold px-2 py-1 bg-gray-100 text-gray-800 font-mono text-xs">{item.noAntrian}</span>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {item.poliklinik}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="font-bold text-gray-900">{item.pasien.namaLengkap}</div>
-                              {item.screening?.kategoriTriage?.toLowerCase() === 'merah' && (
-                                <span className="animate-pulse bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-none shadow-sm tracking-wider">GAWAT DARURAT</span>
-                              )}
-                              {item.screening?.kategoriTriage?.toLowerCase() === 'kuning' && (
-                                <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-none shadow-sm tracking-wider">URGENT</span>
-                              )}
-                              {(item.prioritas?.toLowerCase().includes('lansia') || item.prioritas?.toLowerCase().includes('disabilitas') || item.prioritas?.toLowerCase().includes('hamil')) && (
-                                <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-none border border-indigo-200 tracking-wider uppercase">{item.prioritas}</span>
-                              )}
+                            <div className="font-bold text-gray-900">{item.namaPasien}</div>
+                            <div className="text-xs text-gray-500 font-mono mt-0.5">
+                              RM: {item.noRM} {item.usia ? `• ${item.usia} th` : ''}
                             </div>
-                            <div className="text-xs text-gray-500 font-mono mt-0.5">RM: {item.pasien.noRM}</div>
-                          </td>
-                          <td className="px-6 py-4 text-gray-500">
-                            {item.screening?.keluhanUtama ? (
-                              <p className="max-w-xs truncate" title={item.screening.keluhanUtama}>
-                                {item.screening.keluhanUtama}
-                              </p>
-                            ) : (
-                              <span className="italic">Belum diskrining</span>
-                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {getStatusBadge(item.statusKunjungan)}
+                            <span className={`inline-block px-2 py-0.5 text-[10px] font-bold border ${
+                              item.shift === 'Pagi' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              item.shift === 'Siang' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-purple-50 text-purple-700 border-purple-200'
+                            }`}>
+                              Shift {item.shift}
+                            </span>
+                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1 font-mono">
+                              <Clock className="w-3 h-3 text-gray-400" /> Selesai: {item.jamSelesai}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-gray-800 font-medium max-w-xs truncate" title={item.diagnosaUtama}>
+                              {item.diagnosaUtama}
+                            </p>
+                            <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 border border-gray-200 mt-0.5 inline-block">
+                              {item.statusKunjungan === 'MENUNGGU_FARMASI' ? 'Antre Farmasi' : item.statusKunjungan === 'MENUNGGU_KASIR' ? 'Antre Kasir' : item.statusPulang}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <Link 
-                              href={`/dokter/rme-dokter/${item.pasien.noRM}`}
-                              className="inline-flex items-center px-4 py-2 bg-white text-emerald-600 font-medium text-xs rounded-none border border-emerald-200 hover:bg-emerald-50 transition-colors"
+                              href={`/dokter/rme-dokter/${item.noRM}`}
+                              className="inline-flex items-center px-3 py-1.5 bg-white text-emerald-700 font-semibold text-xs border border-emerald-200 hover:bg-emerald-50 transition-colors"
                             >
-                              Lihat Riwayat RME
+                              Buka RME
                             </Link>
                           </td>
                         </tr>

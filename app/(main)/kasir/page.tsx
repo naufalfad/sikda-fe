@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   CreditCard, Users, Search, Loader2, RefreshCw, CheckCircle2,
-  Receipt, Wallet, Banknote, Printer, FileText, Download
+  Receipt, Wallet, Banknote, Printer, FileText, Download, X, ArrowRight
 } from 'lucide-react';
 import { useKasirStore } from '@/store/kasir.store';
 import Swal from 'sweetalert2';
@@ -23,6 +23,9 @@ export default function KasirPage() {
 
   useEffect(() => {
     fetchAntrian();
+    return () => {
+      clearSelection();
+    };
   }, []);
 
   useEffect(() => {
@@ -194,11 +197,21 @@ export default function KasirPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-right flex flex-col items-end">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nomor Antrian</div>
-                <div className="text-2xl font-mono font-bold text-gray-900">
-                  {selectedKunjungan.noAntrian}
+              <div className="text-right flex items-center gap-3">
+                <div className="flex flex-col items-end">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nomor Antrian</div>
+                  <div className="text-2xl font-mono font-bold text-gray-900">
+                    {selectedKunjungan.noAntrian}
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => clearSelection()}
+                  className="p-2 ml-2 hover:bg-rose-50 text-gray-400 hover:text-rose-600 border border-gray-200 hover:border-rose-300 transition-colors"
+                  title="Tutup / Batal Pilih Pasien Ini"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
@@ -243,6 +256,8 @@ export default function KasirPage() {
                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide ${
                                   item.kategori === 'Akomodasi' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
                                   item.kategori === 'Obat' ? 'bg-blue-100 text-blue-800' :
+                                  item.kategori === 'Obat Pulang' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                  item.kategori === 'Potongan / DP' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
                                   item.kategori === 'Tindakan' ? 'bg-amber-100 text-amber-800' :
                                   item.kategori === 'Vaksin' ? 'bg-emerald-100 text-emerald-800' :
                                   'bg-gray-100 text-gray-700'
@@ -287,9 +302,20 @@ export default function KasirPage() {
                          )}
                        </div>
 
-                       <button onClick={handlePrint} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 shadow-md transition-colors flex justify-center items-center gap-2 mt-4">
-                         <Printer className="w-5 h-5" /> Cetak Struk
-                       </button>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+                         <button onClick={handlePrint} className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-3 shadow-md transition-colors flex justify-center items-center gap-1.5 text-xs">
+                           <Printer className="w-4 h-4" /> Cetak Struk
+                         </button>
+                         <button 
+                           onClick={() => { 
+                             clearSelection(); 
+                             fetchAntrian(); 
+                           }} 
+                           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-3 shadow-md transition-colors flex justify-center items-center gap-1.5 text-xs"
+                         >
+                           <CheckCircle2 className="w-4 h-4" /> Selesai & Bersihkan
+                         </button>
+                       </div>
 
                        {/* Hidden Print Component */}
                        <div className="hidden">
