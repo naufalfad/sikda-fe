@@ -450,9 +450,13 @@ export default function LaboratoriumDashboard() {
                       </h3>
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                      <span className="text-emerald-700 font-bold">✓ {selectedInternalTests.length} Internal</span>
+                      <span className="text-emerald-700 font-bold flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5" /> {selectedInternalTests.length} Internal
+                      </span>
                       <span>•</span>
-                      <span className="text-sky-700 font-bold">↗ {selectedExternalTests.length} Rujukan Luar</span>
+                      <span className="text-slate-700 font-bold flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3 text-slate-500" /> {selectedExternalTests.length} Rujukan Luar
+                      </span>
                     </div>
                   </div>
                   

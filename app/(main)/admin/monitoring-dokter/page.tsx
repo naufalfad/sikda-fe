@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
 import {
   Users,
   Calendar,
@@ -21,7 +22,8 @@ import {
   X,
   ExternalLink,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Wallet
 } from 'lucide-react';
 import { kunjunganService } from '@/services/kunjungan.service';
 import { klinikService } from '@/services/klinik.service';
@@ -221,6 +223,15 @@ export default function AdminMonitoringDokterPage() {
                 <Printer className="w-3.5 h-3.5" />
                 <span>Cetak Rekap</span>
               </button>
+
+              <Link
+                href="/admin/remunerasi"
+                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-sm"
+                title="Buka Modul Remunerasi & Jaspel Dokter"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                <span>Doctor & Nurse Fee</span>
+              </Link>
             </div>
           </div>
 
@@ -517,14 +528,24 @@ export default function AdminMonitoringDokterPage() {
                           {getBebanBadge(item.statusBebanKerja)}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <button
-                            onClick={() => setSelectedDokterDetail(item)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors shadow-xs"
-                            title="Lihat Daftar Pasien Selesai"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>Lihat Pasien ({item.totalSelesai})</span>
-                          </button>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => setSelectedDokterDetail(item)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors shadow-xs"
+                              title="Lihat Daftar Pasien Selesai"
+                            >
+                              <FileText className="w-3.5 h-3.5" />
+                              <span>Pasien ({item.totalSelesai})</span>
+                            </button>
+                            <Link
+                              href="/admin/remunerasi"
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-600 hover:text-white transition-colors shadow-xs"
+                              title="Buka Rincian Doctor Fee"
+                            >
+                              <Wallet className="w-3.5 h-3.5" />
+                              <span>Fee</span>
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -629,13 +650,22 @@ export default function AdminMonitoringDokterPage() {
                 <span className="text-xs text-slate-500">
                   Total {selectedDokterDetail.daftarPasienSelesai.length} catatan pasien tercatat dalam audit trail medis.
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedDokterDetail(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-colors shadow-sm"
-                >
-                  Tutup
-                </button>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/admin/remunerasi"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-sm"
+                  >
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>Kelola Fee & Slip Remunerasi</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDokterDetail(null)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold transition-colors shadow-sm"
+                  >
+                    Tutup
+                  </button>
+                </div>
               </div>
 
             </div>

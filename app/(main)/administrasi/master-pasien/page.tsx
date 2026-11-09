@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Users, FileText, CheckCircle, Trash2, Edit, RefreshCw, Baby, X, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { Plus, Search, Users, FileText, CheckCircle, Trash2, Edit, RefreshCw, Baby, X, AlertTriangle, ShieldCheck, Info } from 'lucide-react';
 import { usePasienStore } from '@/store/pasien.store';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -166,11 +166,23 @@ export default function MasterPasienAdministrasiPage() {
           </button>
         </div>
 
-        <p className="text-xs text-gray-500">
-          {filterStatus === 'RESMI' && '💡 Menampilkan pasien resmi. Data darurat sementara otomatis disembunyikan agar tidak membingungkan.'}
-          {filterStatus === 'DARURAT_PENDING' && '⚠️ Menampilkan pasien darurat UGD yang sedang dirawat dan menunggu verifikasi loket.'}
-          {filterStatus === 'SEMUA' && 'Menampilkan seluruh record pasien di sistem.'}
-        </p>
+        <div className="text-xs text-gray-500">
+          {filterStatus === 'RESMI' && (
+            <p className="flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-slate-400" />
+              <span>Menampilkan pasien resmi. Data darurat sementara otomatis disembunyikan agar tidak membingungkan.</span>
+            </p>
+          )}
+          {filterStatus === 'DARURAT_PENDING' && (
+            <p className="flex items-center gap-1.5 text-amber-700">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+              <span>Menampilkan pasien darurat UGD yang sedang dirawat dan menunggu verifikasi loket.</span>
+            </p>
+          )}
+          {filterStatus === 'SEMUA' && (
+            <p>Menampilkan seluruh record pasien di sistem.</p>
+          )}
+        </div>
       </div>
 
       {/* Banner Khusus jika Tab Darurat UGD Aktif */}

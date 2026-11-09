@@ -11,7 +11,8 @@ import {
   Stethoscope,
   Activity,
   CheckCircle2,
-  UserCheck
+  UserCheck,
+  MapPin
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '../../store/auth.store';
@@ -374,22 +375,24 @@ function LoginContent() {
                     <button
                       type="button"
                       onClick={() => setActiveFaskesTab('cibinong')}
-                      className={`flex-1 py-1 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${activeFaskesTab === 'cibinong'
-                        ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
+                      className={`flex-1 py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center justify-center gap-1.5 ${activeFaskesTab === 'cibinong'
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                         : 'text-slate-500 hover:text-slate-800'
                         }`}
                     >
-                      🏥 Cibinong Raya
+                      <Building2 className="w-3.5 h-3.5 text-slate-700" />
+                      <span>Cibinong Raya</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveFaskesTab('sukamakmur')}
-                      className={`flex-1 py-1 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${activeFaskesTab === 'sukamakmur'
-                        ? 'bg-white text-amber-700 shadow-sm border border-slate-200'
+                      className={`flex-1 py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center justify-center gap-1.5 ${activeFaskesTab === 'sukamakmur'
+                        ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
                         : 'text-slate-500 hover:text-slate-800'
                         }`}
                     >
-                      ⛰️ Sukamakmur
+                      <MapPin className="w-3.5 h-3.5 text-slate-700" />
+                      <span>Sukamakmur</span>
                     </button>
                   </div>
 

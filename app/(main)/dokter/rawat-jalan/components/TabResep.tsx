@@ -18,7 +18,8 @@ import {
   Layers,
   ShieldCheck,
   Package,
-  Info
+  Info,
+  Zap
 } from 'lucide-react';
 import { masterService } from '@/services/master.service';
 import Swal from 'sweetalert2';
@@ -253,7 +254,9 @@ export default function TabResep({
           </div>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl leading-relaxed">
             Sistem menampilkan seluruh lot/batch obat, BMHP, dan vaksin yang tersedia di faskes dengan indikator 
-            <span className="font-bold text-amber-700 bg-amber-50 px-1 mx-1 border border-amber-200">⚡ Prioritas FEFO</span> 
+            <span className="inline-flex items-center gap-1 font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 mx-1 border border-amber-200">
+              <Zap className="w-3 h-3 text-amber-600" /> Prioritas FEFO
+            </span> 
             agar dokter dapat memprioritaskan batch yang harus segera dikeluarkan terlebih dahulu.
           </p>
         </div>
@@ -397,7 +400,11 @@ export default function TabResep({
                                   : 'bg-slate-50 border-slate-200 text-slate-700'
                               }`}
                             >
-                              {isFefo && <span className="text-amber-600">⚡ FEFO (Keluarkan Dulu):</span>}
+                              {isFefo && (
+                                <span className="inline-flex items-center gap-1 text-amber-700 font-bold">
+                                  <Zap className="w-3 h-3 text-amber-600" /> FEFO (Keluarkan Dulu):
+                                </span>
+                              )}
                               <span className="font-mono font-bold">{b.noBatch}</span>
                               <span className="text-slate-400">|</span>
                               <span>Stok: <strong>{b.stok}</strong></span>
@@ -490,7 +497,7 @@ export default function TabResep({
                   >
                     {isFefo && (
                       <span className="absolute -top-2.5 right-2 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 uppercase tracking-wider shadow-sm flex items-center gap-1">
-                        ⚡ Prioritas FEFO (Keluarkan Dulu)
+                        <Zap className="w-3 h-3 text-white" /> Prioritas FEFO (Keluarkan Dulu)
                       </span>
                     )}
 
@@ -695,7 +702,7 @@ export default function TabResep({
                               ? 'bg-amber-50 text-amber-900 border-amber-300' 
                               : 'bg-slate-100 text-slate-800 border-slate-200'
                           }`}>
-                            {isFefo && <span>⚡</span>}
+                            {isFefo && <Zap className="w-3 h-3 text-amber-600" />}
                             {item.noBatch}
                           </span>
                           {isFefo && (

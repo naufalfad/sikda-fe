@@ -7,7 +7,7 @@ import {
   Heart, Shield, Baby, ChevronRight, Calendar, Printer,
   BarChart2, ArrowUpRight, ArrowDownRight, RefreshCw,
   Smartphone, UserCheck, QrCode, Sparkles, CheckCheck,
-  Loader2, Layers, ArrowRight
+  Loader2, Layers, ArrowRight, X, Info, Check
 } from 'lucide-react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
@@ -286,10 +286,10 @@ export default function AdminDashboardPage() {
             <p><strong>NIK:</strong> ${formDataLengkapi.nik || '-'}</p>
             ${generatedRM ? `<p><strong>No. Rekam Medis Resmi:</strong> <span class="bg-blue-100 text-blue-800 font-mono font-bold px-2 py-0.5 rounded border border-blue-200">${generatedRM}</span></p>` : ''}
             <p><strong>Penjamin:</strong> ${formDataLengkapi.jenisPenjamin} ${formDataLengkapi.noBpjs ? `(${formDataLengkapi.noBpjs})` : ''}</p>
-            <div class="bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-900 mt-2">
-              ✓ Berkas administrasi kini berstatus <strong>LENGKAP</strong>.<br/>
-              ✓ Data pasien otomatis terdaftar sebagai <strong>Pasien Terverifikasi Resmi</strong> di Master Data Faskes.<br/>
-              ✓ Rekam Medis & Kasir telah tersinkronisasi.
+            <div class="bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-800 mt-2 space-y-1">
+              <div>• Berkas administrasi kini berstatus <strong>LENGKAP</strong>.</div>
+              <div>• Data pasien otomatis terdaftar sebagai <strong>Pasien Terverifikasi Resmi</strong> di Master Data Faskes.</div>
+              <div>• Rekam Medis & Kasir telah tersinkronisasi.</div>
             </div>
           </div>
         `
@@ -322,14 +322,14 @@ export default function AdminDashboardPage() {
               <p><strong>No. Rekam Medis:</strong> <span class="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold">${res.pasien?.noRM || '-'}</span></p>
               <p><strong>Poli Tujuan:</strong> ${res.kunjungan?.poliklinik?.namaPoli || '-'}</p>
               <p><strong>Nomor Antrean:</strong> <span class="text-xl font-black text-emerald-600">${res.kunjungan?.noAntrian || '-'}</span></p>
-              <div class="bg-emerald-50 border border-emerald-200 p-2 text-xs text-emerald-800 mt-2">
-                ✓ Pasien resmi tersimpan di <strong>Master Pasien</strong> faskes.<br/>
-                ✓ Kunjungan aktif diterbitkan & langsung masuk ke antrean dokter.<br/>
-                ✓ Notifikasi WhatsApp terkirim ke pasien.
+              <div class="bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-800 mt-2 space-y-1">
+                <div>• Pasien resmi tersimpan di <strong>Master Pasien</strong> faskes.</div>
+                <div>• Kunjungan aktif diterbitkan & langsung masuk ke antrean dokter.</div>
+                <div>• Notifikasi WhatsApp terkirim ke pasien.</div>
               </div>
             </div>
           `,
-          confirmButtonColor: '#2563eb',
+          confirmButtonColor: '#059669',
           confirmButtonText: 'Tutup & Lanjutkan'
         });
         setQuickCheckInKode('');
@@ -1189,9 +1189,9 @@ export default function AdminDashboardPage() {
               </div>
               <button
                 onClick={() => setIsModalLengkapiOpen(false)}
-                className="text-rose-200 hover:text-white text-sm font-bold p-1"
+                className="text-rose-200 hover:text-white p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -1316,8 +1316,9 @@ export default function AdminDashboardPage() {
                           No. RM: {nikLookupStatus.noRM}
                         </span>
                       </div>
-                      <p className="text-[11px] text-emerald-800 mt-1">
-                        ✓ Pasien lama terverifikasi di faskes. Semua field administrasi di bawah telah terisi secara otomatis. Anda tetap dapat menyesuaikan nomor HP atau alamat jika terdapat pembaruan.
+                      <p className="text-[11px] text-emerald-800 mt-1 flex items-start gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>Pasien lama terverifikasi di faskes. Semua field administrasi di bawah telah terisi secara otomatis. Anda tetap dapat menyesuaikan nomor HP atau alamat jika terdapat pembaruan.</span>
                       </p>
                     </div>
                   </div>
@@ -1338,8 +1339,8 @@ export default function AdminDashboardPage() {
                 )}
 
                 {nikLookupStatus.status === 'IDLE' && (
-                  <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1.5">
-                    <span>💡</span>
+                  <p className="text-[11px] text-slate-500 mt-2 flex items-start gap-1.5">
+                    <Info className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-0.5" />
                     <span>
                       Jika pasien pernah berobat, masukkan NIK lalu klik <strong>Tarik Data Pasien</strong> (atau tekan Enter). Jika pasien baru, Anda dapat langsung mengisi form di bawah secara manual.
                     </span>

@@ -3,20 +3,25 @@ import { rujukanService, RujukanData } from '../services/rujukan.service';
 
 interface RujukanState {
   antrianList: any[];
+  antrianPenunjangList: any[];
   rujukanDetail: RujukanData | null;
   isLoading: boolean;
+  isLoadingPenunjang: boolean;
   isSendingSS: boolean;
   error: string | null;
 
   fetchAntrian: () => Promise<void>;
+  fetchAntrianPenunjang: () => Promise<void>;
   fetchRujukanDetail: (kunjunganId: string) => Promise<void>;
   kirimServiceRequest: (kunjunganId: string) => Promise<boolean>;
 }
 
 export const useRujukanStore = create<RujukanState>((set, get) => ({
   antrianList: [],
+  antrianPenunjangList: [],
   rujukanDetail: null,
   isLoading: false,
+  isLoadingPenunjang: false,
   isSendingSS: false,
   error: null,
 
@@ -29,6 +34,18 @@ export const useRujukanStore = create<RujukanState>((set, get) => ({
       set({ error: err.message || 'Gagal mengambil antrean rujukan' });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  fetchAntrianPenunjang: async () => {
+    set({ isLoadingPenunjang: true, error: null });
+    try {
+      const data = await rujukanService.getAntrianPenunjang();
+      set({ antrianPenunjangList: data });
+    } catch (err: any) {
+      set({ error: err.message || 'Gagal mengambil antrean rujukan penunjang' });
+    } finally {
+      set({ isLoadingPenunjang: false });
     }
   },
 

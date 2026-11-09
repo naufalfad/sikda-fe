@@ -15,7 +15,8 @@ import {
   Stethoscope,
   Brain,
   ArrowUpRight,
-  ArrowRight
+  ArrowRight,
+  Wallet
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -122,6 +123,13 @@ export default function PerawatDashboardPage() {
               </p>
             </div>
           </div>
+          <Link
+            href="/perawat/fee"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white rounded-xl text-xs font-bold transition-all shadow-sm backdrop-blur-sm self-start md:self-center hover:scale-105"
+          >
+            <Wallet className="w-4 h-4 text-emerald-300" />
+            <span>Fee Kehadiran Saya</span>
+          </Link>
         </div>
       </div>
 

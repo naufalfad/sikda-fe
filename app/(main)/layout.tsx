@@ -27,7 +27,8 @@ import {
   BedDouble,
   Syringe,
   Sparkles,
-  Layers
+  Layers,
+  MapPin
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -65,6 +66,11 @@ export default function DashboardLayout({
   };
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // Full-screen GIS mode (frameless, uses its own GisNavbar & GisSidebar)
+  if (pathname?.startsWith('/dinkes/gis')) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -136,9 +142,14 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Monitoring Beban Dokter</span>
               </Link>
 
-              <Link href="#" className="flex items-center px-6 py-3 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors">
-                <FileText className="w-7 h-7 text-gray-400 md:group-hover:text-blue-600 flex-shrink-0 transition-colors" />
-                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Laporan Kunjungan</span>
+              <Link href="/admin/remunerasi" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/remunerasi' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Wallet className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/remunerasi' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-indigo-900">Doctor & Nurse Fee</span>
+              </Link>
+
+              <Link href="/laporan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/laporan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/laporan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Pusat Laporan Faskes</span>
               </Link>
             </>
           )}
@@ -154,6 +165,11 @@ export default function DashboardLayout({
               <Link href="/admin/monitoring-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/monitoring-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/monitoring-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Monitoring Kinerja Dokter</span>
+              </Link>
+
+              <Link href="/admin/remunerasi" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/remunerasi' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Wallet className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/remunerasi' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-indigo-900">Doctor & Nurse Fee</span>
               </Link>
 
               {/* <Link href="/admin/perusahaan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -216,6 +232,11 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Alergi</span>
               </Link>
 
+              <Link href="/laporan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/laporan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/laporan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Pusat Laporan &amp; Rekap</span>
+              </Link>
+
               {/* <Link href="/administrasi/monitoring-encounter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/administrasi/monitoring-encounter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Monitoring FHIR</span>
@@ -236,14 +257,14 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Screening & Triage Poli</span>
               </Link>
 
+              <Link href="/perawat/fee" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/perawat/fee' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <Wallet className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/perawat/fee' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-emerald-900">Fee Kehadiran Saya</span>
+              </Link>
+
               <Link href="/dokter/ugd" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-700 bg-rose-50 border-r-4 border-rose-600' : 'text-gray-600 hover:bg-rose-50 hover:text-rose-700'}`}>
                 <Activity className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/ugd' ? 'text-rose-600' : 'text-gray-400 md:group-hover:text-rose-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Triase & Bed UGD</span>
-              </Link>
-
-              <Link href="/dokter/rawat-jalan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
-                <Stethoscope className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rawat-jalan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
-                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Input RME Dokter</span>
               </Link>
 
               <Link href="#" className="flex items-center px-6 py-3 text-sm font-medium text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors">
@@ -274,6 +295,11 @@ export default function DashboardLayout({
               <Link href="/dokter/rme-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Rekam Medis (RME)</span>
+              </Link>
+
+              <Link href="/dokter/fee" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/fee' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Wallet className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/fee' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Doctor Fee Saya</span>
               </Link>
 
               <div className="mt-4 mb-1 px-6">
@@ -316,6 +342,11 @@ export default function DashboardLayout({
               <Link href="/dokter/rme-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/rme-dokter' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Rekam Medis (RME)</span>
+              </Link>
+
+              <Link href="/dokter/fee" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dokter/fee' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Wallet className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dokter/fee' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Doctor Fee Saya</span>
               </Link>
 
               <div className="mt-4 mb-1 px-6">
@@ -443,6 +474,14 @@ export default function DashboardLayout({
               <Link href="/dinkes" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
                 <LayoutDashboard className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes' ? 'text-emerald-600' : 'text-gray-400 md:group-hover:text-emerald-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Dashboard Eksekutif</span>
+              </Link>
+
+              <Link href="/dinkes/gis" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/gis' ? 'text-emerald-700 bg-emerald-50 border-r-4 border-emerald-600' : 'text-gray-600 hover:bg-emerald-50 hover:text-emerald-700'}`}>
+                <MapPin className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/dinkes/gis' ? 'text-emerald-600' : 'text-emerald-500 md:group-hover:text-emerald-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap flex items-center gap-1.5 font-bold text-emerald-900">
+                  GIS Sebaran Faskes
+                  <span className="text-[9px] px-1.5 py-0.5 bg-emerald-600 text-white font-bold uppercase tracking-wider">GIS</span>
+                </span>
               </Link>
 
               <Link href="/dinkes/ai-briefing" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/dinkes/ai-briefing' ? 'text-amber-800 bg-amber-50 border-r-4 border-amber-600' : 'text-gray-600 hover:bg-amber-50 hover:text-amber-800'}`}>

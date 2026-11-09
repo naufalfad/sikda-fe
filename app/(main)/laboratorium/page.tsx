@@ -12,7 +12,8 @@ import {
   ClipboardList,
   AlertCircle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Info
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth.store';
@@ -340,9 +341,11 @@ export default function LaboratoriumDashboard() {
                 <p>
                   Unit Laboratorium siap menerima spesimen medis. Semua rujukan uji laboratorium yang diorder oleh Dokter Poli Rawat Jalan atau UGD akan otomatis muncul di menu <b>Antrean Uji Lab</b>.
                 </p>
-                <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 text-xs">
-                  <strong>💡 Catatan Alur:</strong>
-                  <ul className="list-disc pl-4 mt-1 space-y-1 text-[11px] text-blue-800">
+                <div className="p-3 bg-slate-50 border border-slate-200 text-slate-800 text-xs">
+                  <strong className="flex items-center gap-1.5 text-slate-900 font-bold">
+                    <Info className="w-3.5 h-3.5 text-slate-600" /> Catatan Alur:
+                  </strong>
+                  <ul className="list-disc pl-4 mt-1.5 space-y-1 text-[11px] text-slate-600">
                     <li>Dokter memilih parameter uji di tab <em>Laboratorium</em> saat periksa pasien.</li>
                     <li>Order masuk ke Lab → Petugas input hasil & klik <em>Kirim Hasil</em>.</li>
                     <li>Hasil lab langsung muncul di rekam medis dokter secara real-time.</li>

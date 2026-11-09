@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Pill, Search, Plus, Edit2, Trash2, Loader2, X, Package, ExternalLink, Info } from 'lucide-react';
+import { Pill, Search, Plus, Edit2, Trash2, Loader2, X, Package, ExternalLink, Info, Check } from 'lucide-react';
 import { masterService } from '@/services/master.service';
 import { satusehatService } from '@/services/satusehat.service';
 import Swal from 'sweetalert2';
@@ -390,7 +390,7 @@ export default function MasterObatPage() {
                   <div className="text-xs text-gray-500">
                     {previewUrl ? (
                       <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                        ✓ Foto terpasang
+                        <Check className="w-3.5 h-3.5" /> Foto terpasang
                       </span>
                     ) : (
                       <span className="text-amber-600 font-medium">

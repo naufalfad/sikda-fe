@@ -56,6 +56,12 @@ export const rujukanService = {
     return response.data.data;
   },
 
+  /** GET /api/rujukan/antrian-penunjang - Ambil daftar antrean rujukan penunjang (Lab & Radiologi) */
+  getAntrianPenunjang: async (): Promise<any[]> => {
+    const response = await api.get('/rujukan/antrian-penunjang');
+    return response.data.data;
+  },
+
   /** GET /api/rujukan/kunjungan/:kunjunganId - Ambil detail untuk preview surat */
   getRujukanDetail: async (kunjunganId: string): Promise<RujukanData> => {
     const response = await api.get(`/rujukan/kunjungan/${kunjunganId}`);

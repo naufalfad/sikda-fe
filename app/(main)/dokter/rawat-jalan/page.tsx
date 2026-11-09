@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth.store';
 import { 
   Stethoscope, User, FileText, Activity, Syringe, Pill, 
   ClipboardList, CheckCircle2, Clock, Users, Search, Loader2, RefreshCw, TestTubes, Printer,
   FileDown, AlertTriangle, Radio, X
 } from 'lucide-react';
 import { laboratoriumService } from '@/services/laboratorium.service';
+import { radiologiService } from '@/services/radiologi.service';
 import { kunjunganService } from '@/services/kunjungan.service';
 import { useRawatJalanStore } from '@/store/rawatJalan.store';
 import { SOAPPayload } from '@/types/rawatJalan.types';
@@ -35,6 +37,10 @@ import { useReactToPrint } from 'react-to-print';
 import { CetakHasilLab } from '@/components/laboratorium/CetakHasilLab';
 
 function DokterRawatJalanContent() {
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const isPerawat = user?.role === 'PERAWAT';
+
   const searchParams = useSearchParams();
   const kunjunganIdParam = searchParams.get('kunjunganId');
   const [activeTab, setActiveTab] = useState('SOAP_S');
@@ -76,6 +82,41 @@ function DokterRawatJalanContent() {
   // SOAP local form state
   const [soapData, setSoapData] = useState<SOAPPayload>(getCleanSoapData());
   const hasHandledUrlParam = useRef(false);
+
+  // Proteksi Wewenang: Cegah perawat mengakses dan mengisi RME Dokter
+  useEffect(() => {
+    if (isPerawat) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Wewenang Dokter DPJP',
+        text: 'Modul Rekam Medis (SOAP) dan peresepan obat merupakan wewenang eksklusif Dokter DPJP (Permenkes No. 24/2022). Akun Perawat dialihkan ke modul Triase & Screening.',
+        confirmButtonText: 'Buka Triase / Screening',
+        confirmButtonColor: '#2563eb'
+      }).then(() => {
+        router.replace('/perawat/screening');
+      });
+    }
+  }, [isPerawat, router]);
+
+  if (isPerawat) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-slate-50 p-6 text-center">
+        <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center mb-4">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800 mb-2">Akses Dibatasi Untuk Perawat</h2>
+        <p className="text-slate-600 max-w-md text-xs mb-5 leading-relaxed">
+          Sesuai regulasi rekam medis elektronik dan standar keselamatan pasien, pengisian formulir SOAP klinis, penetapan diagnosa ICD-10, tindakan, dan peresepan obat hanya dapat dilakukan oleh Dokter Penanggung Jawab Pelayanan (DPJP).
+        </p>
+        <button
+          onClick={() => router.replace('/perawat/screening')}
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-xs transition-colors shadow-sm"
+        >
+          Kembali ke Triase & Screening Pasien
+        </button>
+      </div>
+    );
+  }
 
   // Removed separate ICD10 states since TabAsesmen handles it now
   
@@ -143,12 +184,57 @@ function DokterRawatJalanContent() {
   // Lab Modal & Print Ref
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
   const [orderLabData, setOrderLabData] = useState<any>(null);
+  const [orderRadiologiList, setOrderRadiologiList] = useState<any[]>([]);
   const [riwayatLabList, setRiwayatLabList] = useState<any[]>([]);
   const [isLoadingLab, setIsLoadingLab] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Otomatis fetch riwayat lab selesai milik pasien ketika pasien aktif dipilih
+  const fetchOrderLab = async () => {
+    if (!selectedKunjungan?.id) {
+      setOrderLabData(null);
+      return;
+    }
+    try {
+      const res = await laboratoriumService.getOrderByKunjungan(selectedKunjungan.id);
+      if (res.success && res.data) {
+        setOrderLabData(res.data);
+      } else {
+        setOrderLabData(null);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil order lab kunjungan:', err);
+      setOrderLabData(null);
+    }
+  };
+
+  const fetchOrderRadiologi = async () => {
+    if (!selectedKunjungan?.id) {
+      setOrderRadiologiList([]);
+      return;
+    }
+    try {
+      const res = await radiologiService.getOrders({ kunjunganId: selectedKunjungan.id });
+      if (res.success) {
+        setOrderRadiologiList(res.data || []);
+      } else {
+        setOrderRadiologiList([]);
+      }
+    } catch (err) {
+      console.error('Gagal mengambil order radiologi kunjungan:', err);
+      setOrderRadiologiList([]);
+    }
+  };
+
+  // Otomatis fetch riwayat lab selesai & order aktif ketika pasien aktif dipilih
   useEffect(() => {
+    if (selectedKunjungan?.id) {
+      fetchOrderLab();
+      fetchOrderRadiologi();
+    } else {
+      setOrderLabData(null);
+      setOrderRadiologiList([]);
+    }
+
     if (selectedKunjungan?.pasien?.id) {
       laboratoriumService.getRiwayatLabByPasien(selectedKunjungan.pasien.id)
         .then(res => {
@@ -165,7 +251,7 @@ function DokterRawatJalanContent() {
     } else {
       setRiwayatLabList([]);
     }
-  }, [selectedKunjungan?.pasien?.id]);
+  }, [selectedKunjungan?.id, selectedKunjungan?.pasien?.id]);
   
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -399,13 +485,35 @@ function DokterRawatJalanContent() {
   // Sync tindakan from store when loaded
   useEffect(() => {
     if (tindakanList && tindakanList.length > 0) {
-      setSelectedProsedur(tindakanList.map(t => ({
-        icd9Id: t.icd9Id,
-        kode_icd9: t.icd9.kode,
-        nama_prosedur: t.icd9.deskripsi,
-        pelaksana: t.pelaksanaTeks || 'Dokter',
-        catatan: t.catatanTindakan || '',
-      })));
+      setSelectedProsedur(tindakanList.map(t => {
+        const isEksternal = 
+          (t as any).tipePelaksanaan === 'EKSTERNAL' || 
+          (t.catatanTindakan && t.catatanTindakan.includes('[RUJUKAN PENUNJANG EKSTERNAL'));
+        
+        let faskesRujukan = '';
+        let alasanRujukan = '';
+        if (isEksternal && t.catatanTindakan) {
+          const match = t.catatanTindakan.match(/\[RUJUKAN PENUNJANG EKSTERNAL - ([^\]]+)\]:\s*(.*)/);
+          if (match) {
+            faskesRujukan = match[1];
+            alasanRujukan = match[2];
+          }
+        }
+
+        return {
+          id_icd9: t.icd9Id,
+          icd9Id: t.icd9Id,
+          kode_icd9: t.icd9?.kode || '',
+          nama_prosedur: t.icd9?.deskripsi || '',
+          pelaksana: t.pelaksanaTeks || 'Dokter',
+          catatan: t.catatanTindakan || '',
+          bmhpDetails: t.bmhpDetails || [],
+          alkesDetails: t.alkesDetails || [],
+          tipePelaksanaan: isEksternal ? 'EKSTERNAL' : 'INTERNAL',
+          faskesRujukan: faskesRujukan || (t as any).faskesRujukan || '',
+          alasanRujukan: alasanRujukan || (t as any).alasanRujukan || '',
+        };
+      }));
     } else {
       setSelectedProsedur([]);
     }
@@ -469,18 +577,18 @@ function DokterRawatJalanContent() {
           <div style="font-size: 13px; text-align: left; line-height: 1.5; color: #334155;">
             <p>Anda akan memulai pemeriksaan untuk <strong>${kunjungan.pasien.namaLengkap}</strong> (No. RM: <code>${kunjungan.pasien.noRM}</code>).</p>
             <p style="color: #64748b; font-size: 12px; margin-top: 8px;">
-              💡 <em>Anda dapat meninjau riwayat kunjungan & rekam medis sebelumnya secara leluasa terlebih dahulu jika diperlukan.</em>
+              <em>Catatan: Anda dapat meninjau riwayat kunjungan & rekam medis sebelumnya secara leluasa terlebih dahulu jika diperlukan.</em>
             </p>
           </div>
         `,
         icon: 'question',
         showCancelButton: true,
         showDenyButton: true,
-        confirmButtonColor: '#2563eb',
-        denyButtonColor: '#4f46e5',
+        confirmButtonColor: '#059669',
+        denyButtonColor: '#334155',
         cancelButtonColor: '#94a3b8',
         confirmButtonText: 'Ya, Mulai Periksa',
-        denyButtonText: '📂 Buka Berkas RME Lengkap',
+        denyButtonText: 'Buka Berkas RME Lengkap',
         cancelButtonText: 'Batal'
       }).then((result) => {
         if (result.isConfirmed) {
@@ -507,9 +615,34 @@ function DokterRawatJalanContent() {
   const handleSaveSOAP = async () => {
     try {
       await simpanSOAP(soapData);
-      Swal.fire({ icon: 'success', title: 'SOAP Disimpan!', timer: 1200, showConfirmButton: false });
+      if (soapData.alergiArr) {
+        await simpanAlergi(soapData.alergiArr);
+      }
+      if (soapData.diagnosisArr && soapData.diagnosisArr.length > 0) {
+        const payload = soapData.diagnosisArr.map(d => ({
+          icd10Id: d.icd10Id,
+          kode_icd10: d.kode_icd10,
+          nama_diagnosis: d.nama_diagnosis,
+          jenisDiagnosis: d.jenisDiagnosis,
+        }));
+        await simpanDiagnosa(payload);
+      }
+      if (selectedProsedur.length > 0) {
+        const tPayload = selectedProsedur.map(p => ({
+          icd9Id: p.id_icd9 || p.icd9Id,
+          pelaksana: p.pelaksana,
+          catatan: p.catatan,
+          bmhpDetails: p.bmhpDetails || null,
+          alkesDetails: p.alkesDetails || null,
+          tipePelaksanaan: p.tipePelaksanaan || 'INTERNAL',
+          faskesRujukan: p.faskesRujukan || '',
+          alasanRujukan: p.alasanRujukan || '',
+        }));
+        await simpanTindakan(tPayload);
+      }
+      Swal.fire({ icon: 'success', title: 'Draf SOAP Disimpan!', timer: 1200, showConfirmButton: false });
     } catch {
-      Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan data SOAP' });
+      Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal menyimpan draf SOAP' });
     }
   };
 
@@ -542,7 +675,7 @@ function DokterRawatJalanContent() {
       title: 'Simpan SOAP & Lanjut Tindak Lanjut?',
       text: isUgd 
         ? 'Data pemeriksaan SOAP UGD akan disimpan. Anda akan diarahkan ke tahap Keputusan Tindak Lanjut UGD (Boleh Pulang, Rawat Inap, Rujuk RS, atau Kematian).'
-        : 'Data SOAP, diagnosa, dan terapi akan disimpan. Anda akan diarahkan ke tahap Rencana Tindak Lanjut Pasien.',
+        : 'Data SOAP, diagnosa, dan rencana tindakan akan disimpan. Anda akan diarahkan ke tahap Keputusan Tindak Lanjut Pasien.',
       showCancelButton: true,
       confirmButtonText: 'Ya, Lanjut Tindak Lanjut',
       cancelButtonText: 'Batal',
@@ -569,12 +702,17 @@ function DokterRawatJalanContent() {
         }));
         await simpanDiagnosa(payload);
       }
-      // Save tindakan jika ada
+      // Save tindakan beserta Alkes & BMHP jika ada
       if (selectedProsedur.length > 0) {
         const tPayload = selectedProsedur.map(p => ({
           icd9Id: p.id_icd9 || p.icd9Id, // bisa datang dari search (id_icd9) atau DB (icd9Id)
           pelaksana: p.pelaksana,
           catatan: p.catatan,
+          bmhpDetails: p.bmhpDetails || null,
+          alkesDetails: p.alkesDetails || null,
+          tipePelaksanaan: p.tipePelaksanaan || 'INTERNAL',
+          faskesRujukan: p.faskesRujukan || '',
+          alasanRujukan: p.alasanRujukan || '',
         }));
         await simpanTindakan(tPayload);
       }
@@ -804,69 +942,22 @@ function DokterRawatJalanContent() {
                       <TabAsesmen soapData={soapData} setSoapData={setSoapData} setActiveTab={setActiveTab} />
                     )}
 
-                    {/* TAB P: Plan */}
+                    {/* TAB P: Plan & Tindakan Medis (Terintegrasi Alkes, BMHP, & Penunjang) */}
                     {activeTab === 'SOAP_P' && (
-                      <TabPlan soapData={soapData} setSoapData={setSoapData} setActiveTab={setActiveTab} />
-                    )}
-
-                    {/* Removed TabDiagnosa Component from here since it's merged into TabAsesmen */}
-
-                    {/* TAB: Order Laboratorium */}
-                    {activeTab === 'LABORATORIUM' && (
-                      <TabLaboratorium 
-                        availableLabTests={availableLabTests} 
-                        openLabCategories={openLabCategories} 
-                        handleToggleLabCategory={handleToggleLabCategory} 
-                        labOrders={labOrders} 
-                        handleToggleLab={handleToggleLab} 
-                        labNote={labNote} 
-                        setLabNote={setLabNote} 
-                        isSaving={isSaving} 
-                        selectedKunjungan={selectedKunjungan} 
-                        simpanOrderLab={simpanOrderLab} 
-                        clearSelection={clearSelection} 
-                        fetchAntrian={fetchAntrian} 
-                        setActiveTab={setActiveTab} 
-                        existingLabCount={riwayatLabList.length}
-                        onViewExistingLab={openLabModal}
-                      />
-                    )}
-
-                    {/* TAB: Order Radiologi */}
-                    {activeTab === 'RADIOLOGI' && (
-                      <TabRadiologi 
-                        kunjunganId={selectedKunjungan.id}
-                        isPoliGigi={Boolean(selectedKunjungan?.poliklinik?.namaPoli?.toLowerCase().includes('gigi'))}
+                      <TabPlan 
+                        soapData={soapData} 
+                        setSoapData={setSoapData} 
                         setActiveTab={setActiveTab}
+                        selectedProsedur={selectedProsedur}
+                        setSelectedProsedur={setSelectedProsedur}
+                        handleRemoveProsedur={handleRemoveProsedur}
+                        selectedKunjungan={selectedKunjungan}
+                        onOpenHasilLabModal={openLabModal}
+                        orderLabData={orderLabData}
+                        onRefreshOrderLab={fetchOrderLab}
+                        orderRadiologiList={orderRadiologiList}
+                        onRefreshOrderRadiologi={fetchOrderRadiologi}
                       />
-                    )}
-
-                    {/* TAB: Tindakan ICD-9 */}
-                    {activeTab === 'TINDAKAN' && (
-                      <TabTindakan 
-                        selectedProsedur={selectedProsedur} 
-                        setSelectedProsedur={setSelectedProsedur} 
-                        handleRemoveProsedur={handleRemoveProsedur} 
-                      />
-                    )}
-
-                    {/* TAB RESEP OBAT */}
-                    {activeTab === 'RESEP' && (
-                      <TabResep 
-                        obatQuery={obatQuery} 
-                        setObatQuery={setObatQuery} 
-                        selectedObat={selectedObat} 
-                        setSelectedObat={setSelectedObat}
-                        kunjunganId={selectedKunjungan?.id}
-                        faskesId={selectedKunjungan?.poliklinik?.faskesId}
-                        onSaveResep={handleSaveResepOnly}
-                        isSaving={isSaving}
-                      />
-                    )}
-
-                    {/* TAB RUJUKAN */}
-                    {activeTab === 'RUJUKAN' && (
-                      <TabRujukan rujukanData={rujukanData} setRujukanData={setRujukanData} />
                     )}
 
                   </div>

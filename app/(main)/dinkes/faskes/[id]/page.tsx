@@ -38,7 +38,8 @@ import {
   Box,
   Flame,
   Check,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { dinkesService, FaskesDetailData } from '../../../../../services/dinkes.service';
 
@@ -444,7 +445,9 @@ export default function DinkesFaskesDetailPage() {
               <span className="text-xl font-black text-blue-600">{ringkasanEksekutif.totalDosisVaksin}</span>
               <span className="text-slate-500 font-medium">Dosis</span>
             </div>
-            <span className="text-[10px] text-blue-700 font-semibold mt-0.5 block">❄️ 2°C - 8°C Stabil</span>
+            <span className="text-[10px] text-blue-700 font-semibold mt-0.5 flex items-center gap-1">
+              <ThermometerSnowflake className="w-3 h-3 text-blue-600" /> 2°C - 8°C Stabil
+            </span>
           </div>
         </div>
       </div>
@@ -873,12 +876,14 @@ export default function DinkesFaskesDetailPage() {
 
               <div className="text-xs">
                 <span className="text-[10px] font-bold text-slate-500 block uppercase">Rekomendasi Dinas:</span>
-                <span className="font-semibold text-slate-800">
-                  {ringkasanEksekutif.statusBebanKerja === 'KRITIS_TINGGI'
-                    ? '⚠️ Perlu penambahan atau mutasi dokter tambahan.'
-                    : ringkasanEksekutif.statusBebanKerja === 'TINGGI'
-                    ? '⚠️ Beban kerja padat, pantau jam operasional poli.'
-                    : '✅ Kapasitas pelayanan dalam kondisi optimal.'}
+                <span className="font-semibold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                  {ringkasanEksekutif.statusBebanKerja === 'KRITIS_TINGGI' ? (
+                    <><AlertTriangle className="w-3.5 h-3.5 text-rose-500" /> Perlu penambahan atau mutasi dokter tambahan.</>
+                  ) : ringkasanEksekutif.statusBebanKerja === 'TINGGI' ? (
+                    <><AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> Beban kerja padat, pantau jam operasional poli.</>
+                  ) : (
+                    <><CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Kapasitas pelayanan dalam kondisi optimal.</>
+                  )}
                 </span>
               </div>
             </div>
@@ -1011,9 +1016,10 @@ export default function DinkesFaskesDetailPage() {
                 <button
                   type="button"
                   onClick={() => setKunjunganPoliFilter('ALL')}
-                  className="text-xs text-emerald-600 font-bold hover:underline self-start sm:self-auto"
+                  className="text-xs text-slate-600 hover:text-slate-900 font-bold hover:underline self-start sm:self-auto flex items-center gap-1"
                 >
-                  ✕ Reset Filter Poli
+                  <X className="w-3.5 h-3.5" />
+                  <span>Reset Filter Poli</span>
                 </button>
               )}
             </div>
@@ -1352,8 +1358,8 @@ export default function DinkesFaskesDetailPage() {
                         <td className="p-3">
                           <div className="flex gap-1.5 flex-wrap">
                             {item.isPenyakitMenular && (
-                              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
-                                ⚠️ MENULAR
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 inline-flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 text-rose-600" /> MENULAR
                               </span>
                             )}
                             {item.isWajibLapor && (
@@ -1845,8 +1851,8 @@ export default function DinkesFaskesDetailPage() {
                           <td className="p-3 font-semibold text-slate-700">{vaksin.targetPenyakit || '-'}</td>
                           <td className="p-3 font-mono font-bold text-slate-800">{vaksin.noBatch}</td>
                           <td className="p-3">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
-                              ❄️ {vaksin.suhuPenyimpanan || '2-8°C'}
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 inline-flex items-center gap-1">
+                              <ThermometerSnowflake className="w-3 h-3 text-blue-600" /> {vaksin.suhuPenyimpanan || '2-8°C'}
                             </span>
                           </td>
                           <td className="p-3 text-right font-mono font-black text-slate-900 text-sm">
@@ -1861,8 +1867,8 @@ export default function DinkesFaskesDetailPage() {
                             </span>{' '}
                             <span className="text-xs font-normal text-slate-500">Dosis</span>
                             {vaksin.stok === 0 && vaksin.adaBatchPengganti && (
-                              <span className="block text-[9px] font-sans font-bold text-teal-700">
-                                ✓ Ada Batch Baru ({vaksin.totalStokVaksinFaskes} Dosis)
+                              <span className="block text-[9px] font-sans font-bold text-teal-700 flex items-center justify-end gap-1">
+                                <Check className="w-3 h-3" /> Ada Batch Baru ({vaksin.totalStokVaksinFaskes} Dosis)
                               </span>
                             )}
                           </td>

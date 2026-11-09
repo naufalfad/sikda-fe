@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckCircle2, ChevronRight, ChevronLeft, Printer } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ChevronLeft, Printer, Building2 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { registrationSchema, type RegistrationFormData } from '../schema';
 import { TicketPrint } from '@/components/ui/TicketPrint';
@@ -143,11 +143,11 @@ export default function RegistrationForm() {
           Data pasien telah berhasil disimpan. Nomor antrean: <strong>{generatedNoAntrian || 'A-001'}</strong>
         </p>
 
-        <div className="bg-blue-50 border border-blue-200 text-blue-900 p-4 max-w-md mx-auto rounded-none text-xs my-4 text-left shadow-sm">
-          <p className="font-bold text-blue-950 mb-1 flex items-center gap-1.5">
-            🏥 Petunjuk Alur Pasien:
+        <div className="bg-slate-50 border border-slate-200 text-slate-800 p-4 max-w-md mx-auto rounded-none text-xs my-4 text-left shadow-xs">
+          <p className="font-bold text-slate-900 mb-1 flex items-center gap-1.5">
+            <Building2 className="w-4 h-4 text-slate-600" /> Petunjuk Alur Pasien:
           </p>
-          <p className="text-blue-800">
+          <p className="text-slate-600">
             Arahkan pasien menuju <strong>Ruang Pemeriksaan Awal / Perawat (Screening & TTV)</strong> terlebih dahulu untuk pengukuran tanda-tanda vital sebelum dipanggil ke ruang dokter.
           </p>
         </div>
@@ -155,7 +155,7 @@ export default function RegistrationForm() {
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center items-center">
           <button 
             onClick={handlePrint}
-            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-xl text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all w-full sm:w-auto"
+            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-colors w-full sm:w-auto"
           >
             <Printer className="w-5 h-5 mr-2" />
             Cetak Struk Antrean

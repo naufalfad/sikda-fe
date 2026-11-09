@@ -19,11 +19,15 @@ import {
   Clock,
   Plus,
   Info,
-  Calendar
+  Calendar,
+  Pill,
+  Trash2,
+  ArrowRight
 } from 'lucide-react';
 import { useRawatJalanStore } from '@/store/rawatJalan.store';
 import { asetRuanganService } from '@/services/asetRuangan.service';
 import { imunisasiService, VaksinItem, BatchVaksinItem } from '@/services/imunisasi.service';
+import { masterService } from '@/services/master.service';
 import Swal from 'sweetalert2';
 
 const LOKASI_SUNTIK_OPTIONS = [
@@ -55,7 +59,8 @@ const DOSIS_KE_OPTIONS = [
 export default function DischargePlanning() {
   const {
     selectedKunjungan, rekamMedis, diagnosaList, setFase,
-    simpanRujukan, assignRawatInap, pulang, catatMeninggal
+    simpanRujukan, assignRawatInap, pulang, catatMeninggal,
+    simpanResep
   } = useRawatJalanStore();
 
   const isUgd = selectedKunjungan?.jenisPelayanan === 'UGD' || 
@@ -120,6 +125,19 @@ export default function DischargePlanning() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ─── Resep Obat Bekal Perjalanan Rujukan (Sesuai Kebutuhan Real Klinis) ───
+  const [resepBekal, setResepBekal] = useState<any[]>([]);
+  const [availableObatList, setAvailableObatList] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeMenu === 'RUJUKAN') {
+      masterService.getObat().then((res) => {
+        const list = res?.data || res || [];
+        setAvailableObatList(Array.isArray(list) ? list : []);
+      }).catch(err => console.error('Failed to load medicines for referral:', err));
+    }
+  }, [activeMenu]);
 
   if (!selectedKunjungan) return null;
 
@@ -240,9 +258,9 @@ export default function DischargePlanning() {
           <p><strong>Batch:</strong> <span class="font-mono">${batch?.noBatch || '-'}</span> (ED: ${batch?.tanggalExpired ? new Date(batch.tanggalExpired).toLocaleDateString('id-ID') : '-'})</p>
           <p><strong>Dosis:</strong> Ke-${vaksinForm.dosisKe} (${vaksinForm.dosisJumlah} ${vaksinForm.ruteSuntik === 'Oral' ? 'tetes' : 'mL'})</p>
           <p><strong>Rute & Lokasi:</strong> ${vaksinForm.ruteSuntik} • ${vaksinForm.lokasiSuntik}</p>
-          <div class="mt-2 pt-2 border-t border-gray-200 text-xs text-teal-800 font-semibold">
-            ✓ 1 vial dipotong dari Cold-Chain<br/>
-            ✓ Layanan vaksinasi (Rp 25.000) otomatis masuk ke kasir
+          <div class="mt-2 pt-2 border-t border-gray-200 text-xs text-slate-700 font-semibold space-y-1">
+            <div>• 1 vial dipotong dari Cold-Chain</div>
+            <div>• Layanan vaksinasi (Rp 25.000) otomatis masuk ke kasir</div>
           </div>
         </div>
       `,
@@ -311,6 +329,7 @@ export default function DischargePlanning() {
     }
     setIsSubmitting(true);
     try {
+      // 1. Simpan data rujukan keluar
       await simpanRujukan({
         faskesTujuan: rujukanData.tujuanRS,
         poliTujuan: rujukanData.tujuanPoli,
@@ -318,10 +337,23 @@ export default function DischargePlanning() {
         alasanRujukan: rujukanData.anamnesa + '\n' + rujukanData.diagnosaSementara,
       });
 
+      // 2. Simpan resep obat bekal rujukan ke farmasi jika ada
+      if (resepBekal.length > 0) {
+        const rPayload = resepBekal.map(o => ({
+          obatId: o.obatId,
+          qty: parseInt(String(o.qty)) || 1,
+          signa: o.signa || '3 x 1 Tablet sesudah makan',
+          catatan: 'Obat bekal perjalanan rujukan RS',
+        }));
+        await simpanResep(rPayload);
+      }
+
       Swal.fire({ 
         icon: 'success', 
-        title: 'Berhasil', 
-        text: 'Rujukan berhasil disimpan. Pasien silakan menuju loket administrasi untuk cetak surat rujukan.', 
+        title: 'Rujukan Berhasil Disimpan!', 
+        text: resepBekal.length > 0
+          ? 'Rujukan faskes beserta resep obat bekal perjalanan telah diteruskan ke Farmasi dan Kasir.'
+          : 'Rujukan berhasil disimpan. Pasien silakan menuju loket administrasi untuk cetak surat rujukan.', 
         timer: 3000, 
         showConfirmButton: false 
       });
@@ -667,7 +699,8 @@ export default function DischargePlanning() {
               className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-none transition-colors shadow-sm flex items-center gap-2"
             >
               <CheckCircle2 className="w-4 h-4" />
-              Selesai & Pulangkan Pasien ➔
+              <span>Selesai & Pulangkan Pasien</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -835,7 +868,11 @@ export default function DischargePlanning() {
                               </div>
                               <div className="text-[11px] text-gray-500 flex justify-between">
                                 <span>ED: {new Date(batch.tanggalExpired).toLocaleDateString('id-ID')}</span>
-                                {isBatchSelected && <span className="text-teal-700 font-bold">✓ Terpilih</span>}
+                                {isBatchSelected && (
+                                  <span className="text-emerald-700 font-bold inline-flex items-center gap-1">
+                                    <Check className="w-3.5 h-3.5" /> Terpilih
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
@@ -1120,6 +1157,100 @@ export default function DischargePlanning() {
                 <textarea className="w-full border border-gray-300 rounded-none p-2 text-sm text-gray-900 focus:border-blue-500 outline-none" rows={2}
                   value={rujukanData.terapi} onChange={e => setRujukanData({...rujukanData, terapi: e.target.value})} />
               </div>
+
+              {/* Seksi Resep Obat Bekal Perjalanan Rujukan (Sesuai Kebutuhan Klinis) */}
+              <div className="pt-3 border-t border-indigo-100 bg-indigo-50/60 p-3">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
+                    <Pill className="w-3.5 h-3.5 text-indigo-600" />
+                    Resep Obat Bekal Perjalanan / Darurat (Opsional)
+                  </label>
+                  <span className="text-[10px] text-indigo-700 font-bold bg-indigo-100 px-1.5 py-0.5">
+                    {resepBekal.length} obat
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-600 mb-2">
+                  Resepkan obat bekal perjalanan (analgetik, antiemetik, atau obat emergensi) selama pasien menuju RS rujukan.
+                </p>
+
+                {/* List Obat Bekal Terpilih */}
+                {resepBekal.length > 0 && (
+                  <div className="space-y-1.5 mb-2.5 max-h-36 overflow-y-auto pr-1">
+                    {resepBekal.map((ob, idx) => (
+                      <div key={idx} className="bg-white border border-indigo-200 p-2 text-xs flex items-center justify-between gap-2 shadow-xs">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-gray-900 truncate">{ob.namaObat}</p>
+                          <input 
+                            type="text" 
+                            value={ob.signa} 
+                            onChange={e => {
+                              const updated = [...resepBekal];
+                              updated[idx].signa = e.target.value;
+                              setResepBekal(updated);
+                            }}
+                            className="text-[11px] text-gray-700 border border-gray-200 px-1.5 py-0.5 w-full mt-1 bg-gray-50 focus:bg-white" 
+                            placeholder="Aturan pakai, misal: 3 x 1 Tablet"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <input 
+                            type="number" 
+                            min="1" 
+                            value={ob.qty} 
+                            onChange={e => {
+                              const updated = [...resepBekal];
+                              updated[idx].qty = Math.max(1, parseInt(e.target.value) || 1);
+                              setResepBekal(updated);
+                            }}
+                            className="w-12 text-center border border-gray-300 p-1 text-xs font-bold font-mono"
+                            title="Jumlah obat"
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              setResepBekal(resepBekal.filter((_, i) => i !== idx));
+                            }}
+                            className="text-rose-500 hover:text-rose-700 p-1"
+                            title="Hapus Obat"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Dropdown Pencarian Obat */}
+                <select
+                  className="w-full bg-white border border-indigo-300 p-2 text-xs text-gray-800 font-semibold focus:ring-1 focus:ring-indigo-500"
+                  onChange={(e) => {
+                    if (!e.target.value) return;
+                    const found = availableObatList.find(o => o.id === e.target.value);
+                    if (found) {
+                      setResepBekal([
+                        ...resepBekal,
+                        {
+                          obatId: found.id,
+                          namaObat: found.namaObat,
+                          sediaan: found.sediaan || 'Tablet',
+                          qty: 3,
+                          signa: '3 x 1 Tablet sesudah makan',
+                        }
+                      ]);
+                    }
+                    e.target.value = '';
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>+ Tambah Obat Bekal dari Formularium Faskes...</option>
+                  {availableObatList.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.namaObat} ({o.sediaan || 'unit'})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <button 
               onClick={submitRujukan} 
@@ -1208,6 +1339,19 @@ export default function DischargePlanning() {
                 </tbody>
               </table>
 
+              {resepBekal.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-gray-300">
+                  <p className="font-bold text-gray-900 mb-1 text-sm">Obat Bekal Perjalanan / Terapi Darurat yang Diberikan:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-gray-800 ml-2">
+                    {resepBekal.map((o, idx) => (
+                      <li key={idx}>
+                        <strong>{o.namaObat}</strong> ({o.qty} {o.sediaan || 'unit'}) &mdash; <em>{o.signa}</em>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <p className="mt-8">
                 Demikian surat rujukan ini kami sampaikan, atas bantuan dan kerja sama teman sejawat kami ucapkan terima kasih.
               </p>
@@ -1262,7 +1406,8 @@ export default function DischargePlanning() {
               className="px-6 py-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold transition-colors text-xs rounded-none shadow-sm flex items-center gap-2"
             >
               {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-              Assign ke Rawat Inap & Selesaikan ➔
+              <span>Assign ke Rawat Inap & Selesaikan</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -1343,9 +1488,13 @@ export default function DischargePlanning() {
                           </div>
                         </div>
                         <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                          <span className={`font-bold ${isSelected ? 'text-teal-700' : 'text-gray-400'}`}>
-                            {isSelected ? '✓ Terpilih' : 'Klik untuk Pilih'}
-                          </span>
+                          {isSelected ? (
+                            <span className="font-bold text-emerald-700 inline-flex items-center gap-1">
+                              <Check className="w-3.5 h-3.5" /> Terpilih
+                            </span>
+                          ) : (
+                            <span className="font-bold text-gray-400">Klik untuk Pilih</span>
+                          )}
                         </div>
                       </div>
                     );

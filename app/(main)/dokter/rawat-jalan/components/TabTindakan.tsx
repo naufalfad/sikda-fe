@@ -85,7 +85,10 @@ export default function TabTindakan({
           kode_icd9: item.kode_icd9,
           nama_prosedur: item.nama_prosedur,
           pelaksana: 'Dokter',
-          catatan: ''
+          catatan: '',
+          tipePelaksanaan: 'INTERNAL',
+          faskesRujukan: '',
+          alasanRujukan: ''
         }
       ]);
     }

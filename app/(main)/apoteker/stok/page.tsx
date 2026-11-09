@@ -23,7 +23,9 @@ import {
   Snowflake,
   ThermometerSnowflake,
   ShieldCheck,
-  MinusCircle
+  MinusCircle,
+  LayoutGrid,
+  Table
 } from 'lucide-react';
 import { farmasiService, StokFaskesItem, StokVaksinItem } from '@/services/farmasi.service';
 import { masterService } from '@/services/master.service';
@@ -42,6 +44,29 @@ function KatalogObatContent() {
   const [kategoriTab, setKategoriTab] = useState<'semua' | 'obat' | 'bmhp' | 'vaksin'>('semua');
   // Filter Status Operasional: 'tersedia' | 'semua' | 'fefo' | 'kritis' | 'habis'
   const [statusTab, setStatusTab] = useState<'tersedia' | 'semua' | 'fefo' | 'kritis' | 'habis'>('tersedia');
+
+  // Mode Tampilan: 'card' (Grid Kartu) | 'table' (Tabel Data)
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('apoteker_stok_view_mode');
+      if (savedMode === 'card' || savedMode === 'table') {
+        setViewMode(savedMode);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleSetViewMode = (mode: 'card' | 'table') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('apoteker_stok_view_mode', mode);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -264,10 +289,16 @@ function KatalogObatContent() {
     }
   };
 
+  // Helper Universal: Identifikasi apakah item tergolong BMHP (Bahan Medis Habis Pakai)
+  const isItemBmhp = (kategori?: string | null): boolean => {
+    if (!kategori) return false;
+    return kategori.toUpperCase().includes('BMHP');
+  };
+
   // KPI Calculations
   const totalItemCount = stokList.length;
-  const obatList = stokList.filter(o => o.kategori !== 'BMHP');
-  const bmhpList = stokList.filter(o => o.kategori === 'BMHP');
+  const obatList = stokList.filter(o => !isItemBmhp(o.kategori));
+  const bmhpList = stokList.filter(o => isItemBmhp(o.kategori));
 
   const kritisObatBmhp = stokList.filter(o => o.statusStok === 'KRITIS' && o.stok > 0);
   const habisObatBmhp = stokList.filter(o => o.stok === 0);
@@ -288,9 +319,9 @@ function KatalogObatContent() {
 
     if (!matchSearch) return false;
 
-    // Filter Kategori
-    if (kategoriTab === 'obat' && o.kategori === 'BMHP') return false;
-    if (kategoriTab === 'bmhp' && o.kategori !== 'BMHP') return false;
+    // Filter Kategori: Pisahkan tegas antara Obat dan BMHP
+    if (kategoriTab === 'obat' && isItemBmhp(o.kategori)) return false;
+    if (kategoriTab === 'bmhp' && !isItemBmhp(o.kategori)) return false;
 
     // Filter Status
     if (statusTab === 'tersedia') return o.stok > 0;
@@ -418,7 +449,10 @@ function KatalogObatContent() {
           <div>
             <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Vaksin Cold-Chain</p>
             <p className="text-xl font-black text-cyan-700 font-mono">{totalDosisVaksin} <span className="text-xs font-normal text-gray-500">Dosis</span></p>
-            <p className="text-[11px] text-cyan-800 font-medium mt-0.5">❄️ 2-8°C • {vaksinList.length} Batch Lot</p>
+            <p className="text-[11px] text-cyan-800 font-medium mt-0.5 flex items-center gap-1">
+              <Snowflake className="w-3 h-3 text-cyan-600" />
+              <span>2-8°C • {vaksinList.length} Batch Lot</span>
+            </p>
           </div>
         </div>
 
@@ -510,63 +544,97 @@ function KatalogObatContent() {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
-          <button
-            onClick={() => setStatusTab('tersedia')}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
-              statusTab === 'tersedia'
-                ? 'bg-teal-700 text-white shadow-xs'
-                : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
-            }`}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Tersedia (Ready)
-          </button>
-          <button
-            onClick={() => setStatusTab('fefo')}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
-              statusTab === 'fefo'
-                ? 'bg-amber-600 text-white'
-                : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
-            }`}
-          >
-            <Clock className="w-3 h-3" />
-            Prioritas FEFO (&lt; 60 Hari)
-          </button>
-          <button
-            onClick={() => setStatusTab('kritis')}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
-              statusTab === 'kritis'
-                ? 'bg-rose-600 text-white'
-                : 'bg-rose-50 text-rose-800 hover:bg-rose-100'
-            }`}
-          >
-            <AlertTriangle className="w-3 h-3" />
-            Stok Kritis
-          </button>
-          <button
-            onClick={() => setStatusTab('habis')}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
-              statusTab === 'habis'
-                ? 'bg-red-700 text-white shadow-xs'
-                : 'bg-red-50 text-red-700 hover:bg-red-100'
-            }`}
-          >
-            <MinusCircle className="w-3.5 h-3.5" />
-            Stok Habis ({kategoriTab === 'vaksin' ? habisVaksin.length : habisObatBmhp.length})
-          </button>
-          <button
-            onClick={() => setStatusTab('semua')}
-            className={`px-3 py-1.5 text-xs font-bold transition-colors ${
-              statusTab === 'semua'
-                ? 'bg-gray-900 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Semua Batch
-          </button>
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+          {/* Status Filter Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setStatusTab('tersedia')}
+              className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                statusTab === 'tersedia'
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Tersedia (Ready)
+            </button>
+            <button
+              onClick={() => setStatusTab('fefo')}
+              className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                statusTab === 'fefo'
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              Prioritas FEFO (&lt; 60 Hari)
+            </button>
+            <button
+              onClick={() => setStatusTab('kritis')}
+              className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                statusTab === 'kritis'
+                  ? 'bg-rose-600 text-white'
+                  : 'bg-rose-50 text-rose-800 hover:bg-rose-100'
+              }`}
+            >
+              <AlertTriangle className="w-3 h-3" />
+              Stok Kritis
+            </button>
+            <button
+              onClick={() => setStatusTab('habis')}
+              className={`px-3 py-1.5 text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                statusTab === 'habis'
+                  ? 'bg-red-700 text-white shadow-xs'
+                  : 'bg-red-50 text-red-700 hover:bg-red-100'
+              }`}
+            >
+              <MinusCircle className="w-3.5 h-3.5" />
+              Stok Habis ({kategoriTab === 'vaksin' ? habisVaksin.length : habisObatBmhp.length})
+            </button>
+            <button
+              onClick={() => setStatusTab('semua')}
+              className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                statusTab === 'semua'
+                  ? 'bg-gray-900 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Semua Batch
+            </button>
+          </div>
+
+          {/* Switcher Tampilan Card vs Tabel */}
+          <div className="flex items-center border border-gray-300 p-0.5 bg-gray-100 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleSetViewMode('card')}
+              className={`px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                viewMode === 'card'
+                  ? 'bg-white text-gray-900 shadow-2xs font-extrabold'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Tampilkan dalam bentuk Kartu / Grid"
+            >
+              <LayoutGrid className="w-3.5 h-3.5 text-teal-600" />
+              <span>Card</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetViewMode('table')}
+              className={`px-2.5 py-1 text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                viewMode === 'table'
+                  ? 'bg-white text-gray-900 shadow-2xs font-extrabold'
+                  : 'text-gray-500 hover:text-gray-900'
+              }`}
+              title="Tampilkan dalam bentuk Tabel Data"
+            >
+              <Table className="w-3.5 h-3.5 text-teal-600" />
+              <span>Tabel</span>
+            </button>
+          </div>
         </div>
       </div>
+
 
       {/* CONTENT: JIKA TAB VAKSIN AKTIF */}
       {kategoriTab === 'vaksin' ? (
@@ -582,7 +650,7 @@ function KatalogObatContent() {
               <p className="font-bold text-gray-800">Tidak ada batch vaksin yang sesuai filter</p>
               <p className="text-xs text-gray-400 mt-1">Gunakan tombol &quot;+ Penerimaan Vaksin Baru&quot; untuk mencatat droping Bio Farma / Dinkes.</p>
             </div>
-          ) : (
+          ) : viewMode === 'card' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredVaksin.map((vaksin) => {
                 const isKritis = vaksin.statusStok === 'KRITIS';
@@ -709,6 +777,135 @@ function KatalogObatContent() {
                 );
               })}
             </div>
+          ) : (
+            /* TABEL VAKSIN COLD-CHAIN */
+            <div className="bg-white border border-gray-200 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                      <th className="py-3 px-4 w-12 text-center">Foto</th>
+                      <th className="py-3 px-4">Nama Vaksin &amp; Target Imunisasi</th>
+                      <th className="py-3 px-3 text-center">Suhu Cold-Chain</th>
+                      <th className="py-3 px-4">No. Lot Batch</th>
+                      <th className="py-3 px-4">Tanggal Expired (FEFO)</th>
+                      <th className="py-3 px-4 text-center">Sisa Dosis</th>
+                      <th className="py-3 px-3 text-center">Batas Buffer</th>
+                      <th className="py-3 px-3 text-center">Kode KFA</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-center w-36">Aksi Cepat</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredVaksin.map((vaksin) => {
+                      const isKritis = vaksin.statusStok === 'KRITIS';
+                      const isHabis = vaksin.statusStok === 'HABIS';
+                      const isKadaluwarsa = vaksin.statusExpired === 'KADALUWARSA';
+                      const isSegeraExpired = vaksin.statusExpired === 'SEGERA_KADALUWARSA';
+
+                      return (
+                        <tr key={vaksin.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4 text-center">
+                            <div className="relative w-10 h-10 rounded bg-cyan-50 border border-cyan-200 overflow-hidden shrink-0 mx-auto">
+                              <img 
+                                src="/images/logistik/vaksin.jpg" 
+                                alt={vaksin.namaVaksin}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-slate-900 text-sm leading-snug">
+                              {vaksin.namaVaksin}
+                            </div>
+                            <div className="text-[11px] text-cyan-700 font-medium mt-0.5">
+                              Target: {vaksin.targetPenyakit || 'Imunisasi Dasar'}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full bg-cyan-100 text-cyan-800 border border-cyan-200">
+                              <Snowflake className="w-3 h-3 text-cyan-600" />
+                              {vaksin.suhuPenyimpanan || '2-8°C'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 text-[11px]">
+                              {vaksin.noBatch}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className={`font-semibold ${
+                              isKadaluwarsa ? 'text-red-600 font-bold' :
+                              isSegeraExpired ? 'text-amber-700 font-bold' : 'text-slate-700'
+                            }`}>
+                              {vaksin.tanggalExpired ? new Date(vaksin.tanggalExpired).toLocaleDateString('id-ID') : '-'}
+                            </div>
+                            {isKadaluwarsa ? (
+                              <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.2 mt-0.5 inline-block">
+                                KADALUWARSA
+                              </span>
+                            ) : isSegeraExpired ? (
+                              <span className="bg-amber-600 text-white text-[9px] font-bold px-1.5 py-0.2 mt-0.5 inline-flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" /> FEFO: {vaksin.sisaHariExpired} HARI
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`text-base font-black font-mono ${
+                              isHabis ? 'text-red-600' : isKritis ? 'text-rose-600' : 'text-cyan-700'
+                            }`}>
+                              {vaksin.stok}
+                            </span>
+                            <span className="text-[10px] text-slate-500 ml-1">Dosis</span>
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-600">
+                            {vaksin.stokMinimum} Dosis
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-500 text-[11px]">
+                            {vaksin.kodeKfa || '-'}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {isHabis ? (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                HABIS
+                              </span>
+                            ) : isKritis ? (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                KRITIS
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                TERSEDIA
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openKeluarModal('vaksin', vaksin.vaksinId, vaksin.noBatch)}
+                                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition-colors"
+                                title="Catat Pengeluaran Dosis"
+                              >
+                                - Keluar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openVaksinModal(vaksin.vaksinId)}
+                                className="px-2 py-1 bg-cyan-700 hover:bg-cyan-800 text-white text-[11px] font-bold transition-colors shadow-2xs"
+                                title="Tambah Stok / Dosis Baru"
+                              >
+                                + Terima
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       ) : (
@@ -725,14 +922,14 @@ function KatalogObatContent() {
               <p className="font-bold text-gray-800">Tidak ada item yang sesuai dengan filter pencarian</p>
               <p className="text-xs text-gray-400 mt-1">Gunakan tombol &quot;+ Penerimaan Obat / BMHP Baru&quot; untuk menambah stok.</p>
             </div>
-          ) : (
+          ) : viewMode === 'card' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredObatBmhp.map((obat) => {
                 const isKritis = obat.statusStok === 'KRITIS';
                 const isHabis = obat.statusStok === 'HABIS';
                 const isKadaluwarsa = obat.statusExpired === 'KADALUWARSA';
                 const isSegeraExpired = obat.statusExpired === 'SEGERA_KADALUWARSA';
-                const isBmhp = obat.kategori === 'BMHP';
+                const isBmhp = isItemBmhp(obat.kategori);
 
                 return (
                   <div 
@@ -875,6 +1072,158 @@ function KatalogObatContent() {
                 );
               })}
             </div>
+          ) : (
+            /* TABEL OBAT & BMHP */
+            <div className="bg-white border border-gray-200 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                      <th className="py-3 px-4 w-12 text-center">Foto</th>
+                      <th className="py-3 px-4">Kode &amp; Nama Barang</th>
+                      <th className="py-3 px-3 text-center">Kategori</th>
+                      <th className="py-3 px-3 text-center">Bentuk Sediaan</th>
+                      <th className="py-3 px-4">No. Batch</th>
+                      <th className="py-3 px-4">Kadaluwarsa (FEFO)</th>
+                      <th className="py-3 px-4 text-center">Stok Fisik</th>
+                      <th className="py-3 px-3 text-center">Batas Buffer</th>
+                      <th className="py-3 px-4 text-right">Harga Satuan</th>
+                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 text-center w-36">Aksi Cepat</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredObatBmhp.map((obat) => {
+                      const isKritis = obat.statusStok === 'KRITIS';
+                      const isHabis = obat.statusStok === 'HABIS';
+                      const isKadaluwarsa = obat.statusExpired === 'KADALUWARSA';
+                      const isSegeraExpired = obat.statusExpired === 'SEGERA_KADALUWARSA';
+                      const isBmhp = isItemBmhp(obat.kategori);
+
+                      return (
+                        <tr key={obat.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="py-3 px-4 text-center">
+                            <div className={`relative w-10 h-10 rounded overflow-hidden shrink-0 border mx-auto ${
+                              isBmhp ? 'bg-purple-50 border-purple-200' : 'bg-blue-50 border-blue-200'
+                            }`}>
+                              <img 
+                                src={obat.gambarUrl || (isBmhp ? '/images/logistik/bmhp.jpg' : '/images/logistik/obat.jpg')} 
+                                alt={obat.namaObat}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).src = isBmhp ? '/images/logistik/bmhp.jpg' : '/images/logistik/obat.jpg';
+                                }}
+                              />
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-bold text-slate-900 text-sm leading-snug">
+                              {obat.namaObat}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="font-mono text-[10px] text-slate-500 bg-slate-100 px-1 py-0.2">
+                                {obat.kodeObat}
+                              </span>
+                              <span className="text-[11px] text-slate-500">
+                                {obat.kategori}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                isBmhp
+                                  ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                                  : 'bg-blue-100 text-blue-800 border border-blue-200'
+                              }`}
+                            >
+                              {isBmhp ? <Syringe className="w-3 h-3" /> : <Pill className="w-3 h-3" />}
+                              {isBmhp ? 'BMHP' : 'OBAT'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className="text-[10px] text-teal-800 bg-teal-50 border border-teal-200 px-1.5 py-0.5 font-bold uppercase">
+                              {obat.sediaan}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="font-mono font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 text-[11px]">
+                              {obat.noBatch}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className={`font-semibold ${
+                              isKadaluwarsa ? 'text-red-600 font-bold' :
+                              isSegeraExpired ? 'text-amber-700 font-bold' : 'text-slate-700'
+                            }`}>
+                              {obat.tanggalExpired ? new Date(obat.tanggalExpired).toLocaleDateString('id-ID') : '-'}
+                            </div>
+                            {isKadaluwarsa ? (
+                              <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.2 mt-0.5 inline-block">
+                                KADALUWARSA
+                              </span>
+                            ) : isSegeraExpired ? (
+                              <span className="bg-amber-600 text-white text-[9px] font-bold px-1.5 py-0.2 mt-0.5 inline-flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5" /> FEFO: {obat.sisaHariExpired} HARI
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <span className={`text-base font-black font-mono ${
+                              isHabis ? 'text-red-600' : isKritis ? 'text-rose-600' : 'text-teal-600'
+                            }`}>
+                              {obat.stok}
+                            </span>
+                            <span className="text-[10px] text-slate-500 ml-1">{obat.sediaan}</span>
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-600">
+                            {obat.stokMinimum} {obat.sediaan}
+                          </td>
+                          <td className="py-3 px-4 text-right font-mono text-slate-700">
+                            Rp {obat.harga?.toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            {isHabis ? (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-800 border border-red-200">
+                                HABIS
+                              </span>
+                            ) : isKritis ? (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                KRITIS
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                TERSEDIA
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openKeluarModal('obat', obat.obatId)}
+                                className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition-colors"
+                                title="Catat Pengeluaran Stok"
+                              >
+                                - Keluar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openRestockModal(obat.obatId)}
+                                className="px-2 py-1 bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold transition-colors shadow-2xs"
+                                title="Tambah Stok Masuk"
+                              >
+                                + Terima
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -947,13 +1296,13 @@ function KatalogObatContent() {
                   <option value="">-- Pilih Barang --</option>
                   {masterList
                     .filter(m => {
-                      if (modalFilterKat === 'obat') return m.kategori !== 'BMHP';
-                      if (modalFilterKat === 'bmhp') return m.kategori === 'BMHP';
+                      if (modalFilterKat === 'obat') return !isItemBmhp(m.kategori);
+                      if (modalFilterKat === 'bmhp') return isItemBmhp(m.kategori);
                       return true;
                     })
                     .map((m) => (
                       <option key={m.id} value={m.id}>
-                        [{m.kategori === 'BMHP' ? 'BMHP' : 'OBAT'}] {m.namaObat} ({m.kodeObat}) - {m.sediaan}
+                        [{isItemBmhp(m.kategori) ? 'BMHP' : 'OBAT'}] {m.namaObat} ({m.kodeObat}) - {m.sediaan}
                       </option>
                     ))}
                 </select>
@@ -1144,9 +1493,9 @@ function KatalogObatContent() {
                     onChange={(e) => setFormVaksin({ ...formVaksin, suhuPenyimpanan: e.target.value })}
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-300 text-xs font-bold text-cyan-800 outline-none"
                   >
-                    <option value="2-8°C">❄️ 2-8°C (Kulkas Standar)</option>
-                    <option value="-20°C">🧊 -20°C (Freezer Khusus)</option>
-                    <option value="-70°C">⚡ -70°C (Ultra Cold)</option>
+                    <option value="2-8°C">2-8°C (Kulkas Standar)</option>
+                    <option value="-20°C">-20°C (Freezer Khusus)</option>
+                    <option value="-70°C">-70°C (Ultra Cold)</option>
                   </select>
                 </div>
                 <div>

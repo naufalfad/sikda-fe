@@ -281,8 +281,8 @@ export default function QueueSidebar({
                       {k.jamRegistrasi} • {k.pasien?.noRM || 'UGD'}
                     </span>
                     {isUgd && (
-                      <span className="bg-red-700 text-white font-black text-[9px] px-1.5 py-0.2 uppercase tracking-wider shadow-sm">
-                        🚨 UGD
+                      <span className="bg-rose-700 text-white font-bold text-[9px] px-1.5 py-0.2 uppercase tracking-wider shadow-sm flex items-center gap-1">
+                        <Activity className="w-2.5 h-2.5" /> UGD
                       </span>
                     )}
                     {currentBed && (

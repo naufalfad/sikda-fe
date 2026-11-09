@@ -10,24 +10,12 @@ import { kasirService } from '../../../../services/kasir.service';
 import { useAuthStore } from '../../../../store/auth.store';
 import Swal from 'sweetalert2';
 
-// Mock Data cadangan untuk Kamar / Bed Management
-const MOCK_WARDS = [
-  { room: 'Ruang Rawat Inap Melati (Dewasa)', beds: [
-      { id: 'BED-MELATI-01', patient: 'Ahmad Dahlan', noRM: 'RM-00102', days: 3, status: 'occupied', diagnosis: 'Typhoid Fever' },
-      { id: 'BED-MELATI-02', patient: null, noRM: null, days: 0, status: 'empty', diagnosis: null }
-  ]},
-  { room: 'Ruang Rawat Inap Mawar (Isolasi)', beds: [
-      { id: 'BED-MAWAR-01', patient: null, noRM: null, days: 0, status: 'empty', diagnosis: null }
-  ]}
-];
-
-const OCCUPIED_BEDS = MOCK_WARDS.flatMap(w => w.beds).filter(b => b.status !== 'empty');
-
 export default function RawatInapDashboard() {
   const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'admission' | 'visit' | 'askep' | 'discharge'>('admission');
-  const [wards, setWards] = useState<any[]>(MOCK_WARDS);
-  const [selectedBed, setSelectedBed] = useState<any>(OCCUPIED_BEDS[0]);
+  const [wards, setWards] = useState<any[]>([]);
+  const [selectedBed, setSelectedBed] = useState<any>(null);
+  const [isLoadingBeds, setIsLoadingBeds] = useState(true);
 
   // State Form Discharge (Rencana Pulang / Rujukan)
   const [keadaanKeluar, setKeadaanKeluar] = useState<'SEMBUH' | 'PULANG_PAKSA' | 'MENINGGAL' | 'RUJUK'>('SEMBUH');
@@ -107,90 +95,103 @@ export default function RawatInapDashboard() {
   });
 
   const loadBeds = async () => {
+    setIsLoadingBeds(true);
     try {
       const [ruangans, beds] = await Promise.all([
         asetRuanganService.getRuangans({ kategoriRuangan: 'RAWAT_INAP' }),
         asetRuanganService.getBeds()
       ]);
 
-      if (beds && beds.length > 0) {
-        // Filter bed rawat inap
-        const rawatInapBeds = beds.filter((b: any) => 
-          !b.ruangan || b.ruangan.kategoriRuangan === 'RAWAT_INAP' || b.ruangan.namaRuangan.toLowerCase().includes('inap')
-        );
-        const targetBeds = rawatInapBeds.length > 0 ? rawatInapBeds : beds;
+      const bedsList = Array.isArray(beds) ? beds : [];
+      // Filter bed rawat inap
+      const rawatInapBeds = bedsList.filter((b: any) => 
+        !b.ruangan || b.ruangan.kategoriRuangan === 'RAWAT_INAP' || b.ruangan.namaRuangan?.toLowerCase().includes('inap')
+      );
+      const targetBeds = rawatInapBeds.length > 0 ? rawatInapBeds : bedsList.filter((b: any) => b.ruangan?.kategoriRuangan === 'RAWAT_INAP');
 
-        const grouped: { [key: string]: any[] } = {};
-        targetBeds.forEach((b: any) => {
-          const roomKey = b.ruangan?.namaRuangan || 'Ruang Rawat Inap';
-          if (!grouped[roomKey]) grouped[roomKey] = [];
-          const isTerisi = b.statusBed === 'TERISI';
-          const kunjungan = b.kunjunganAktif;
-          const pasien = kunjungan?.pasien;
+      const grouped: { [key: string]: any[] } = {};
 
-          // Hitung durasi hari menginap
-          let days = 1;
-          if (kunjungan) {
-            const waktuMasuk = kunjungan.waktuMasukRawatInap || kunjungan.tanggalRegistrasi || new Date();
-            const start = new Date(waktuMasuk);
-            start.setHours(0, 0, 0, 0);
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const diff = Math.round((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-            days = Math.max(1, diff <= 0 ? 1 : diff);
+      if (Array.isArray(ruangans)) {
+        ruangans.forEach((r: any) => {
+          if (r.kategoriRuangan === 'RAWAT_INAP' || r.namaRuangan?.toLowerCase().includes('inap')) {
+            grouped[r.namaRuangan] = [];
           }
-
-          let usia = 'Dewasa';
-          if (pasien?.tanggalLahir) {
-            const birth = new Date(pasien.tanggalLahir);
-            const diffYears = Math.floor((new Date().getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-            if (diffYears > 0) usia = `${diffYears} Tahun`;
-          }
-
-          const dokterDPJP = kunjungan?.dokterTujuan?.namaLengkap || kunjungan?.rekamMedis?.dokter?.namaLengkap || 'dr. DPJP Rawat Inap';
-          const penjamin = kunjungan?.pasien?.penjamin?.jenisPenjamin || kunjungan?.jenisPembayaran || 'BPJS / Umum';
-          const asalMasuk = kunjungan?.jenisPelayanan === 'UGD' ? 'IGD / Kedaruratan' : (kunjungan?.poliklinik?.namaPoli || 'Poliklinik Rawat Jalan');
-          const alasanRawatInap = kunjungan?.alasanRawatInap || kunjungan?.rekamMedis?.keluhanUtama || kunjungan?.screening?.keluhanUtama || (kunjungan?.rekamMedis?.diagnosisKlinis ? `Observasi dan penanganan ${kunjungan.rekamMedis.diagnosisKlinis}` : 'Observasi klinis rawat inap');
-
-          grouped[roomKey].push({
-            id: b.nomorBed,
-            rawId: b.id,
-            ruangan: b.ruangan,
-            kunjunganAktif: kunjungan,
-            patient: isTerisi ? (pasien?.namaLengkap || 'Pasien Rawat Inap') : null,
-            noRM: isTerisi ? (pasien?.noRM || 'RM-INAP') : null,
-            usia,
-            penjamin,
-            dokterDPJP,
-            asalMasuk,
-            alasanRawatInap,
-            tanggalMasuk: kunjungan?.waktuMasukRawatInap || kunjungan?.tanggalRegistrasi,
-            days,
-            status: isTerisi ? 'occupied' : (b.statusBed === 'PERBAIKAN' ? 'critical' : (b.statusBed === 'DIBERSIHKAN' ? 'discharge_plan' : 'empty')),
-            diagnosis: isTerisi ? (kunjungan?.rekamMedis?.diagnosisKlinis || 'Observasi Klinis Rawat Inap') : null,
-            kelas: b.kelasKamar,
-            rawBed: b,
-          });
-        });
-
-        const newWards = Object.keys(grouped).map(roomName => ({
-          room: roomName,
-          beds: grouped[roomName]
-        }));
-
-        setWards(newWards);
-
-        setSelectedBed((prev: any) => {
-          if (prev) {
-            const found = newWards.flatMap(w => w.beds).find(b => b.rawId === prev.rawId);
-            if (found && found.status !== 'empty') return found;
-          }
-          const firstOccupied = newWards.flatMap(w => w.beds).find(b => b.status !== 'empty');
-          return firstOccupied || newWards[0]?.beds[0] || null;
         });
       }
+
+      targetBeds.forEach((b: any) => {
+        const roomKey = b.ruangan?.namaRuangan || 'Ruang Rawat Inap';
+        if (!grouped[roomKey]) grouped[roomKey] = [];
+        const isTerisi = b.statusBed === 'TERISI' || Boolean(b.kunjunganAktifId);
+        const kunjungan = b.kunjunganAktif;
+        const pasien = kunjungan?.pasien;
+
+        // Hitung durasi hari menginap
+        let days = 1;
+        if (kunjungan) {
+          const waktuMasuk = kunjungan.waktuMasukRawatInap || kunjungan.tanggalRegistrasi || new Date();
+          const start = new Date(waktuMasuk);
+          start.setHours(0, 0, 0, 0);
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const diff = Math.round((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+          days = Math.max(1, diff <= 0 ? 1 : diff);
+        }
+
+        let usia = 'Dewasa';
+        if (pasien?.tanggalLahir) {
+          const birth = new Date(pasien.tanggalLahir);
+          const diffYears = Math.floor((new Date().getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+          if (diffYears > 0) usia = `${diffYears} Tahun`;
+        }
+
+        const dokterDPJP = kunjungan?.dokterTujuan?.namaLengkap || kunjungan?.rekamMedis?.dokter?.namaLengkap || 'dr. DPJP Rawat Inap';
+        const penjamin = kunjungan?.pasien?.penjamin?.jenisPenjamin || kunjungan?.jenisPembayaran || 'BPJS / Umum';
+        const asalMasuk = kunjungan?.jenisPelayanan === 'UGD' ? 'IGD / Kedaruratan' : (kunjungan?.poliklinik?.namaPoli || 'Poliklinik Rawat Jalan');
+        const alasanRawatInap = kunjungan?.alasanRawatInap || kunjungan?.rekamMedis?.keluhanUtama || kunjungan?.screening?.keluhanUtama || (kunjungan?.rekamMedis?.diagnosisKlinis ? `Observasi dan penanganan ${kunjungan.rekamMedis.diagnosisKlinis}` : 'Observasi klinis rawat inap');
+
+        grouped[roomKey].push({
+          id: b.nomorBed,
+          rawId: b.id,
+          ruangan: b.ruangan,
+          kunjunganAktif: kunjungan,
+          patient: isTerisi ? (pasien?.namaLengkap || 'Pasien Rawat Inap') : null,
+          noRM: isTerisi ? (pasien?.noRM || 'RM-INAP') : null,
+          usia,
+          penjamin,
+          dokterDPJP,
+          asalMasuk,
+          alasanRawatInap,
+          tanggalMasuk: kunjungan?.waktuMasukRawatInap || kunjungan?.tanggalRegistrasi,
+          days,
+          status: isTerisi ? 'occupied' : (b.statusBed === 'PERBAIKAN' ? 'critical' : (b.statusBed === 'DIBERSIHKAN' ? 'discharge_plan' : 'empty')),
+          diagnosis: isTerisi ? (kunjungan?.rekamMedis?.diagnosisKlinis || 'Observasi Klinis Rawat Inap') : null,
+          kelas: b.kelasKamar,
+          rawBed: b,
+        });
+      });
+
+      const newWards = Object.keys(grouped).map(roomName => ({
+        room: roomName,
+        beds: grouped[roomName]
+      }));
+
+      setWards(newWards);
+
+      setSelectedBed((prev: any) => {
+        if (prev) {
+          const found = newWards.flatMap(w => w.beds).find(b => b.rawId === prev.rawId);
+          if (found && found.status !== 'empty') return found;
+        }
+        const firstOccupied = newWards.flatMap(w => w.beds).find(b => b.status !== 'empty');
+        return firstOccupied || null;
+      });
     } catch (err) {
-      console.warn('Gagal memuat data dinamis bed, menggunakan template lokal', err);
+      console.warn('Gagal memuat data dinamis bed:', err);
+      setWards([]);
+      setSelectedBed(null);
+    } finally {
+      setIsLoadingBeds(false);
     }
   };
 
@@ -575,16 +576,44 @@ export default function RawatInapDashboard() {
     fetchObatCatalog();
   }, []);
 
+  const allBeds = wards.flatMap(w => w.beds || []);
+  const totalBedsCount = allBeds.length;
+  const occupiedBedsCount = allBeds.filter(b => b.status !== 'empty').length;
+  const availableBedsCount = totalBedsCount - occupiedBedsCount;
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       
       {/* LEFT PANEL: WARD MANAGEMENT */}
       <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col h-full shadow-sm z-10">
         <div className="p-4 border-b border-gray-200 bg-teal-50/50">
-          <h2 className="text-lg font-bold text-teal-800 flex items-center">
-            <BedDouble className="w-5 h-5 mr-2 text-teal-600" />
-            Manajemen Kamar & Bed
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-teal-800 flex items-center">
+              <BedDouble className="w-5 h-5 mr-2 text-teal-600" />
+              Manajemen Kamar & Bed
+            </h2>
+            <button
+              onClick={() => loadBeds()}
+              title="Segarkan Data Bed"
+              className="p-1 text-teal-700 hover:text-teal-900 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoadingBeds ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {/* Ringkasan Status Keterisian Bed */}
+          <div className="mt-2.5 flex items-center gap-2 text-[11px] font-semibold">
+            <span className="px-2 py-0.5 bg-rose-100 text-rose-800 border border-rose-200">
+              Terisi: {occupiedBedsCount}
+            </span>
+            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Tersedia: {availableBedsCount}
+            </span>
+            <span className="text-gray-500 font-mono ml-auto">
+              Total: {totalBedsCount} Bed
+            </span>
+          </div>
+
           <div className="mt-3 flex gap-2 text-xs font-medium text-gray-500">
             <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-teal-500 mr-1"></div> Terisi</span>
             <span className="flex items-center"><div className="w-2 h-2 rounded-full bg-red-500 mr-1"></div> Kritis</span>
@@ -594,14 +623,25 @@ export default function RawatInapDashboard() {
         </div>
         
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
-          {wards.map((ward, wardIdx) => (
-            <div key={wardIdx} className="border border-gray-200 shadow-sm">
-              <div className="bg-gray-100 p-2 font-bold text-sm text-gray-700 border-b border-gray-200">
-                {ward.room}
-              </div>
-              <div className="grid grid-cols-2 gap-px bg-gray-200">
-                {ward.beds.map((bed: any) => {
-                  const isSelected = selectedBed?.id === bed.id;
+          {isLoadingBeds ? (
+            <div className="flex flex-col items-center justify-center p-8 text-gray-400">
+              <Loader2 className="w-7 h-7 animate-spin text-teal-600 mb-2" />
+              <p className="text-xs">Memuat status tempat tidur...</p>
+            </div>
+          ) : wards.length === 0 ? (
+            <div className="p-6 text-center text-gray-400 text-xs">
+              <BedDouble className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+              Belum ada ruangan rawat inap terdaftar di faskes ini.
+            </div>
+          ) : (
+            wards.map((ward, wardIdx) => (
+              <div key={wardIdx} className="border border-gray-200 shadow-sm">
+                <div className="bg-gray-100 p-2 font-bold text-sm text-gray-700 border-b border-gray-200">
+                  {ward.room}
+                </div>
+                <div className="grid grid-cols-2 gap-px bg-gray-200">
+                  {ward.beds.map((bed: any) => {
+                    const isSelected = selectedBed?.id === bed.id;
                   const isEmpty = bed.status === 'empty';
                   
                   let bgClass = "bg-white hover:bg-gray-50 cursor-pointer";
@@ -647,7 +687,8 @@ export default function RawatInapDashboard() {
                 })}
               </div>
             </div>
-          ))}
+          ))
+        )}
         </div>
       </div>
 
@@ -797,24 +838,24 @@ export default function RawatInapDashboard() {
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Menarik data Rekam Medis sebelumnya...
                       </div>
                     ) : prevRekamMedis ? (
-                      <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/70 border border-blue-300 p-4 shadow-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-blue-200 pb-2.5 mb-3">
+                      <div className="bg-slate-50 border border-slate-200 p-4 shadow-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5 mb-3">
                           <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-blue-600" />
-                            <span className="text-xs font-extrabold text-blue-900 uppercase tracking-wide">
+                            <Sparkles className="w-4 h-4 text-slate-700" />
+                            <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
                               Preview Rekam Medis / Asesmen Sebelumnya
                             </span>
-                            <span className="text-[10px] bg-blue-200 text-blue-800 font-bold px-2 py-0.5">
+                            <span className="text-[10px] bg-slate-200 text-slate-800 font-bold px-2 py-0.5">
                               {prevRekamMedis.labelSumber}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-[11px] text-gray-600 font-medium">
-                            <span>🕒 {prevRekamMedis.tanggal ? new Date(prevRekamMedis.tanggal).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}</span>
-                            <span>👨‍⚕️ {prevRekamMedis.petugas}</span>
+                          <div className="flex items-center gap-3 text-[11px] text-slate-600 font-medium">
+                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-500" /> {prevRekamMedis.tanggal ? new Date(prevRekamMedis.tanggal).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '-'}</span>
+                            <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-slate-500" /> {prevRekamMedis.petugas}</span>
                             <button
                               onClick={handleApplyPreviousData}
                               type="button"
-                              className="ml-1 inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-2.5 py-1 transition-colors shadow-sm"
+                              className="ml-1 inline-flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold px-2.5 py-1 transition-colors shadow-xs"
                               title="Salin ulang data ini ke formulir hari ini"
                             >
                               <RotateCcw className="w-3 h-3" /> Salin ke Form Hari Ini
@@ -2148,10 +2189,18 @@ export default function RawatInapDashboard() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50">
-            <BedDouble className="w-20 h-20 mb-4 text-gray-200" />
-            <p className="text-xl font-bold text-gray-400">Silakan pilih Bed yang terisi di panel sebelah kiri</p>
-            <p className="text-sm mt-2">Pilih kasur dengan indikator warna biru, merah, atau oranye</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-gray-50 p-6 text-center">
+            <div className="w-16 h-16 bg-white border border-gray-200 rounded-full flex items-center justify-center mb-4 shadow-xs">
+              <BedDouble className="w-8 h-8 text-teal-600" />
+            </div>
+            <p className="text-lg font-bold text-gray-800">
+              {occupiedBedsCount === 0 ? 'Tidak Ada Pasien Rawat Inap Aktif' : 'Silakan Pilih Bed Terisi'}
+            </p>
+            <p className="text-sm mt-1.5 text-gray-500 max-w-md">
+              {occupiedBedsCount === 0
+                ? 'Seluruh tempat tidur rawat inap di Puskesmas saat ini berstatus Tersedia (Kosong). Untuk merawat inap pasien baru, lakukan alur rawat inap di menu UGD atau Poli.'
+                : 'Silakan klik salah satu tempat tidur yang berstatus Terisi pada panel sebelah kiri untuk melihat rekam medis, input visit CPPT, dan rencana pulang.'}
+            </p>
           </div>
         )}
       </div>

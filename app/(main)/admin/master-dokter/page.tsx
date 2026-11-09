@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Users, Edit, Trash2 } from 'lucide-react';
+import { Plus, Search, Users, Edit, Trash2, ShieldAlert } from 'lucide-react';
 import { useDokterStore } from '@/store/dokter.store';
 import { useKlinikStore } from '@/store/klinik.store';
 import { useAuthStore } from '@/store/auth.store';
@@ -232,8 +232,8 @@ export default function MasterDokterPage() {
                     <td className="px-6 py-4 font-mono text-xs">{dokter.username}</td>
                     <td className="px-6 py-4">
                       {dokter.role === 'DOKTER_UGD' ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                          🚨 Unit Gawat Darurat (UGD)
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                          <ShieldAlert className="w-3 h-3 text-rose-600" /> Unit Gawat Darurat (UGD)
                         </span>
                       ) : dokter.poliklinik ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-medium bg-blue-100 text-blue-800">

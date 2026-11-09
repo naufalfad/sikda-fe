@@ -108,18 +108,44 @@ export interface FaskesItem {
   id: string;
   kodeFaskes: string;
   namaFaskes: string;
-  tipeFaskes: 'PUSKESMAS' | 'KLINIK_PRATAMA' | 'KLINIK_UTAMA' | 'RUMAH_SAKIT_DAERAH' | 'LABKESDA';
-  statusOperasional: 'AKTIF' | 'NONAKTIF' | 'RENOVASI';
+  tipeFaskes: string;
+  jenisFaskes?: string;
+  tingkatFaskes?: string;
+  statusOperasional: 'AKTIF' | 'NONAKTIF' | 'RENOVASI' | string;
   alamat: string;
   wilayahKecamatan?: string;
   wilayahKelurahan?: string;
   telepon?: string;
+  noTelepon?: string;
   email?: string;
   kepalaFaskes?: string;
+  penanggungJawab?: string;
+  nipKepala?: string;
+  sipPenanggungJawab?: string;
+  nomorIzinOperasional?: string;
+  tanggalIzinOperasional?: string;
+  akreditasi?: string;
+  kontakDarurat?: string;
+  jamOperasional?: string;
+  layananUnggulan?: string;
+  nama?: string;
+  kode?: string;
+  jenis?: string;
+  kecamatan?: string;
+  kelurahanDesa?: string;
+  fotoUrl?: string;
   kapasitasRawatInap: number;
+  kapasitasBed?: any;
+  ketersediaanAmbulance?: any;
+  jenisAmbulance?: string;
   tersediaIGD: boolean;
   latitude?: number;
   longitude?: number;
+  titikGps?: string;
+  totalUsers?: number;
+  totalNakes?: number;
+  totalKunjungan?: number;
+  isTerintegrasiSikda?: boolean;
 }
 
 export interface FaskesDetailData {
@@ -130,6 +156,8 @@ export interface FaskesDetailData {
     jenisFaskes: string;
     kategoriWilayah: string;
     statusAktif: boolean;
+    totalUsers?: number;
+    isTerintegrasiSikda?: boolean;
     alamat: string;
     kecamatan: string;
     desaKelurahan?: string | null;
@@ -419,18 +447,44 @@ export const dinkesService = {
       id: f.id,
       kodeFaskes: f.kodeFaskes,
       namaFaskes: f.namaFaskes,
+      nama: f.namaFaskes || f.nama,
+      kode: f.kodeFaskes || f.kode,
       tipeFaskes: f.jenisFaskes || f.tipeFaskes || 'PUSKESMAS',
+      jenisFaskes: f.jenisFaskes,
+      jenis: f.jenisFaskes || f.tipeFaskes || 'Puskesmas',
+      tingkatFaskes: f.tingkatFaskes || 'FASKES_1',
       statusOperasional: f.statusAktif ? 'AKTIF' : 'NONAKTIF',
       alamat: f.alamat || '-',
       wilayahKecamatan: f.kecamatan || '-',
       wilayahKelurahan: f.desaKelurahan || '-',
-      telepon: f.telepon || '-',
+      kecamatan: f.kecamatan || f.wilayahKecamatan || '-',
+      kelurahanDesa: f.desaKelurahan || f.wilayahKelurahan || '-',
+      telepon: f.noTelepon || f.telepon || '-',
+      noTelepon: f.noTelepon || f.telepon || '-',
       email: f.email || '-',
-      kepalaFaskes: f.kepalaFaskes || '-',
-      kapasitasRawatInap: f.totalBedFisik ?? f.kapasitasRawatInap ?? 0,
-      tersediaIGD: true,
+      kepalaFaskes: f.kepalaPuskesmas || f.kepalaFaskes || '-',
+      penanggungJawab: f.penanggungJawab || f.kepalaPuskesmas || '-',
+      nipKepala: f.nipKepala || '-',
+      sipPenanggungJawab: f.sipPenanggungJawab || '-',
+      nomorIzinOperasional: f.nomorIzinOperasional || '-',
+      tanggalIzinOperasional: f.tanggalIzinOperasional || undefined,
+      akreditasi: f.akreditasi || 'PARIPURNA',
+      kontakDarurat: f.kontakDarurat || '-',
+      jamOperasional: f.jamOperasional || '24 Jam',
+      layananUnggulan: f.layananUnggulan || '-',
+      fotoUrl: f.fotoUrl || '',
+      kapasitasRawatInap: f.totalBedFisik ?? f.kapasitasRawatInap ?? f.kapasitasBed ?? 0,
+      kapasitasBed: f.kapasitasBed ?? f.totalBedFisik ?? 0,
+      ketersediaanAmbulance: f.ketersediaanAmbulance ?? 0,
+      jenisAmbulance: f.jenisAmbulance || undefined,
+      tersediaIGD: Boolean(f.layananUnggulan?.toLowerCase().includes('igd') || f.layananUnggulan?.toLowerCase().includes('ugd') || f.jenisFaskes === 'RUMAH_SAKIT' || f.jenisFaskes === 'PUSKESMAS_RAWAT_INAP'),
       latitude: f.titikGps ? parseFloat(f.titikGps.split(',')[0]) : undefined,
       longitude: f.titikGps ? parseFloat(f.titikGps.split(',')[1]) : undefined,
+      titikGps: f.titikGps,
+      totalUsers: f.totalUsers ?? f._count?.users ?? 0,
+      totalNakes: f.totalNakes ?? f._count?.tenagaMedis ?? 0,
+      totalKunjungan: f.totalKunjungan ?? f._count?.kunjungans ?? 0,
+      isTerintegrasiSikda: Boolean(f.isTerintegrasiSikda ?? ((f.totalUsers ?? f._count?.users ?? 0) > 0)),
     }));
   },
 

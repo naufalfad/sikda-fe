@@ -451,12 +451,13 @@ export default function VirtualAssistantWidget() {
             onClick={handleLauncherClick}
             tabIndex={-1}
             aria-hidden="true"
-            className={`mb-3 sm:mb-4 -mr-3 sm:-mr-5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold tracking-tight shadow-xl border whitespace-nowrap flex items-center gap-1 cursor-pointer transition-colors duration-200 ${avatarActive
+            className={`mb-3 sm:mb-4 -mr-3 sm:-mr-5 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-bold tracking-tight shadow-xl border whitespace-nowrap flex items-center gap-1.5 cursor-pointer transition-colors duration-200 ${avatarActive
               ? 'bg-emerald-600 text-white border-emerald-400 animate-[sikda-wiggle_0.6s_ease-in-out_infinite]'
               : 'bg-white text-slate-800 border-slate-200 animate-[sikda-float_2.4s_ease-in-out_infinite]'
               }`}
           >
-            <span>✨ Tanya Asisten SIKDA</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Tanya Asisten SIKDA</span>
           </button>
 
           {/* Avatar maskot: dua pose ditumpuk & selalu ada di DOM (tanpa flicker) */}

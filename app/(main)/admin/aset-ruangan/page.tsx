@@ -23,7 +23,8 @@ import {
   ShieldCheck,
   FileCheck2,
   Send,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { asetRuanganService } from '../../../../services/asetRuangan.service';
 import { 
@@ -104,8 +105,10 @@ export default function AsetRuanganPage() {
     tahunPerolehan: new Date().getFullYear(),
     sumberAnggaran: 'APBD',
     hargaPerolehan: 0,
-    kondisiAset: 'BAIK' as const,
-    statusOperasional: 'AKTIF_DIGUNAKAN' as const,
+    tarifPemakaian: 0,
+    isAlkesTindakan: true,
+    kondisiAset: 'BAIK' as 'BAIK' | 'RUSAK_RINGAN' | 'RUSAK_BERAT' | 'AFKIR',
+    statusOperasional: 'AKTIF_DIGUNAKAN' as 'AKTIF_DIGUNAKAN' | 'DALAM_PERBAIKAN' | 'DALAM_KALIBRASI' | 'NON_AKTIF',
     kodeAspak: '',
     kodeSnomed: '',
     catatan: ''
@@ -306,18 +309,73 @@ export default function AsetRuanganPage() {
   const handleSaveAset = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...asetForm,
+        tarifPemakaian: parseFloat(String(asetForm.tarifPemakaian)) || 0,
+        isAlkesTindakan: Boolean(asetForm.isAlkesTindakan),
+        hargaPerolehan: parseFloat(String(asetForm.hargaPerolehan)) || 0,
+        tahunPerolehan: parseInt(String(asetForm.tahunPerolehan), 10) || new Date().getFullYear(),
+      };
+
       if (editingAset) {
-        await asetRuanganService.updateAset(editingAset.id, asetForm);
-        Swal.fire('Berhasil', 'Data aset berhasil diperbarui', 'success');
+        await asetRuanganService.updateAset(editingAset.id, payload);
+        Swal.fire('Berhasil', `Data aset & tarif ${payload.namaAset} berhasil diperbarui!`, 'success');
       } else {
-        await asetRuanganService.createAset(asetForm);
-        Swal.fire('Berhasil', 'Aset baru berhasil didaftarkan', 'success');
+        await asetRuanganService.createAset(payload);
+        Swal.fire('Berhasil', `Aset baru ${payload.namaAset} berhasil didaftarkan!`, 'success');
       }
       setShowAsetModal(false);
       setEditingAset(null);
       loadTabData();
     } catch (err: any) {
       Swal.fire('Gagal', err.response?.data?.message || err.message, 'error');
+    }
+  };
+
+  const handleEditAset = (aset: AsetRuangan) => {
+    setEditingAset(aset);
+    setAsetForm({
+      kodeAset: aset.kodeAset,
+      namaAset: aset.namaAset,
+      ruanganId: aset.ruanganId,
+      kategoriAset: aset.kategoriAset,
+      merk: aset.merk || '',
+      tipeModel: aset.tipeModel || '',
+      nomorSeri: aset.nomorSeri || '',
+      gambarUrl: aset.gambarUrl || '',
+      tahunPerolehan: aset.tahunPerolehan || new Date().getFullYear(),
+      sumberAnggaran: aset.sumberAnggaran || 'APBD',
+      hargaPerolehan: aset.hargaPerolehan || 0,
+      tarifPemakaian: aset.tarifPemakaian || 0,
+      isAlkesTindakan: aset.isAlkesTindakan !== undefined ? Boolean(aset.isAlkesTindakan) : true,
+      kondisiAset: aset.kondisiAset || 'BAIK',
+      statusOperasional: aset.statusOperasional || 'AKTIF_DIGUNAKAN',
+      kodeAspak: aset.kodeAspak || '',
+      kodeSnomed: aset.kodeSnomed || '',
+      catatan: aset.catatan || ''
+    });
+    setShowAsetModal(true);
+  };
+
+  const handleDeleteAset = async (id: string, nama: string) => {
+    const confirm = await Swal.fire({
+      title: 'Hapus Aset / Alkes?',
+      text: `Apakah Anda yakin ingin menghapus data ${nama}? Aset yang sudah terhapus tidak dapat dikembalikan.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#d33',
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        await asetRuanganService.deleteAset(id);
+        Swal.fire('Terhapus', 'Aset berhasil dihapus.', 'success');
+        loadTabData();
+      } catch (err: any) {
+        Swal.fire('Gagal Menghapus', err.response?.data?.message || err.message, 'error');
+      }
     }
   };
 
@@ -781,7 +839,10 @@ export default function AsetRuanganPage() {
                       </div>
                       {b.statusBed === 'TERISI' && b.kunjunganAktif ? (
                         <div className="bg-red-50 border border-red-200 p-2 rounded text-[11px] text-red-900 mt-1">
-                          <p className="font-bold truncate">👤 {b.kunjunganAktif.pasien?.namaLengkap}</p>
+                          <p className="font-bold truncate flex items-center gap-1">
+                            <User className="w-3 h-3 text-red-700 flex-shrink-0" />
+                            <span>{b.kunjunganAktif.pasien?.namaLengkap}</span>
+                          </p>
                           <p className="text-[10px] text-red-600 font-mono">RM: {b.kunjunganAktif.pasien?.noRM}</p>
                         </div>
                       ) : b.statusBed === 'DIBERSIHKAN' ? (
@@ -896,6 +957,8 @@ export default function AsetRuanganPage() {
                   tahunPerolehan: new Date().getFullYear(),
                   sumberAnggaran: 'APBD',
                   hargaPerolehan: 0,
+                  tarifPemakaian: 10000,
+                  isAlkesTindakan: true,
                   kondisiAset: 'BAIK',
                   statusOperasional: 'AKTIF_DIGUNAKAN',
                   kodeAspak: '',
@@ -966,7 +1029,14 @@ export default function AsetRuanganPage() {
                     </td>
                     <td className="py-3 px-4 text-xs">
                       <p className="font-medium text-gray-900">Th. {a.tahunPerolehan || '-'}</p>
-                      <p className="text-gray-500">Rp {(a.hargaPerolehan || 0).toLocaleString('id-ID')}</p>
+                      <p className="text-gray-500">Beli: Rp {(a.hargaPerolehan || 0).toLocaleString('id-ID')}</p>
+                      {a.isAlkesTindakan ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-1.5 py-0.5 rounded text-[11px] mt-1 shadow-2xs">
+                          Retribusi: Rp {(a.tarifPemakaian || 0).toLocaleString('id-ID')}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400 block mt-0.5">Non-Tindakan Medis</span>
+                      )}
                     </td>
                     <td className="py-3 px-4">
                       {a.ihsDeviceId ? (
@@ -986,6 +1056,13 @@ export default function AsetRuanganPage() {
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
+                          onClick={() => handleEditAset(a)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                          title="Edit Data & Tarif Retribusi Aset"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setMutasiForm({
                               asetId: a.id,
@@ -994,7 +1071,7 @@ export default function AsetRuanganPage() {
                             });
                             setShowMutasiModal(true);
                           }}
-                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded"
+                          className="p-1.5 text-purple-600 hover:bg-purple-50 rounded transition"
                           title="Pindahkan / Mutasi ke Ruangan Lain"
                         >
                           <ArrowLeftRight className="w-4 h-4" />
@@ -1011,10 +1088,17 @@ export default function AsetRuanganPage() {
                             });
                             setShowPemeliharaanModal(true);
                           }}
-                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded"
+                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded transition"
                           title="Jadwalkan Kalibrasi / Servis"
                         >
                           <Wrench className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAset(a.id, a.namaAset)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                          title="Hapus Aset / Alkes"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -1590,6 +1674,69 @@ export default function AsetRuanganPage() {
                 </div>
               </div>
 
+              {/* PENGATURAN ALKES TINDAKAN & TARIF RETRIBUSI */}
+              <div className="bg-emerald-50/80 border border-emerald-300 p-4 rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-black text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
+                      <Activity className="w-4 h-4 text-emerald-700" />
+                      Gunakan sebagai Alkes Tindakan Medis?
+                    </label>
+                    <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
+                      Jika diaktifkan, alat ini akan otomatis muncul pada formulir tindakan dokter/perawat (SOAP Plan) dan dapat dikenakan tarif retribusi ke kasir.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0 ml-3">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(asetForm.isAlkesTindakan)}
+                      onChange={(e) => setAsetForm({ ...asetForm, isAlkesTindakan: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                {asetForm.isAlkesTindakan && (
+                  <div className="pt-3 border-t border-emerald-200">
+                    <label className="block text-xs font-bold text-emerald-950 mb-1">
+                      Tarif Pemakaian / Retribusi per Tindakan (Rp) *
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-emerald-900 bg-emerald-200/80 px-3 py-2 border border-emerald-300 rounded">
+                        Rp
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={asetForm.tarifPemakaian}
+                        onChange={(e) => setAsetForm({ ...asetForm, tarifPemakaian: parseFloat(e.target.value) || 0 })}
+                        className="w-full border border-emerald-300 p-2 rounded text-sm font-black text-emerald-950 bg-white focus:ring-2 focus:ring-emerald-500"
+                        placeholder="Contoh: 15000"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px] text-emerald-800">
+                      <span className="font-semibold">Preset Cepat:</span>
+                      {[5000, 10000, 15000, 20000, 25000, 50000].map((nominal) => (
+                        <button
+                          key={nominal}
+                          type="button"
+                          onClick={() => setAsetForm({ ...asetForm, tarifPemakaian: nominal })}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                            asetForm.tarifPemakaian === nominal
+                              ? 'bg-emerald-700 text-white border-emerald-700'
+                              : 'bg-white text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+                          }`}
+                        >
+                          Rp {nominal.toLocaleString('id-ID')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4 border-t pt-3">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1">Kode ASPAK (Kemenkes)</label>
@@ -1913,10 +2060,10 @@ export default function AsetRuanganPage() {
                     onChange={(e) => setSelesaiForm({ ...selesaiForm, hasilKegiatan: e.target.value })}
                     className="w-full border p-2 rounded text-sm text-black focus:ring-2 focus:ring-emerald-500 outline-none"
                   >
-                    <option value="LAIK_PAKAI">✅ LAIK PAKAI (Lolos Uji & Normal)</option>
-                    <option value="LULUS_UJI">✅ LULUS UJI KALIBRASI</option>
-                    <option value="SELESAI_SERVIS">🛠️ SELESAI SERVIS BERKALA</option>
-                    <option value="TIDAK_LAIK_PAKAI">❌ TIDAK LAIK PAKAI (Gagal Uji)</option>
+                    <option value="LAIK_PAKAI">LAIK PAKAI (Lolos Uji & Normal)</option>
+                    <option value="LULUS_UJI">LULUS UJI KALIBRASI</option>
+                    <option value="SELESAI_SERVIS">SELESAI SERVIS BERKALA</option>
+                    <option value="TIDAK_LAIK_PAKAI">TIDAK LAIK PAKAI (Gagal Uji)</option>
                   </select>
                 </div>
                 <div>

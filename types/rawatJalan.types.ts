@@ -186,6 +186,22 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface BmhpTindakanItem {
+  obatId: string;
+  namaItem: string;
+  sediaan?: string;
+  jumlah: number;
+  hargaSatuan: number;
+  subTotal: number;
+}
+
+export interface AlkesTindakanItem {
+  asetId: string;
+  namaAset: string;
+  kodeAset?: string;
+  tarifPemakaian: number;
+}
+
 /** Tindakan ICD-9 yang dipilih dokter */
 export interface TindakanItem {
   icd9Id: string;
@@ -193,6 +209,11 @@ export interface TindakanItem {
   nama_prosedur: string;
   pelaksana: string; // Dokter, Perawat, dll
   catatan?: string;
+  bmhpDetails?: BmhpTindakanItem[];
+  alkesDetails?: AlkesTindakanItem[];
+  tipePelaksanaan?: 'INTERNAL' | 'EKSTERNAL';
+  faskesRujukan?: string;
+  alasanRujukan?: string;
 }
 
 /** Tindakan dari DB */
@@ -210,6 +231,11 @@ export interface TindakanPasien {
   pelaksanaTeks: string;
   catatanTindakan?: string;
   waktuTindakan: string;
+  bmhpDetails?: BmhpTindakanItem[] | null;
+  alkesDetails?: AlkesTindakanItem[] | null;
+  tipePelaksanaan?: 'INTERNAL' | 'EKSTERNAL' | string | null;
+  faskesRujukan?: string | null;
+  alasanRujukan?: string | null;
 }
 
 export interface MasterObat {

@@ -47,27 +47,36 @@ export const useKasirStore = create<KasirState>((set, get) => ({
   prosesPembayaran: async (tagihanId, metode, jumlahBayar) => {
     set({ isProcessing: true });
     try {
-      await kasirService.prosesPembayaran(tagihanId, metode, jumlahBayar);
+      const res = await kasirService.prosesPembayaran(tagihanId, metode, jumlahBayar);
       
       set({ isProcessing: false });
       
       // Update antrian & tagihan aktif
       get().fetchAntrian();
+      const returnedTagihan = res?.data || res;
       const tagihanState = get().tagihanAktif;
-      if (tagihanState) {
-        const updatedTagihan: Tagihan = { 
-          ...tagihanState, 
-          statusTagihan: 'LUNAS', 
-          pembayaran: { 
-            jumlahBayar, 
-            metodePembayaran: metode, 
-            kembalian: (metode === 'BPJS' ? 0 : jumlahBayar - tagihanState.totalBiaya) 
-          } 
-        };
-        set({ tagihanAktif: updatedTagihan });
-      }
+      const selectedKunj = get().selectedKunjungan;
 
-      Swal.fire('Sukses', 'Pembayaran berhasil diproses', 'success');
+      const mergedTagihan: Tagihan = { 
+        ...(tagihanState || {}),
+        ...(returnedTagihan || {}),
+        statusTagihan: 'LUNAS', 
+        pembayaran: returnedTagihan?.pembayaran || { 
+          jumlahBayar, 
+          metodePembayaran: metode, 
+          kembalian: (metode === 'BPJS' ? 0 : jumlahBayar - (tagihanState?.totalBiaya || 0)) 
+        },
+        kunjungan: returnedTagihan?.kunjungan || tagihanState?.kunjungan || selectedKunj
+      };
+      set({ tagihanAktif: mergedTagihan });
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Pembayaran Berhasil Diproses!',
+        text: 'Tagihan telah LUNAS. Struk kasir, hasil lab, hasil radiologi, dan surat rujukan keluar kini siap dicetak.',
+        timer: 2000,
+        showConfirmButton: false
+      });
       return true;
     } catch (error: any) {
       set({ isProcessing: false });

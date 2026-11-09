@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, User, Stethoscope, FileText, 
-  Activity, Eye, CheckCircle2, Loader2, AlertCircle, Search, ChevronRight, Building2
+  Activity, Eye, CheckCircle2, Loader2, AlertCircle, Search, ChevronRight, Building2, X
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 
@@ -192,16 +192,16 @@ export default function RiwayatKedatanganTab({ noRM }: RiwayatKedatanganTabProps
       {selectedVisit && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white max-w-2xl w-full border border-gray-200 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-            <div className="bg-blue-700 text-white p-5 flex justify-between items-center">
+            <div className="bg-slate-900 border-b border-slate-800 text-white p-5 flex justify-between items-center">
               <div>
                 <h3 className="font-bold text-lg">Detail Skrining - {formatDate(selectedVisit.tanggalRegistrasi)}</h3>
-                <p className="text-xs text-blue-200 mt-0.5">Poli: {selectedVisit.poliklinik?.namaPoli} | Dokter: {selectedVisit.dokterTujuan?.namaLengkap}</p>
+                <p className="text-xs text-slate-300 mt-0.5">Poli: {selectedVisit.poliklinik?.namaPoli} | Dokter: {selectedVisit.dokterTujuan?.namaLengkap}</p>
               </div>
               <button 
                 onClick={() => setSelectedVisit(null)}
-                className="text-white hover:bg-blue-800 p-1 text-sm font-bold"
+                className="text-slate-400 hover:text-white p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

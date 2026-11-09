@@ -42,10 +42,14 @@ api.interceptors.request.use((config) => {
       }
 
       // Standard Admin/Staff auth
-      const existingAuth = config.headers?.get 
+      let existingAuth = config.headers?.get 
         ? config.headers.get('Authorization') 
         : (config.headers?.Authorization || config.headers?.authorization);
       
+      if (existingAuth && typeof existingAuth === 'string' && (existingAuth.includes('undefined') || existingAuth.includes('null'))) {
+        existingAuth = null;
+      }
+
       if (existingAuth) {
         return config;
       }
@@ -54,7 +58,7 @@ api.interceptors.request.use((config) => {
       if (authStorage) {
         const parsedData = JSON.parse(authStorage);
         const token = parsedData?.state?.token;
-        if (token) {
+        if (token && typeof token === 'string' && token !== 'undefined' && token !== 'null') {
           if (config.headers?.set) {
             config.headers.set('Authorization', `Bearer ${token}`);
           } else {
@@ -68,5 +72,24 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+
+// Response interceptor to handle expired sessions / 401
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        const isAuthOrPortal = pathname.startsWith('/login') || pathname.startsWith('/portal-pasien') || pathname.startsWith('/booking');
+        if (!isAuthOrPortal) {
+          console.warn('[API 401] Sesi telah berakhir atau tidak valid. Membersihkan sesi lokal...');
+          localStorage.removeItem('auth-storage');
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

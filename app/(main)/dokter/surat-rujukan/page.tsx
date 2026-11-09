@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useRujukanStore } from '@/store/rujukan.store';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -200,7 +200,7 @@ function SuratRujukanContent() {
             <button 
               onClick={handleProsesDanCetak} 
               disabled={isSendingSS}
-              className="w-full bg-blue-600 text-white font-bold py-3 mt-4 flex items-center justify-center gap-2 hover:bg-blue-700 sticky bottom-0 disabled:opacity-50"
+              className="w-full bg-emerald-600 text-white font-bold py-3 mt-4 flex items-center justify-center gap-2 hover:bg-emerald-700 sticky bottom-0 disabled:opacity-50 transition-colors shadow-sm"
             >
               {isSendingSS ? (
                 <>
@@ -313,14 +313,18 @@ function SuratRujukanContent() {
           <div className="mt-12 flex justify-between items-end border-t pt-4">
             <div className="text-xs text-gray-500 max-w-sm font-mono space-y-1">
               {satusehatStatus.processed && satusehatStatus.serviceRequestId ? (
-                <div className="p-2 border border-green-200 bg-green-50 text-green-800 space-y-1">
-                  <p className="font-bold text-[10px] uppercase tracking-wider text-green-700">✓ SATUSEHAT INTEGRATED</p>
+                <div className="p-2 border border-emerald-200 bg-emerald-50 text-emerald-800 space-y-1">
+                  <p className="font-bold text-[10px] uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> SATUSEHAT INTEGRATED
+                  </p>
                   <p className="text-[10px]">ServiceRequest ID: {satusehatStatus.serviceRequestId}</p>
                   <p className="text-[9px]">Encounter: {rujukanDetail?.encounterId}</p>
                 </div>
               ) : (
-                <div className="p-2 border border-yellow-200 bg-yellow-50 text-yellow-800">
-                  <p className="text-[10px] font-bold">⚠️ DRAFT / UNREGISTERED</p>
+                <div className="p-2 border border-amber-200 bg-amber-50 text-amber-800 space-y-1">
+                  <p className="text-[10px] font-bold text-amber-800 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> DRAFT / UNREGISTERED
+                  </p>
                   <p className="text-[9px]">Klik "Cetak & Selesaikan Rujukan" untuk mendaftarkan digital rujukan ke SatuSehat.</p>
                 </div>
               )}

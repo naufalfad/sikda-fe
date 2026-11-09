@@ -257,7 +257,7 @@ export default function TabObjektif({
                 title="Isi otomatis semua parameter ABCDE dengan nilai normal stabil"
               >
                 <Zap className="w-3.5 h-3.5 text-yellow-300" />
-                ⚡ Set Normal ABCDE
+                Set Normal ABCDE
               </button>
               <button
                 type="button"

@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { UseFormRegister, FieldErrors, UseFormWatch, UseFormSetValue } from 'react-hook-form';
+import { Check } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { RegistrationFormData } from '../schema';
@@ -137,7 +138,9 @@ export default function Step4Administrasi({ register, errors, watch, setValue }:
       {watch('noAntrian') && (
         <div className="p-4 bg-emerald-50 border border-emerald-300 flex items-center justify-between text-xs text-emerald-900">
           <div className="flex items-center gap-2">
-            <span className="font-bold">✓ Terhubung dengan Antrean Online / Booking:</span>
+            <span className="font-bold flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-emerald-600" /> Terhubung dengan Antrean Online / Booking:
+            </span>
             <span className="bg-emerald-600 text-white font-mono px-2 py-0.5 font-bold">{watch('noAntrian')}</span>
           </div>
           <span className="text-emerald-700 italic">Poli & dokter tujuan terisi otomatis</span>

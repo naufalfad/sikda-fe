@@ -31,7 +31,9 @@ import {
   Eye,
   Layers,
   Activity,
-  ArrowUpRight
+  ArrowUpRight,
+  X,
+  Check
 } from 'lucide-react';
 import { kunjunganService } from '@/services/kunjungan.service';
 import { portalPasienService } from '@/services/portalPasien.service';
@@ -262,10 +264,10 @@ function PusatAntreanContent() {
               <p><strong>No. Rekam Medis:</strong> <span class="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold font-mono">${res.pasien?.noRM || '-'}</span></p>
               <p><strong>Poli Tujuan:</strong> ${res.kunjungan?.poliklinik?.namaPoli || '-'}</p>
               <p><strong>Nomor Antrean:</strong> <span class="text-2xl font-black text-emerald-600">${res.kunjungan?.noAntrian || '-'}</span></p>
-              <div class="bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 mt-2 rounded">
-                ✓ Pasien resmi tercatat di <strong>Master Pasien</strong> faskes.<br/>
-                ✓ Kunjungan aktif diterbitkan & langsung terhubung ke dokter poli.<br/>
-                ✓ Notifikasi WhatsApp terkirim ke pasien.
+              <div class="bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-800 mt-2 space-y-1 rounded">
+                <div>• Pasien resmi tercatat di <strong>Master Pasien</strong> faskes.</div>
+                <div>• Kunjungan aktif diterbitkan & langsung terhubung ke dokter poli.</div>
+                <div>• Notifikasi WhatsApp terkirim ke pasien.</div>
               </div>
             </div>
           `,
@@ -432,10 +434,10 @@ function PusatAntreanContent() {
             <p><strong>NIK:</strong> ${formDataLengkapi.nik || '-'}</p>
             ${generatedRM ? `<p><strong>No. Rekam Medis Resmi:</strong> <span class="bg-blue-100 text-blue-800 font-mono font-bold px-2 py-0.5 rounded border border-blue-200">${generatedRM}</span></p>` : ''}
             <p><strong>Penjamin:</strong> ${formDataLengkapi.jenisPenjamin} ${formDataLengkapi.noBpjs ? `(${formDataLengkapi.noBpjs})` : ''}</p>
-            <div class="bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-900 mt-2">
-              ✓ Berkas administrasi kini berstatus <strong>LENGKAP</strong>.<br/>
-              ✓ Data pasien otomatis terdaftar sebagai <strong>Pasien Terverifikasi Resmi</strong> di Master Data Faskes.<br/>
-              ✓ Rekam Medis & Kasir telah tersinkronisasi.
+            <div class="bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-800 mt-2 space-y-1">
+              <div>• Berkas administrasi kini berstatus <strong>LENGKAP</strong>.</div>
+              <div>• Data pasien otomatis terdaftar sebagai <strong>Pasien Terverifikasi Resmi</strong> di Master Data Faskes.</div>
+              <div>• Rekam Medis & Kasir telah tersinkronisasi.</div>
             </div>
           </div>
         `
@@ -668,8 +670,12 @@ function PusatAntreanContent() {
               </span>
               <span className="text-xs text-rose-700 font-semibold">Butuh Tindak Lanjut</span>
             </div>
-            <div className="text-[10px] text-rose-600 font-bold mt-1">
-              {pendingUgdList.length > 0 ? '⚠️ Jangan sampai terabaikan!' : '✓ Semua berkas lengkap'}
+            <div className={`text-[10px] font-bold mt-1 flex items-center gap-1 ${pendingUgdList.length > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {pendingUgdList.length > 0 ? (
+                <><AlertTriangle className="w-3 h-3" /> Jangan sampai terabaikan!</>
+              ) : (
+                <><Check className="w-3 h-3" /> Semua berkas lengkap</>
+              )}
             </div>
           </div>
 
@@ -1333,9 +1339,9 @@ function PusatAntreanContent() {
               <button
                 type="button"
                 onClick={() => setIsModalLengkapiOpen(false)}
-                className="text-rose-200 hover:text-white text-sm font-bold p-1"
+                className="text-rose-200 hover:text-white p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -1459,8 +1465,9 @@ function PusatAntreanContent() {
                           No. RM: {nikLookupStatus.noRM}
                         </span>
                       </div>
-                      <p className="text-[11px] text-emerald-800 mt-1">
-                        ✓ Pasien lama terverifikasi. Formulir di bawah telah terisi otomatis. Anda tetap dapat memperbarui alamat atau nomor HP bila diperlukan.
+                      <p className="text-[11px] text-emerald-800 mt-1 flex items-start gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <span>Pasien lama terverifikasi. Formulir di bawah telah terisi otomatis. Anda tetap dapat memperbarui alamat atau nomor HP bila diperlukan.</span>
                       </p>
                     </div>
                   </div>

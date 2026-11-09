@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, Plus, Trash2, CheckCircle2, Clock, FileText, AlertCircle, Eye, Search } from 'lucide-react';
+import { Radio, Plus, Trash2, CheckCircle2, Clock, FileText, AlertCircle, Eye, Search, X, ExternalLink } from 'lucide-react';
 import { radiologiService } from '@/services/radiologi.service';
 import Swal from 'sweetalert2';
+import CetakRadiologiModal from '@/components/kasir/CetakRadiologiModal';
+import { Printer, Building2 } from 'lucide-react';
 
 interface TabRadiologiProps {
   kunjunganId: string;
@@ -27,6 +29,17 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedHasilModal, setSelectedHasilModal] = useState<any | null>(null);
+  const [faskesTujuan, setFaskesTujuan] = useState('Instalasi Radiologi RSUD Kabupaten / Faskes Rujukan');
+  const [isCetakModalOpen, setIsCetakModalOpen] = useState(false);
+  const [selectedOrderForCetak, setSelectedOrderForCetak] = useState<any>(null);
+  const [isInputHasilOpen, setIsInputHasilOpen] = useState(false);
+  const [selectedOrderForHasil, setSelectedOrderForHasil] = useState<any>(null);
+  const [isSubmittingHasil, setIsSubmittingHasil] = useState(false);
+  const [hasilForm, setHasilForm] = useState({
+    kesimpulan: '',
+    bacaanNaratif: '',
+    dokumenHasilUrl: ''
+  });
 
   const fetchOrders = async () => {
     if (!kunjunganId) return;
@@ -47,13 +60,38 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
     fetchOrders();
   }, [kunjunganId]);
 
+  const handleSimpanHasilRujukan = async (orderId: string) => {
+    if (!hasilForm.kesimpulan && !hasilForm.bacaanNaratif) {
+      Swal.fire('Peringatan', 'Ketikkan minimal kesimpulan/kesan radiologi dari berkas hasil luar!', 'warning');
+      return;
+    }
+
+    setIsSubmittingHasil(true);
+    try {
+      await radiologiService.submitHasilRujukanLuar(orderId, hasilForm);
+      await Swal.fire({
+        icon: 'success',
+        title: 'Hasil Rujukan Radiologi Disimpan!',
+        text: 'Kesimpulan ekspertise rontgen luar telah tercatat di rekam medis pasien.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      setIsInputHasilOpen(false);
+      fetchOrders();
+    } catch (err: any) {
+      Swal.fire('Gagal', err?.response?.data?.message || 'Gagal menyimpan hasil radiologi luar', 'error');
+    } finally {
+      setIsSubmittingHasil(false);
+    }
+  };
+
   const handleAddItem = (item: any) => {
-    if (selectedDetails.some((d) => d.kodeLoinc === item.kodeLoinc)) return;
+    if (selectedDetails.some((d: any) => d.kodeLoinc === item.kodeLoinc)) return;
     setSelectedDetails([...selectedDetails, item]);
   };
 
   const handleRemoveItem = (kodeLoinc: string) => {
-    setSelectedDetails(selectedDetails.filter((d) => d.kodeLoinc !== kodeLoinc));
+    setSelectedDetails(selectedDetails.filter((d: any) => d.kodeLoinc !== kodeLoinc));
   };
 
   const handleSubmitOrder = async () => {
@@ -68,7 +106,9 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
         kunjunganId,
         prioritas,
         catatan,
-        details: selectedDetails.map((d) => ({
+        isRujukanLuar: true,
+        faskesTujuan,
+        details: selectedDetails.map((d: any) => ({
           kodeLoinc: d.kodeLoinc,
           namaPemeriksaan: d.namaPemeriksaan,
           bodySiteCode: d.bodySiteCode,
@@ -77,18 +117,33 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
       };
 
       const res = await radiologiService.createOrder(payload);
-      if (res.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Order Radiologi Berhasil!',
-          text: `Nomor ACSN: ${res.data.acsn}. Permintaan rujukan radiologi tercatat untuk diserahkan ke pasien.`,
-          timer: 2000,
-          showConfirmButton: false,
-        });
+      if (res.success || res.data) {
+        const createdOrder = res.data || res;
         setSelectedDetails([]);
         setCatatan('');
         fetchOrders();
-        if (setActiveTab) {
+
+        const confirmPrint = await Swal.fire({
+          icon: 'success',
+          title: 'Surat Pengantar Radiologi Dibuat!',
+          html: `
+            <div class="text-left text-xs space-y-2 mt-2">
+              <p>✅ Permintaan rontgen berhasil didaftarkan.</p>
+              <p>🏥 <strong>RS Tujuan:</strong> ${faskesTujuan}</p>
+              <p>💰 <strong>Tarif Puskesmas:</strong> <strong class="text-emerald-700">Rp 0 (Rujukan Eksternal)</strong>.</p>
+              <p class="font-bold text-slate-800 mt-2">Cetak 1 Lembar Surat Pengantar Radiologi sekarang?</p>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '🖨️ Cetak Surat Pengantar',
+          cancelButtonText: 'Selesai Tanpa Cetak',
+          confirmButtonColor: '#4f46e5',
+        });
+
+        if (confirmPrint.isConfirmed) {
+          setSelectedOrderForCetak(createdOrder);
+          setIsCetakModalOpen(true);
+        } else if (setActiveTab) {
           setActiveTab('RESEP');
         }
       }
@@ -205,18 +260,18 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
 
         {/* LIST ITEM TERPILIH */}
         {selectedDetails.length > 0 && (
-          <div className="bg-white p-4 border border-purple-200 space-y-2">
-            <h4 className="text-xs font-extrabold text-purple-900 uppercase">Pemeriksaan Ditambahkan:</h4>
+          <div className="bg-white p-4 border border-slate-200 space-y-2">
+            <h4 className="text-xs font-bold text-slate-900 uppercase">Pemeriksaan Ditambahkan:</h4>
             <div className="space-y-1.5">
-              {selectedDetails.map((item) => (
-                <div key={item.kodeLoinc} className="flex justify-between items-center bg-purple-50 p-2 border border-purple-100">
-                  <span className="text-xs font-extrabold text-purple-950">
-                    {item.namaPemeriksaan} <span className="font-mono text-[10px] text-purple-700">({item.kodeLoinc})</span>
+              {selectedDetails.map((item: any) => (
+                <div key={item.kodeLoinc} className="flex justify-between items-center bg-slate-50 p-2 border border-slate-200">
+                  <span className="text-xs font-bold text-slate-900">
+                    {item.namaPemeriksaan} <span className="font-mono text-[10px] text-slate-600">({item.kodeLoinc})</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => handleRemoveItem(item.kodeLoinc)}
-                    className="text-red-600 hover:text-red-800 text-xs font-bold"
+                    className="text-rose-600 hover:text-rose-800 text-xs font-bold"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -231,7 +286,7 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
             type="button"
             onClick={handleSubmitOrder}
             disabled={isSubmitting || selectedDetails.length === 0}
-            className="px-6 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs rounded-none shadow-sm disabled:opacity-50 transition-colors flex items-center gap-2"
+            className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-none shadow-sm disabled:opacity-50 transition-colors flex items-center gap-2"
           >
             <Radio className="w-4 h-4" /> Kirim Order Radiologi
           </button>
@@ -240,8 +295,8 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
 
       {/* RIWAYAT & STATUS ORDER RADIOLOGI */}
       <div className="space-y-3">
-        <h4 className="text-sm font-extrabold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-          <Clock className="w-4 h-4 text-purple-600" />
+        <h4 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+          <Clock className="w-4 h-4 text-slate-600" />
           Status Order Radiologi Pasien Kunjungan Ini
         </h4>
 
@@ -249,7 +304,7 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
           <p className="text-xs text-gray-500">Memuat status order...</p>
         ) : existingOrders.length > 0 ? (
           <div className="space-y-3">
-            {existingOrders.map((ord) => (
+            {existingOrders.map((ord: any) => (
               <div key={ord.id} className="bg-white border border-gray-200 p-4 space-y-2 shadow-xs">
                 <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                   <div className="flex items-center gap-3">
@@ -284,17 +339,41 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
                   {ord.catatanKlinis && <p className="text-gray-500 italic">Indikasi: {ord.catatanKlinis}</p>}
                 </div>
 
-                {ord.status === 'COMPLETED' && ord.hasil && (
-                  <div className="pt-2 flex justify-end">
+                <div className="pt-2 flex flex-wrap justify-end items-center gap-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedOrderForCetak(ord);
+                      setIsCetakModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 bg-white hover:bg-gray-100 text-slate-800 border border-slate-300 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-slate-600" /> Cetak Surat Pengantar
+                  </button>
+
+                  {ord.status !== 'COMPLETED' ? (
                     <button
                       type="button"
-                      onClick={() => setSelectedHasilModal(ord)}
-                      className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-none shadow-sm flex items-center gap-1.5 transition-colors"
+                      onClick={() => {
+                        setSelectedOrderForHasil(ord);
+                        setIsInputHasilOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-colors"
                     >
-                      <Eye className="w-3.5 h-3.5" /> Lihat Hasil Ekspertise & Foto WADO
+                      <FileText className="w-3.5 h-3.5" /> 📥 Input Hasil Kertas Rontgen RS
                     </button>
-                  </div>
-                )}
+                  ) : (
+                    ord.hasil && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedHasilModal(ord)}
+                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-none shadow-sm flex items-center gap-1.5 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Lihat Hasil Ekspertise & Foto
+                      </button>
+                    )
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -304,6 +383,96 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
           </div>
         )}
       </div>
+
+      {/* MODAL CETAK SURAT PENGANTAR PENUNJANG */}
+      {isCetakModalOpen && selectedOrderForCetak && (
+        <CetakRadiologiModal
+          isOpen={isCetakModalOpen}
+          onClose={() => setIsCetakModalOpen(false)}
+          pasienData={selectedOrderForCetak?.pasien || selectedOrderForCetak?.kunjungan?.pasien}
+          orderRadiologiData={selectedOrderForCetak}
+
+        />
+      )}
+
+      {/* MODAL INPUT HASIL KERTAS RONTGEN RS */}
+      {isInputHasilOpen && selectedOrderForHasil && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center border-b pb-2">
+              <h4 className="text-sm font-extrabold text-slate-900 uppercase">
+                📥 Input Hasil Ekspertise Rontgen dari RS Luar
+              </h4>
+              <button onClick={() => setIsInputHasilOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Ketikkan ringkasan bacaan atau kesimpulan yang tertulis pada lembar amplop rontgen RSUD.
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">
+                  1. Kesan / Kesimpulan Radiologi: *
+                </label>
+                <textarea
+                  rows={2}
+                  value={hasilForm.kesimpulan}
+                  onChange={(e) => setHasilForm({ ...hasilForm, kesimpulan: e.target.value })}
+                  placeholder="Contoh: Cor dan pulmo dalam batas normal / Tidak tampak fraktur..."
+                  className="w-full p-2 border border-slate-300 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">
+                  2. Bacaan Naratif / Temuan Ekspertise (Opsional):
+                </label>
+                <textarea
+                  rows={3}
+                  value={hasilForm.bacaanNaratif}
+                  onChange={(e) => setHasilForm({ ...hasilForm, bacaanNaratif: e.target.value })}
+                  placeholder="Deskripsi apeks paru, hilus, sinus kostofrenikus, diafragma..."
+                  className="w-full p-2 border border-slate-300 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-800 mb-1">
+                  3. Link / Foto Dokumen Berkas Rontgen (Opsional):
+                </label>
+                <input
+                  type="text"
+                  value={hasilForm.dokumenHasilUrl}
+                  onChange={(e) => setHasilForm({ ...hasilForm, dokumenHasilUrl: e.target.value })}
+                  placeholder="https://... atau path scan dokumen"
+                  className="w-full p-2 border border-slate-300 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setIsInputHasilOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingHasil}
+                onClick={() => handleSimpanHasilRujukan(selectedOrderForHasil.id)}
+                className="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold disabled:opacity-50"
+              >
+                {isSubmittingHasil ? 'Menyimpan...' : 'Simpan Hasil Rujukan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL PRATINJAU HASIL BACAAN EKSPERTISE & WADO VIEWER */}
       {selectedHasilModal && (
@@ -316,9 +485,9 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
               </h3>
               <button
                 onClick={() => setSelectedHasilModal(null)}
-                className="text-white hover:text-gray-300 transition-colors font-bold text-sm"
+                className="text-white hover:text-gray-300 transition-colors font-bold text-sm flex items-center gap-1"
               >
-                ✕ Tutup
+                <X className="w-4 h-4" /> Tutup
               </button>
             </div>
 
@@ -362,9 +531,9 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
                       href={selectedHasilModal.hasil.wadoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-extrabold text-purple-700 hover:text-purple-900 underline flex items-center gap-1"
+                      className="text-xs font-bold text-slate-700 hover:text-slate-900 underline flex items-center gap-1.5"
                     >
-                      🔗 Buka Link WADO di Tab Baru ↗
+                      <ExternalLink className="w-3.5 h-3.5" /> Buka Link WADO di Tab Baru
                     </a>
                   </div>
                   <div className="border border-gray-300 bg-slate-950 h-96 flex flex-col items-center justify-center relative overflow-hidden text-white">
@@ -393,9 +562,9 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
                             href={selectedHasilModal.hasil.wadoUrl || 'https://viewer.ohif.org/viewer?StudyInstanceUIDs=2.16.840.1.114362.1.11972228.22789312658.616067305.306.2'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs px-5 py-2.5 rounded shadow-lg transition-transform hover:scale-105"
+                            className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-5 py-2.5 shadow-md transition-colors"
                           >
-                            🚀 Buka OHIF DICOM Viewer Fullscreen ↗
+                            <ExternalLink className="w-4 h-4" /> Buka OHIF DICOM Viewer Fullscreen
                           </a>
                         </div>
                       </div>

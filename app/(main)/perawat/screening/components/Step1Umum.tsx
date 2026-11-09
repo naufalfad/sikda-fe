@@ -5,13 +5,21 @@ import { AlertTriangle, Clock, User, FileText, Activity, CheckCircle2, AlertCirc
 import { masterService } from '@/services/master.service';
 
 const MANIFESTASI_OPTIONS = [
-  { kode: '126485001', nama: 'Urticaria (Gatal-gatal)' },
-  { kode: '271807003', nama: 'Ruam Kulit (Eruption of skin)' },
+  { kode: '126485001', nama: 'Urticaria (Gatal-gatal / Biduran)' },
+  { kode: '271807003', nama: 'Ruam Kulit (Eruption of skin / Eritema)' },
+  { kode: '41291007',  nama: 'Angioedema (Bengkak Bibir / Kelopak Mata / Wajah)' },
   { kode: '267036007', nama: 'Sesak Napas (Dyspnea)' },
+  { kode: '56018004',  nama: 'Mengi / Stridor (Bronkospasme)' },
   { kode: '39579001',  nama: 'Syok Anafilaktik (Anaphylaxis)' },
-  { kode: '419076005', nama: 'Reaksi Alergi Ringan (Allergic reaction)' },
-  { kode: '422587007', nama: 'Mual (Nausea)' },
-  { kode: '422400008', nama: 'Muntah (Vomiting)' }
+  { kode: '61582004',  nama: 'Rinitis Alergi (Bersin / Hidung Berair / Tersumbat)' },
+  { kode: '473460002', nama: 'Konjungtivitis Alergi (Mata Merah / Berair / Gatal)' },
+  { kode: '422587007', nama: 'Mual & Kram Abdomen (Nausea & Abdominal Pain)' },
+  { kode: '422400008', nama: 'Muntah (Vomiting)' },
+  { kode: '62315008',  nama: 'Diare Akut (Diarrhea)' },
+  { kode: '45007003',  nama: 'Hipotensi / Pusing Penurunan Tensi (Hypotension)' },
+  { kode: '271795006', nama: 'Gatal Rongga Mulut & Tenggorokan (Oral Allergy)' },
+  { kode: '49727002',  nama: 'Batuk Kering Akut (Cough)' },
+  { kode: '419076005', nama: 'Reaksi Alergi Ringan (Allergic reaction)' }
 ];
 
 interface Step1Props {
@@ -333,12 +341,28 @@ export default function Step1Umum({ register, errors, watch, setValue, isPoliGig
                 <select 
                   value={selectedAlergenId} 
                   onChange={e => setSelectedAlergenId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-red-200 rounded-none text-sm focus:ring-2 focus:ring-red-500"
+                  className="w-full px-3 py-2 bg-white border border-red-200 rounded-none text-sm focus:ring-2 focus:ring-red-500 font-medium"
                 >
-                  <option value="">-- Pilih Alergen --</option>
-                  {masterAlergis.map(m => (
-                    <option key={m.id_alergi} value={m.id_alergi}>{m.nama_alergi} ({m.kategori})</option>
-                  ))}
+                  <option value="">-- Pilih Alergen (SNOMED-CT / KFA) --</option>
+                  {['medication', 'food', 'environment', 'biologic'].map(kat => {
+                    const items = masterAlergis.filter(m => m.kategori === kat);
+                    if (items.length === 0) return null;
+                    const labelMap: Record<string, string> = {
+                      medication: '💊 Obat-obatan (Medication / KFA)',
+                      food: '🍤 Makanan & Minuman (Food)',
+                      environment: '🌿 Lingkungan & Cuaca (Environment)',
+                      biologic: '🧤 Biologik, Kontak & Lateks (Biologic)'
+                    };
+                    return (
+                      <optgroup key={kat} label={labelMap[kat] || kat.toUpperCase()}>
+                        {items.map(m => (
+                          <option key={m.id_alergi} value={m.id_alergi}>
+                            {m.nama_alergi}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
                 </select>
               </div>
               <div className="flex-1">

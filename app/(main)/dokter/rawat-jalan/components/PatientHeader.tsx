@@ -79,8 +79,8 @@ export default function PatientHeader({
               </h1>
 
               {isUgd && (
-                <span className="bg-red-700 text-white font-black text-[10px] px-2 py-0.5 rounded-none uppercase tracking-wider shadow-sm flex items-center gap-1">
-                  🚨 UGD / GAWAT DARURAT
+                <span className="bg-rose-700 text-white font-bold text-[10px] px-2 py-0.5 rounded-none uppercase tracking-wider shadow-sm flex items-center gap-1">
+                  <ShieldAlert className="w-3 h-3 text-white" /> UGD / GAWAT DARURAT
                 </span>
               )}
 

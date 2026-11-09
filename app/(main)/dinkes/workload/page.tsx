@@ -15,7 +15,8 @@ import {
   Search,
   FileCheck2,
   Stethoscope,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 import { dinkesService, FaskesWorkload, FaskesItem } from '../../../../services/dinkes.service';
 
@@ -358,9 +359,9 @@ export default function DinkesWorkloadPage() {
               </div>
               <button
                 onClick={() => setShowMutasiModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

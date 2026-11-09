@@ -3,7 +3,7 @@ import { UseFormRegister, FieldErrors, UseFormWatch, UseFormSetValue, UseFormRes
 import {
   Search, ShieldCheck, Loader2, Baby, AlertTriangle, CheckCircle2,
   X, User, MapPin, Calendar, CreditCard, RotateCcw, Sparkles, Building2,
-  UserCheck, ArrowRight, Info
+  UserCheck, ArrowRight, Info, Check
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -562,8 +562,9 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
                     <br />
                     Alamat: <b>{formatAlamatRingkas(selectedPasien.alamat)}</b>
                   </p>
-                  <p className="text-[11px] text-emerald-700 mt-1.5 italic">
-                    ✓ Seluruh data identitas, alamat, kontak, dan penjamin telah terisi otomatis. Petugas dapat melanjutkan atau mengedit data bila ada perubahan.
+                  <p className="text-[11px] text-emerald-700 mt-1.5 flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                    <span>Seluruh data identitas, alamat, kontak, dan penjamin telah terisi otomatis. Petugas dapat melanjutkan atau mengedit data bila ada perubahan.</span>
                   </p>
                 </div>
               </div>

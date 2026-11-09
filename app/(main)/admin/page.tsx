@@ -19,7 +19,9 @@ import {
   Hospital,
   CheckCircle2,
   SlidersHorizontal,
-  ChevronRight
+  ChevronRight,
+  Wallet,
+  BarChart3
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -75,6 +77,23 @@ const ADMIN_MODULES: AdminModule[] = [
       borderHover: 'hover:border-emerald-500'
     },
     highlight: 'Beban Kerja Shift'
+  },
+  {
+    id: 'remunerasi-fee',
+    title: 'Doctor & Nurse Fee',
+    href: '/admin/remunerasi',
+    category: 'sdm',
+    categoryLabel: 'SDM & Tenaga Medis',
+    description: 'Manajemen kompensasi jasa medis: Dokter (kehadiran & penanganan pasien) dan Perawat (kehadiran saja), konfigurasi master tarif, presensi shift, dan cetak slip remunerasi.',
+    icon: Wallet,
+    colorScheme: {
+      bg: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
+      text: 'text-indigo-600',
+      badgeBg: 'bg-indigo-50',
+      badgeText: 'text-indigo-700 border-indigo-200',
+      borderHover: 'hover:border-indigo-500'
+    },
+    highlight: 'Doctor & Nurse Fee'
   },
   {
     id: 'master-pasien',
@@ -228,6 +247,23 @@ const ADMIN_MODULES: AdminModule[] = [
       borderHover: 'hover:border-red-500'
     },
     highlight: 'SNOMED-CT Alergen'
+  },
+  {
+    id: 'pusat-laporan',
+    title: 'Pusat Laporan & Rekapitulasi',
+    href: '/laporan',
+    category: 'standar',
+    categoryLabel: 'SP2TP & Pelaporan',
+    description: 'Pusat rekapitulasi data faskes: kunjungan pasien (harian/bulanan/tahunan), diagnosis 10 besar penyakit (LB1), mutasi BMHP, dan utilisasi alkes.',
+    icon: BarChart3,
+    colorScheme: {
+      bg: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
+      text: 'text-emerald-600',
+      badgeBg: 'bg-emerald-50',
+      badgeText: 'text-emerald-700 border-emerald-200',
+      borderHover: 'hover:border-emerald-500'
+    },
+    highlight: 'SP2TP & Cetak A4'
   },
   // {
   //   id: 'perusahaan',

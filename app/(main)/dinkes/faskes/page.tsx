@@ -16,7 +16,8 @@ import {
   Mail, 
   CheckCircle2,
   FileText,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { dinkesService, FaskesItem } from '../../../../services/dinkes.service';
 
@@ -310,9 +311,9 @@ export default function DinkesMasterFaskesPage() {
               </div>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-lg"
+                className="text-slate-400 hover:text-slate-600 p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

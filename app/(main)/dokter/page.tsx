@@ -14,7 +14,8 @@ import {
   AlertCircle,
   Syringe,
   ClipboardList,
-  ArrowUpRight
+  ArrowUpRight,
+  Wallet
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 import { AntrianDokter } from '@/types/rawatJalan.types';
@@ -115,6 +116,13 @@ export default function DokterDashboardPage() {
               </p>
             </div>
           </div>
+          <Link
+            href="/dokter/fee"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 border border-white/30 text-white rounded-xl text-xs font-bold transition-all shadow-sm backdrop-blur-sm self-start md:self-center hover:scale-105"
+          >
+            <Wallet className="w-4 h-4 text-emerald-300" />
+            <span>Doctor Fee Saya</span>
+          </Link>
         </div>
       </div>
 

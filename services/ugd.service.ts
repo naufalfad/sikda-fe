@@ -126,6 +126,8 @@ export interface KunjunganUGD {
     username?: string;
     role?: string;
   } | null;
+  tindakans?: any[];
+  diagnosis?: any[];
 }
 
 export interface AdmitPasienUGDPayload {
@@ -181,13 +183,26 @@ export interface SimpanPemeriksaanUGDPayload {
   rencanaTerapi?: string;
   instruksiMedis?: string;
   diagnosaList?: Array<{
-    icd10Id: string;
+    icd10Id?: string;
+    id_icd10?: string;
+    kode_icd10?: string;
+    nama_diagnosis?: string;
+    jenis?: string;
     isPrimary?: boolean;
     catatan?: string;
   }>;
   tindakanList?: Array<{
     icd9Id: string;
+    id_icd9?: string;
+    kode_icd9?: string;
+    nama_prosedur?: string;
+    pelaksana?: string;
     catatan?: string;
+    tipePelaksanaan?: 'INTERNAL' | 'EKSTERNAL';
+    faskesRujukan?: string;
+    alasanRujukan?: string;
+    bmhpDetails?: any[];
+    alkesDetails?: any[];
   }>;
   resepList?: Array<{
     obatId: string;
@@ -195,7 +210,9 @@ export interface SimpanPemeriksaanUGDPayload {
     dosis: string;
     aturanPakai: string;
   }>;
-  keputusan: 'PULANG' | 'RAWAT_INAP' | 'DIRUJUK' | 'MENINGGAL';
+  hanyaObservasi?: boolean;
+  isDraft?: boolean;
+  keputusan?: 'PULANG' | 'RAWAT_INAP' | 'DIRUJUK' | 'MENINGGAL' | 'OBSERVASI';
   alasanKeputusan?: string;
   tempatTidurInapId?: string;
   catatanBangsal?: string;
@@ -214,8 +231,8 @@ const ugdService = {
   },
 
   // Mendapatkan antrean aktif pasien UGD
-  getAntrean: async (): Promise<KunjunganUGD[]> => {
-    const res = await api.get('/ugd/antrean');
+  getAntrean: async (params?: { tab?: string; filter?: string }): Promise<KunjunganUGD[]> => {
+    const res = await api.get('/ugd/antrean', { params });
     return res.data?.data || [];
   },
 

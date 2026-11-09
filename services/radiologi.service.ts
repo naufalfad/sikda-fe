@@ -13,6 +13,8 @@ export interface CreateOrderRadiologiPayload {
   prioritas?: 'routine' | 'stat';
   catatan?: string;
   details: DetailOrderRadiologiInput[];
+  isRujukanLuar?: boolean;
+  faskesTujuan?: string;
 }
 
 export interface InputHasilRadiologiPayload {
@@ -20,6 +22,14 @@ export interface InputHasilRadiologiPayload {
   bacaanNaratif: string;
   kesimpulan: string;
   wadoUrl?: string;
+}
+
+export interface InputHasilRujukanRadiologiPayload {
+  catatanHasil?: string;
+  kesimpulan?: string;
+  bacaanNaratif?: string;
+  dokumenHasilUrl?: string;
+  dokterRadiologiNama?: string;
 }
 
 export const radiologiService = {
@@ -44,6 +54,12 @@ export const radiologiService = {
   // 4. POST /api/radiologi/order/:id/hasil (Dokter/Petugas Radiologi input ekspertise)
   submitHasil: async (id: string, payload: InputHasilRadiologiPayload) => {
     const res = await api.post(`/radiologi/order/${id}/hasil`, payload);
+    return res.data;
+  },
+
+  // 5. POST /api/radiologi/order/:id/hasil-rujukan (Input hasil fisik rontgen yang dibawa pasien dari RS luar)
+  submitHasilRujukanLuar: async (id: string, payload: InputHasilRujukanRadiologiPayload) => {
+    const res = await api.post(`/radiologi/order/${id}/hasil-rujukan`, payload);
     return res.data;
   },
 };

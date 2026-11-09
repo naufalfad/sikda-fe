@@ -7,7 +7,7 @@ import {
   ChevronUp, Search, Filter, Printer, Maximize2, Minimize2, 
   X, ArrowLeft, User, MapPin, Phone, CreditCard, Sparkles, 
   Heart, Thermometer, RefreshCw, Loader2, Info, ChevronRight,
-  Eye, Check, Copy, Building2
+  Eye, Check, Copy, Building2, ArrowRight
 } from 'lucide-react';
 import { rawatJalanService } from '@/services/rawatJalan.service';
 import { format } from 'date-fns';
@@ -361,15 +361,15 @@ export default function BerkasRMEPasienView({
                   });
                   setIsLabModalOpen(true);
                 }}
-                className="bg-amber-50 hover:bg-amber-100 border border-amber-300 px-3.5 py-1.5 text-left transition-colors cursor-pointer group shadow-xs"
+                className="bg-slate-50 hover:bg-slate-100 border border-slate-300 px-3.5 py-1.5 text-left transition-colors cursor-pointer group shadow-xs"
                 title="Buka Berkas Lembar Hasil Laboratorium Pasien"
               >
-                <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
-                  <TestTubes className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                  <TestTubes className="w-3.5 h-3.5 text-slate-600" />
                   {effectivePatient.orderLabs.length} Hasil Lab Selesai
                 </span>
-                <span className="text-xs font-bold text-amber-900 group-hover:underline block">
-                  Buka Lembar Hasil ➔
+                <span className="text-xs font-semibold text-slate-900 group-hover:underline flex items-center gap-1 mt-0.5">
+                  Buka Lembar Hasil <ArrowRight className="w-3 h-3 text-slate-600" />
                 </span>
               </button>
             )}

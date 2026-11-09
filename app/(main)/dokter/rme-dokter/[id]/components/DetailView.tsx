@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Stethoscope, AlertCircle, Pill, TestTube2, FileText } from 'lucide-react';
+import { Activity, Stethoscope, AlertCircle, Pill, TestTube2, FileText, Calendar } from 'lucide-react';
 import FotoObjektifViewer from '@/app/(main)/dokter/rawat-jalan/components/FotoObjektifViewer';
 
 interface DetailViewProps {
@@ -245,8 +245,9 @@ export function DetailView({
               {selectedVisit.catatanPerkembangans.map((cppt: any, idx: number) => (
                 <div key={cppt.id || idx} className="bg-white border border-slate-200 border-l-4 border-l-blue-600 p-4 shadow-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 mb-3">
-                    <span className="text-xs font-bold text-slate-700">
-                      📅 {new Date(cppt.tanggalCatatan || cppt.createdAt).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                    <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      {new Date(cppt.tanggalCatatan || cppt.createdAt).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] px-2 py-0.5 font-bold uppercase ${cppt.profesi === 'DOKTER' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>

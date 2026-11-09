@@ -176,7 +176,7 @@ export default function DinkesMedicinesPage() {
             {loading ? '...' : `${vaccineData?.ringkasan?.totalDosisKabupaten || 0} Dosis`}
           </div>
           <div className="flex items-center gap-2 mt-1 text-xs text-cyan-800 font-medium">
-            <span>❄️ Cold-Chain 2-8°C</span>
+            <span className="flex items-center gap-1"><Snowflake className="w-3 h-3 text-cyan-600" /> Cold-Chain 2-8°C</span>
             <span>•</span>
             <span>{vaccineData?.ringkasan?.totalPuskesmas || 0} Puskesmas</span>
           </div>

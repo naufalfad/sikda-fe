@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Clock, CheckCircle2, Save, Sparkles } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, Save, Sparkles, ArrowRight } from 'lucide-react';
 
 interface DoctorActionBarProps {
   fillDummyData: () => void;
@@ -55,10 +55,11 @@ export default function DoctorActionBar({
       <button 
         onClick={handleSelesaikan} 
         disabled={isSaving} 
-        className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-sm rounded-none shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+        className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-none shadow-md hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
       >
-        <CheckCircle2 className="w-4 h-4 text-emerald-300" />
-        Simpan & Tindak Lanjut (Discharge) ➔
+        <CheckCircle2 className="w-4 h-4 text-white" />
+        <span>Simpan & Tindak Lanjut (Discharge)</span>
+        <ArrowRight className="w-4 h-4" />
       </button>
     </div>
   );

@@ -58,6 +58,8 @@ export interface AsetRuangan {
   tahunPerolehan?: number | null;
   sumberAnggaran?: string | null;
   hargaPerolehan?: number | null;
+  tarifPemakaian?: number | null;
+  isAlkesTindakan?: boolean;
   kondisiAset: 'BAIK' | 'RUSAK_RINGAN' | 'RUSAK_BERAT' | 'AFKIR';
   statusOperasional: 'AKTIF_DIGUNAKAN' | 'DALAM_PERBAIKAN' | 'DALAM_KALIBRASI' | 'NON_AKTIF';
   ihsDeviceId?: string | null;

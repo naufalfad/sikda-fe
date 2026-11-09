@@ -6,7 +6,8 @@ import {
   AlertCircle, Clock, User, ShieldCheck, ArrowLeft,
   Smartphone, KeyRound, UserCheck, Plus, Check, 
   Printer, LogOut, RefreshCw, Send, Users, QrCode,
-  MapPin, Stethoscope, FileText, ChevronDown, CheckCircle
+  MapPin, Stethoscope, FileText, ChevronDown, CheckCircle,
+  Zap, Calendar, X
 } from 'lucide-react';
 import Link from 'next/link';
 import { portalPasienService, PasienKeluarga, BookingAntrean } from '@/services/portalPasien.service';
@@ -663,8 +664,9 @@ export default function BookingPortalPage() {
                 {/* Dev Hint if OTP generated in development */}
                 {devOtpHint && (
                   <div className="mb-5 bg-amber-50 border border-amber-300 p-3 text-xs text-amber-900">
-                    <div className="font-bold flex items-center gap-1">
-                      <span>⚡ BANTUAN DEVELOPMENT (OTP):</span>
+                    <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                      <Zap className="w-4 h-4 text-amber-600" />
+                      <span>BANTUAN DEVELOPMENT (OTP):</span>
                     </div>
                     <div className="mt-1 text-base font-black tracking-widest text-amber-800">
                       {devOtpHint}
@@ -684,7 +686,7 @@ export default function BookingPortalPage() {
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 text-sm font-bold border-r border-slate-200 pr-2">
-                          🇮🇩 +62
+                          +62
                         </div>
                         <input
                           type="tel"
@@ -1316,7 +1318,7 @@ export default function BookingPortalPage() {
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
                           <div>
                             <span className="font-bold text-emerald-800 uppercase tracking-wide">
-                              ✓ PASIEN LAMA TERIDENTIFIKASI
+                              PASIEN LAMA TERIDENTIFIKASI
                             </span>
                             <div className="mt-0.5">
                               Pasien telah memiliki Nomor Rekam Medis: <span className="font-bold font-mono text-emerald-900">{pasienStatus.noRM}</span> di faskes ini.
@@ -1697,8 +1699,9 @@ export default function BookingPortalPage() {
                             </span>
                           </label>
 
-                          <div className="text-[10px] text-emerald-700 font-semibold pt-1">
-                            ✓ Persetujuan ini disimpan secara digital. Saat kunjungan berikutnya, Anda tidak perlu mengisi persetujuan ulang.
+                          <div className="text-[10px] text-emerald-700 font-semibold pt-1 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            <span>Persetujuan ini disimpan secara digital. Saat kunjungan berikutnya, Anda tidak perlu mengisi persetujuan ulang.</span>
                           </div>
                         </div>
 
@@ -1810,16 +1813,21 @@ export default function BookingPortalPage() {
                           <div className="font-bold text-slate-900 text-sm">
                             {b.namaLengkap} <span className="font-normal text-slate-500 text-xs">(NIK: {b.nik})</span>
                           </div>
-                          <div className="text-xs text-slate-600">
-                            🏢 {b.faskes?.namaFaskes} • 🩺 {b.poliklinik?.namaPoli} • 👨‍⚕️ {b.dokter?.namaLengkap || 'Dokter Jaga'}
+                          <div className="text-xs text-slate-600 flex flex-wrap items-center gap-2 mt-0.5">
+                            <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5 text-slate-500" /> {b.faskes?.namaFaskes}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1"><Stethoscope className="w-3.5 h-3.5 text-slate-500" /> {b.poliklinik?.namaPoli}</span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1"><User className="w-3.5 h-3.5 text-slate-500" /> {b.dokter?.namaLengkap || 'Dokter Jaga'}</span>
                           </div>
-                          <div className="text-[11px] text-slate-500">
-                            📅 Kunjungan: {new Date(b.tanggalKunjungan).toLocaleDateString('id-ID', {
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Kunjungan: {new Date(b.tanggalKunjungan).toLocaleDateString('id-ID', {
                               weekday: 'long',
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
-                            })}
+                            })}</span>
                           </div>
                         </div>
 
@@ -1899,9 +1907,9 @@ export default function BookingPortalPage() {
               </h3>
               <button
                 onClick={() => setShowAddFamilyModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 

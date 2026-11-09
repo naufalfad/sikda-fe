@@ -4,11 +4,19 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   User, ClipboardList, Activity, HeartPulse, AlertTriangle, AlertOctagon,
   Send, Clock, Plus, Syringe, BedDouble, CheckCircle2, RefreshCw,
-  Search, ShieldAlert, Sparkles, UserCheck, Stethoscope, X
+  Search, ShieldAlert, Sparkles, UserCheck, Stethoscope, X, Star, ArrowRight, Check,
+  Save, Wrench, Package, Trash2, Loader2, Printer, ExternalLink
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import ugdService, { BedUGD, KunjunganUGD } from '../../../../services/ugd.service';
+import UGDTindakanSection, { UGDTindakanItem } from './components/UGDTindakanSection';
+import OrderLabModal from '../rawat-jalan/components/OrderLabModal';
+import OrderRadiologiModal from '../rawat-jalan/components/OrderRadiologiModal';
+import { TestTubes, Radio } from 'lucide-react';
 import { asetRuanganService } from '../../../../services/asetRuangan.service';
+import { masterService } from '../../../../services/master.service';
+import { icd9Service } from '../../../../services/icd9.service';
+import { AlkesTindakanItem, BmhpTindakanItem } from '../../../../types/rawatJalan.types';
 import { useAuthStore } from '../../../../store/auth.store';
 import { useRouter } from 'next/navigation';
 import { dokterService, Dokter } from '../../../../services/dokter.service';
@@ -39,13 +47,33 @@ export default function UGDDashboard() {
 
   const [activeTab, setActiveTab] = useState<'triage' | 'pemeriksaan' | 'keputusan'>('triage');
   const [queue, setQueue] = useState<KunjunganUGD[]>([]);
-  // Filter tab antrean UGD: 'my' (Pasien Saya) vs 'all' (Semua Pasien UGD)
-  const [queueFilter, setQueueFilter] = useState<'my' | 'all'>('my');
+  const [selesaiQueue, setSelesaiQueue] = useState<KunjunganUGD[]>([]);
+  // Filter tab antrean UGD: 'my' (Pasien Saya) vs 'all' (Semua Pasien UGD) vs 'selesai' (Selesai Hari Ini)
+  const [queueFilter, setQueueFilter] = useState<'my' | 'all' | 'selesai'>('my');
   const [beds, setBeds] = useState<BedUGD[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<KunjunganUGD | null>(null);
   const [activePatientId, setActivePatientId] = useState<string | null>(null);
   const [draftsByPatient, setDraftsByPatient] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
+
+  // ─── State Tindakan ICD-9, Alkes, & BMHP UGD ───
+  const [selectedProsedur, setSelectedProsedur] = useState<any[]>([]);
+  const [availableAlkes, setAvailableAlkes] = useState<any[]>([]);
+  const [availableBmhp, setAvailableBmhp] = useState<any[]>([]);
+  const [isLoadingAlkes, setIsLoadingAlkes] = useState(false);
+  const [isSavingObservasi, setIsSavingObservasi] = useState(false);
+
+  const selectedProsedurRef = useRef<any[]>([]);
+  useEffect(() => {
+    selectedProsedurRef.current = selectedProsedur;
+  }, [selectedProsedur]);
+
+  // Search ICD-9
+  const [icd9SearchTerm, setIcd9SearchTerm] = useState('');
+  const [icd9Results, setIcd9Results] = useState<any[]>([]);
+  const [isLoadingIcd9, setIsLoadingIcd9] = useState(false);
+  const [isIcd9DropdownOpen, setIsIcd9DropdownOpen] = useState(false);
+  const icd9DropdownRef = useRef<HTMLDivElement>(null);
 
   // Set default tab antrean: Dokter melihat 'my' (Pasien Saya), Perawat melihat 'all' (Semua Pasien)
   useEffect(() => {
@@ -63,7 +91,11 @@ export default function UGDDashboard() {
     return queue.filter(k => k.dokterTujuanId === userIdStr || k.dokterTujuan?.id === userIdStr);
   }, [queue, user?.id]);
 
-  const displayedQueue = queueFilter === 'my' ? myQueue : queue;
+  const displayedQueue = useMemo(() => {
+    if (queueFilter === 'selesai') return selesaiQueue;
+    if (queueFilter === 'my') return myQueue;
+    return queue;
+  }, [queueFilter, selesaiQueue, myQueue, queue]);
 
   // Daftar Dokter Jaga UGD / DPJP
   const [dokterList, setDokterList] = useState<Dokter[]>([]);
@@ -109,6 +141,8 @@ export default function UGDDashboard() {
 
   // State Quick Triage Modal (Perawat melakukan Triage & Assign DPJP)
   const [isAdmitModalOpen, setIsAdmitModalOpen] = useState(false);
+  const [isUgdLabModalOpen, setIsUgdLabModalOpen] = useState(false);
+  const [isUgdRadModalOpen, setIsUgdRadModalOpen] = useState(false);
   const [isSubmittingAdmit, setIsSubmittingAdmit] = useState(false);
   const [admitForm, setAdmitForm] = useState({
     tempatTidurId: '',
@@ -168,9 +202,14 @@ export default function UGDDashboard() {
       pemeriksaanFormRef.current = updated;
       const curId = activePatientIdRef.current;
       if (curId) {
+        const curDraft = draftsByPatientRef.current[curId] || {};
         draftsByPatientRef.current = {
           ...draftsByPatientRef.current,
-          [curId]: updated
+          [curId]: {
+            ...curDraft,
+            form: updated,
+            prosedur: selectedProsedurRef.current
+          }
         };
         setDraftsByPatient(draftsByPatientRef.current);
       }
@@ -185,7 +224,10 @@ export default function UGDDashboard() {
     if (prevId && prevId !== patient.id) {
       draftsByPatientRef.current = {
         ...draftsByPatientRef.current,
-        [prevId]: pemeriksaanFormRef.current
+        [prevId]: {
+          form: pemeriksaanFormRef.current,
+          prosedur: selectedProsedurRef.current
+        }
       };
       setDraftsByPatient(draftsByPatientRef.current);
     }
@@ -214,10 +256,14 @@ export default function UGDDashboard() {
     });
 
     // Jika sudah ada draft tersimpan di memory untuk pasien ini, pakai draft itu
-    if (draftsByPatientRef.current[patient.id]) {
-      const saved = draftsByPatientRef.current[patient.id];
-      setPemeriksaanForm(saved);
-      pemeriksaanFormRef.current = saved;
+    const curDraft = draftsByPatientRef.current[patient.id];
+    if (curDraft) {
+      const savedForm = curDraft.form || curDraft;
+      setPemeriksaanForm(savedForm);
+      pemeriksaanFormRef.current = savedForm;
+      const savedProsedur = curDraft.prosedur || [];
+      setSelectedProsedur(savedProsedur);
+      selectedProsedurRef.current = savedProsedur;
     } else {
       // Ambil data awal dari rekam medis / screening pasien
       const rm = getRekamMedisData(patient);
@@ -232,9 +278,31 @@ export default function UGDDashboard() {
       };
       setPemeriksaanForm(initialData);
       pemeriksaanFormRef.current = initialData;
+
+      // Ambil tindakan yang tersimpan di database jika ada
+      const initialProsedur = (patient.tindakans || []).map((t: any) => ({
+        id: t.id,
+        id_icd9: t.icd9Id || t.icd9?.id_icd9 || t.icd9?.id,
+        icd9Id: t.icd9Id || t.icd9?.id_icd9 || t.icd9?.id,
+        kode_icd9: t.icd9?.kode_icd9 || t.kodeIcd9 || t.kode_icd9 || '',
+        nama_prosedur: t.icd9?.nama_prosedur || t.namaTindakan || t.nama_prosedur || '',
+        pelaksana: t.pelaksanaTeks || t.pelaksana || 'Dokter',
+        tipePelaksanaan: (t.catatanTindakan?.includes('[RUJUKAN PENUNJANG EKSTERNAL') ? 'EKSTERNAL' : 'INTERNAL') as 'INTERNAL' | 'EKSTERNAL',
+        faskesRujukan: '',
+        alasanRujukan: '',
+        catatan: t.catatanTindakan || '',
+        alkesDetails: Array.isArray(t.alkesDetails) ? t.alkesDetails : (typeof t.alkesDetails === 'string' ? JSON.parse(t.alkesDetails) : []),
+        bmhpDetails: Array.isArray(t.bmhpDetails) ? t.bmhpDetails : (typeof t.bmhpDetails === 'string' ? JSON.parse(t.bmhpDetails) : [])
+      }));
+      setSelectedProsedur(initialProsedur);
+      selectedProsedurRef.current = initialProsedur;
+
       draftsByPatientRef.current = {
         ...draftsByPatientRef.current,
-        [patient.id]: initialData
+        [patient.id]: {
+          form: initialData,
+          prosedur: initialProsedur
+        }
       };
       setDraftsByPatient(draftsByPatientRef.current);
     }
@@ -283,9 +351,32 @@ export default function UGDDashboard() {
     }
   };
 
+  // Fetch Master Alkes & BMHP untuk Tindakan UGD
+  const fetchMasterData = async () => {
+    setIsLoadingAlkes(true);
+    try {
+      const alkesData = await asetRuanganService.getAsets({ isAlkesTindakan: true });
+      setAvailableAlkes(alkesData || []);
+
+      const obatData = await masterService.getObat();
+      const rawObat = obatData?.data || obatData || [];
+      const bmhpFiltered = rawObat.filter((o: any) =>
+        (o.kategori && o.kategori.toUpperCase().includes('BMHP')) ||
+        (o.sediaan && ['Spuit', 'Kasa', 'Jarum', 'Plester', 'Benang', 'Infus', 'Ampul', 'Vial', 'Pcs'].some((s: string) => o.sediaan.includes(s))) ||
+        ['spuit', 'kasa', 'jarum', 'lidocaine', 'benang', 'infus', 'abocath', 'catheter', 'masker', 'oksigen', 'perban', 'alcohol'].some((k: string) => (o.namaObat || '').toLowerCase().includes(k))
+      );
+      setAvailableBmhp(bmhpFiltered.length > 0 ? bmhpFiltered : rawObat.slice(0, 40));
+    } catch (err) {
+      console.error('Failed to load master alkes/bmhp UGD:', err);
+    } finally {
+      setIsLoadingAlkes(false);
+    }
+  };
+
   useEffect(() => {
     setIsLoading(true);
     fetchData(false);
+    fetchMasterData();
 
     // Fetch daftar dokter jaga UGD / Poli untuk DPJP
     dokterService.getAllDokter()
@@ -385,11 +476,11 @@ export default function UGDDashboard() {
             <p><strong>Nomor Antrean:</strong> <span class="text-rose-600 font-mono font-black text-lg">${res.kunjungan?.noAntrian}</span></p>
             <p><strong>Tempat Tidur:</strong> <span class="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold">${res.bed?.nomorBed}</span></p>
             <p><strong>Kategori Triase:</strong> <span class="font-bold text-red-600">${res.kunjungan?.triase}</span></p>
-            <p><strong>Dokter DPJP:</strong> <span class="font-bold text-indigo-700">${assignedDoc?.namaLengkap || 'Dokter Jaga UGD'}</span></p>
-            <div class="bg-blue-50 border border-blue-200 p-2.5 text-xs text-blue-900 mt-2">
-              ✓ Triase perawat awal selesai.<br/>
-              ✓ Pasien dialihkan ke antrean <strong>Pemeriksaan Medis Dokter (SOAP & Rencana Tindak Lanjut)</strong>.<br/>
-              ✓ Petugas pendaftaran dapat melengkapi administrasi resmi.
+            <p><strong>Dokter DPJP:</strong> <span class="font-bold text-slate-800">${assignedDoc?.namaLengkap || 'Dokter Jaga UGD'}</span></p>
+            <div class="bg-slate-50 border border-slate-200 p-2.5 text-xs text-slate-800 mt-2 space-y-1">
+              <div>• Triase perawat awal selesai.</div>
+              <div>• Pasien dialihkan ke antrean <strong>Pemeriksaan Medis Dokter (SOAP & Rencana Tindak Lanjut)</strong>.</div>
+              <div>• Petugas pendaftaran dapat melengkapi administrasi resmi.</div>
             </div>
           </div>
         `
@@ -442,6 +533,78 @@ export default function UGDDashboard() {
     }
   };
 
+  // Submit Simpan Observasi Medis & Pemakaian BMHP/Alkes (Tanpa Discharge / Bed Tetap Terisi)
+  const handleSimpanObservasiMedis = async () => {
+    if (!selectedPatient) return;
+
+    if (!canEditMedis) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Wewenang Dokter DPJP',
+        text: 'Hanya Dokter DPJP yang ditugaskan atau Admin yang berwenang menyimpan observasi medis.'
+      });
+      return;
+    }
+
+    setIsSavingObservasi(true);
+    try {
+      await ugdService.simpanPemeriksaan(selectedPatient.id, {
+        keluhanUtama: pemeriksaanForm.keluhanUtama,
+        riwayatPenyakit: pemeriksaanForm.riwayatPenyakit,
+        pemeriksaanFisik: pemeriksaanForm.pemeriksaanFisik,
+        rencanaTerapi: pemeriksaanForm.rencanaTerapi,
+        instruksiMedis: pemeriksaanForm.instruksiMedis,
+        hanyaObservasi: true,
+        isDraft: true,
+        keputusan: 'OBSERVASI',
+        diagnosaList: pemeriksaanForm.diagnosaAwal ? [{
+          kode_icd10: 'R69',
+          nama_diagnosis: pemeriksaanForm.diagnosaAwal,
+          jenis: 'PRIMER'
+        }] : [],
+        tindakanList: selectedProsedur.map(p => ({
+          id_icd9: p.id_icd9 || p.icd9Id,
+          icd9Id: p.icd9Id || p.id_icd9,
+          kode_icd9: p.kode_icd9,
+          nama_prosedur: p.nama_prosedur,
+          pelaksana: p.pelaksana || 'Dokter',
+          tipePelaksanaan: p.tipePelaksanaan || 'INTERNAL',
+          faskesRujukan: p.faskesRujukan || '',
+          alasanRujukan: p.alasanRujukan || '',
+          catatan: p.catatan || '',
+          bmhpDetails: p.bmhpDetails || [],
+          alkesDetails: p.alkesDetails || []
+        }))
+      });
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Observasi & Tindakan UGD Disimpan!',
+        html: `
+          <div class="text-left text-xs space-y-2 mt-2">
+            <p>✅ Catatan SOAP dan <strong>${selectedProsedur.length} Tindakan/BMHP</strong> berhasil disimpan ke Rekam Medis.</p>
+            <p>🏥 <strong>Status Pasien:</strong> Pasien tetap berada dalam status <strong>OBSERVASI</strong> di antrean UGD.</p>
+            <p>🛏️ <strong>Status Tempat Tidur:</strong> Bed tetap <strong>TERISI</strong> untuk pemantauan klinis.</p>
+            <div class="bg-blue-50 border border-blue-200 p-2 text-blue-900 mt-2">
+              💡 Dokter dapat menambahkan observasi berkala, tindakan baru, atau menyelesaikan discharge di Tab Keputusan ketika kondisi pasien stabil.
+            </div>
+          </div>
+        `,
+        confirmButtonColor: '#2563eb'
+      });
+
+      await fetchData(false);
+    } catch (err: any) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menyimpan Observasi',
+        text: err.response?.data?.message || err.message || 'Terjadi kesalahan sistem'
+      });
+    } finally {
+      setIsSavingObservasi(false);
+    }
+  };
+
   // Submit Pemeriksaan & Discharge Pasien UGD (Hanya oleh Dokter DPJP)
   const handleSimpanPemeriksaan = async () => {
     if (!selectedPatient) return;
@@ -484,6 +647,7 @@ export default function UGDDashboard() {
         pemeriksaanFisik: pemeriksaanForm.pemeriksaanFisik,
         rencanaTerapi: pemeriksaanForm.rencanaTerapi,
         instruksiMedis: pemeriksaanForm.instruksiMedis,
+        hanyaObservasi: false,
         keputusan,
         alasanKeputusan: catatanBangsal || alasanRujukan || '',
         tempatTidurInapId: keputusan === 'RAWAT_INAP' ? selectedInapBedId : undefined,
@@ -491,7 +655,25 @@ export default function UGDDashboard() {
         rujukanData: keputusan === 'DIRUJUK' ? {
           faskesTujuan: faskesRujukan,
           alasanRujukan: alasanRujukan || 'Kebutuhan fasilitas rujukan lanjutan'
-        } : undefined
+        } : undefined,
+        diagnosaList: pemeriksaanForm.diagnosaAwal ? [{
+          kode_icd10: 'R69',
+          nama_diagnosis: pemeriksaanForm.diagnosaAwal,
+          jenis: 'PRIMER'
+        }] : [],
+        tindakanList: selectedProsedur.map(p => ({
+          id_icd9: p.id_icd9 || p.icd9Id,
+          icd9Id: p.icd9Id || p.id_icd9,
+          kode_icd9: p.kode_icd9,
+          nama_prosedur: p.nama_prosedur,
+          pelaksana: p.pelaksana || 'Dokter',
+          tipePelaksanaan: p.tipePelaksanaan || 'INTERNAL',
+          faskesRujukan: p.faskesRujukan || '',
+          alasanRujukan: p.alasanRujukan || '',
+          catatan: p.catatan || '',
+          bmhpDetails: p.bmhpDetails || [],
+          alkesDetails: p.alkesDetails || []
+        }))
       });
 
       await Swal.fire({
@@ -705,15 +887,21 @@ export default function UGDDashboard() {
                 </div>
 
                 <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between text-[11px]">
-                  <span className={`flex items-center gap-1 truncate max-w-[170px] ${isAssignedToMe ? 'text-emerald-700 font-black' : 'text-indigo-700 font-semibold'}`} title={patient.dokterTujuan?.namaLengkap || 'Belum di-assign'}>
-                    <Stethoscope className={`w-3 h-3 flex-shrink-0 ${isAssignedToMe ? 'text-emerald-600' : 'text-indigo-500'}`} />
-                    {isAssignedToMe ? '⭐ Pasien Anda' : `DPJP: ${patient.dokterTujuan?.namaLengkap || 'Belum di-assign'}`}
+                  <span className={`flex items-center gap-1.5 truncate max-w-[170px] ${isAssignedToMe ? 'text-emerald-700 font-bold' : 'text-slate-700 font-medium'}`} title={patient.dokterTujuan?.namaLengkap || 'Belum di-assign'}>
+                    <Stethoscope className={`w-3 h-3 flex-shrink-0 ${isAssignedToMe ? 'text-emerald-600' : 'text-slate-500'}`} />
+                    {isAssignedToMe ? (
+                      <span className="flex items-center gap-1 font-bold text-emerald-800">
+                        <Star className="w-3 h-3 fill-emerald-600 text-emerald-600" /> Pasien Anda
+                      </span>
+                    ) : (
+                      `DPJP: ${patient.dokterTujuan?.namaLengkap || 'Belum di-assign'}`
+                    )}
                   </span>
                   <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isAssignedToMe
                       ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                       : patient.statusKunjungan === 'MENUNGGU_DOKTER'
-                        ? 'bg-orange-100 text-orange-800 border border-orange-200'
-                        : 'bg-gray-100 text-gray-700'
+                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                        : 'bg-slate-100 text-slate-700'
                     }`}>
                     {isAssignedToMe ? 'Perlu Diperiksa' : (patient.statusKunjungan === 'MENUNGGU_DOKTER' ? 'Menunggu DPJP' : patient.statusKunjungan)}
                   </span>
@@ -723,6 +911,7 @@ export default function UGDDashboard() {
                   {scr?.keluhanUtama || patient.keluhanUtama || patient.kondisiTiba || 'Kondisi kegawatdaruratan'}
                 </p>
 
+                {isDokter && (
                 <div className="mt-2 pt-1.5 border-t border-gray-100 flex items-center justify-between">
                   <button
                     type="button"
@@ -730,12 +919,14 @@ export default function UGDDashboard() {
                       e.stopPropagation();
                       router.push(`/dokter/rawat-jalan?kunjunganId=${patient.id}`);
                     }}
-                    className="w-full py-1 px-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 text-[11px] font-bold rounded-none flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                    className="w-full py-1.5 px-2 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold rounded-none flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
                   >
-                    <Stethoscope className="w-3.5 h-3.5" />
-                    Buka SOAP di RME Dokter ➔
+                    <Stethoscope className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Buka SOAP di RME Dokter</span>
+                    <ArrowRight className="w-3 h-3 text-slate-400" />
                   </button>
                 </div>
+              )}
               </div>
             );
           })}
@@ -821,23 +1012,30 @@ export default function UGDDashboard() {
                       <span className="text-[11px] opacity-80 font-mono">
                         Tiba: {selectedPatient.jamRegistrasi || '-'}
                       </span>
-                      <span className={`px-2.5 py-1 text-xs font-black uppercase rounded shadow-sm ${selectedPatient.statusAdministrasi === 'LENGKAP'
+                      <span className={`px-2.5 py-1 text-xs font-bold uppercase rounded shadow-xs flex items-center gap-1 ${selectedPatient.statusAdministrasi === 'LENGKAP'
                           ? 'bg-emerald-600 text-white'
-                          : 'bg-amber-400 text-black animate-pulse'
+                          : 'bg-amber-100 text-amber-900 border border-amber-300'
                         }`}>
-                        {selectedPatient.statusAdministrasi === 'LENGKAP' ? '✓ BERKAS LENGKAP' : '⚠ PENDING DI LOKET'}
+                        {selectedPatient.statusAdministrasi === 'LENGKAP' ? (
+                          <><Check className="w-3.5 h-3.5" /> BERKAS LENGKAP</>
+                        ) : (
+                          <><AlertTriangle className="w-3.5 h-3.5 text-amber-700" /> PENDING DI LOKET</>
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-1">
-                      {/* Tombol Akses Cepat ke RME Dokter SOAP */}
-                      <button
-                        type="button"
-                        onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
-                        className="px-3.5 py-1.5 bg-white text-rose-900 hover:bg-rose-50 font-black text-xs uppercase tracking-wider rounded shadow-md flex items-center gap-1.5 transition-all hover:scale-105"
-                      >
-                        <Stethoscope className="w-4 h-4 text-rose-600" />
-                        Buka Pemeriksaan SOAP di RME Dokter ➔
-                      </button>
+                      {/* Tombol Akses Cepat ke RME Dokter SOAP (Hanya Dokter) */}
+                      {isDokter && (
+                        <button
+                          type="button"
+                          onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
+                          className="px-3.5 py-1.5 bg-white text-slate-900 hover:bg-slate-100 font-bold text-xs uppercase tracking-wider rounded shadow-md flex items-center gap-1.5 transition-colors"
+                        >
+                          <Stethoscope className="w-4 h-4 text-emerald-600" />
+                          <span>Buka Pemeriksaan SOAP di RME Dokter</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                        </button>
+                      )}
 
                       <button
                         type="button"
@@ -954,10 +1152,11 @@ export default function UGDDashboard() {
                       {isDokter && (
                         <button
                           onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
-                          className="px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-indigo-600 hover:from-rose-700 hover:to-indigo-700 text-white text-xs font-bold rounded flex items-center gap-1.5 transition-all shadow-sm"
+                          className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded flex items-center gap-1.5 transition-colors shadow-xs"
                         >
-                          <Stethoscope className="w-4 h-4" />
-                          Buka SOAP di RME Dokter ➔
+                          <Stethoscope className="w-4 h-4 text-emerald-400" />
+                          <span>Buka SOAP di RME Dokter</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                       )}
                     </div>
@@ -1232,7 +1431,7 @@ export default function UGDDashboard() {
                                     <option value="">-- Tetapkan Dokter DPJP --</option>
                                     {sortedDokterList.map(d => (
                                       <option key={d.id} value={d.id}>
-                                        {d.namaLengkap || d.username} {d.role === 'DOKTER_UGD' ? '⭐ (Dokter Jaga UGD)' : `(Poli: ${d.poliklinik?.namaPoli || 'Umum'})`}
+                                        {d.namaLengkap || d.username} {d.role === 'DOKTER_UGD' ? '(Dokter Jaga UGD)' : `(Poli: ${d.poliklinik?.namaPoli || 'Umum'})`}
                                       </option>
                                     ))}
                                   </select>
@@ -1250,30 +1449,33 @@ export default function UGDDashboard() {
               {/* TAB 2: PEMERIKSAAN MEDIS SOAP */}
               {activeTab === 'pemeriksaan' && (
                 <div className="space-y-6 max-w-5xl mx-auto">
-                  {/* Banner Alur Terintegrasi RME Dokter */}
-                  <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-4 shadow-md flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-white/10 border border-white/20">
-                        <Stethoscope className="w-6 h-6 text-white" />
+                  {/* Banner Alur Terintegrasi RME Dokter (Hanya Ditampilkan untuk Dokter DPJP) */}
+                  {isDokter && (
+                    <div className="bg-slate-900 text-white p-4 shadow-sm border border-slate-800 flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-slate-800 border border-slate-700">
+                          <Stethoscope className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold uppercase tracking-wide">
+                            Pemeriksaan SOAP UGD di RME Dokter Terintegrasi
+                          </h4>
+                          <p className="text-xs text-slate-300 mt-0.5">
+                            Sesuai standar operasional, pemeriksaan SOAP UGD (Primary Survey ABCDE, ICD-10, E-Resep, Lab Cito, & Keputusan Discharge) dilakukan di halaman RME Dokter.
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-black uppercase tracking-wide">
-                          Pemeriksaan SOAP UGD di RME Dokter Terintegrasi
-                        </h4>
-                        <p className="text-xs text-blue-100 mt-0.5">
-                          Sesuai standar operasional, pemeriksaan SOAP UGD (Primary Survey ABCDE, ICD-10, E-Resep, Lab Cito, & Keputusan Discharge) dilakukan di halaman RME Dokter.
-                        </p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
+                        className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 transition-colors whitespace-nowrap ml-4"
+                      >
+                        <Stethoscope className="w-4 h-4 text-emerald-600" />
+                        <span>Buka di RME Dokter</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
-                      className="px-4 py-2.5 bg-white hover:bg-blue-50 text-blue-900 font-extrabold text-xs uppercase tracking-wider shadow-lg flex items-center gap-2 transition-transform hover:scale-105 whitespace-nowrap ml-4"
-                    >
-                      <Stethoscope className="w-4 h-4 text-blue-700" />
-                      Buka di RME Dokter ➔
-                    </button>
-                  </div>
+                  )}
 
                   <div className="bg-white p-6 shadow-sm border border-gray-200">
                     <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center border-b pb-3">
@@ -1364,32 +1566,59 @@ export default function UGDDashboard() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Diagnosa Medis */}
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          Diagnosa Medis / Masalah Klinis UGD
+                        </label>
+                        <input
+                          type="text"
+                          disabled={!canEditMedis}
+                          value={pemeriksaanForm.diagnosaAwal}
+                          onChange={(e) => handleFormChange('diagnosaAwal', e.target.value)}
+                          className={`w-full text-xs border border-gray-300 p-2.5 focus:border-rose-500 focus:outline-none ${!canEditMedis ? 'bg-gray-100 cursor-not-allowed text-gray-600' : 'bg-white'}`}
+                          placeholder="Contoh: Cedera Kepala Ringan (CKR), Vulnus Laceratum, Fraktur Femur, Asma Akut..."
+                        />
+                      </div>
+
+                      {/* Komponen Tindakan Medis, Sewa Alkes & Pemakaian BMHP UGD */}
+                      <div className="pt-2">
+                        <UGDTindakanSection
+                          selectedProsedur={selectedProsedur}
+                          setSelectedProsedur={setSelectedProsedur}
+                          availableAlkes={availableAlkes}
+                          availableBmhp={availableBmhp}
+                          canEdit={canEditMedis}
+                        />
+                      </div>
+
+                      {/* Tombol Cepat Order Penunjang UGD (Laboratorium & Radiologi Rujukan) */}
+                      <div className="bg-slate-50 border border-slate-300 p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3">
                         <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Diagnosa Medis
-                          </label>
-                          <input
-                            type="text"
-                            disabled={!canEditMedis}
-                            value={pemeriksaanForm.diagnosaAwal}
-                            onChange={(e) => handleFormChange('diagnosaAwal', e.target.value)}
-                            className={`w-full text-xs border border-gray-300 p-2.5 focus:border-blue-500 focus:outline-none ${!canEditMedis ? 'bg-gray-100 cursor-not-allowed text-gray-600' : 'bg-white'}`}
-                            placeholder="Contoh: Cedera Kepala Ringan, Fraktur Humerus..."
-                          />
+                          <span className="text-xs font-bold text-slate-800 block">Pemeriksaan Penunjang Diagnostik UGD</span>
+                          <span className="text-[11px] text-slate-500">
+                            Order uji laboratorium (Puskesmas / Labkesda) atau foto rontgen radiologi rujukan ke RSUD.
+                          </span>
                         </div>
-                        <div>
-                          <label className="block text-xs font-bold text-gray-700 mb-1">
-                            Tindakan Kegawatdaruratan
-                          </label>
-                          <input
-                            type="text"
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
                             disabled={!canEditMedis}
-                            value={pemeriksaanForm.tindakanKegawatdaruratan}
-                            onChange={(e) => handleFormChange('tindakanKegawatdaruratan', e.target.value)}
-                            className={`w-full text-xs border border-gray-300 p-2.5 focus:border-blue-500 focus:outline-none ${!canEditMedis ? 'bg-gray-100 cursor-not-allowed text-gray-600' : 'bg-white'}`}
-                            placeholder="Contoh: Debridement & Hecting, Pasang IV Line, Oksigen..."
-                          />
+                            onClick={() => setIsUgdLabModalOpen(true)}
+                            className="px-3.5 py-2 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-60"
+                          >
+                            <TestTubes className="w-4 h-4 text-amber-200" />
+                            <span>Order Laboratorium</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!canEditMedis}
+                            onClick={() => setIsUgdRadModalOpen(true)}
+                            className="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-xs disabled:opacity-60"
+                          >
+                            <Radio className="w-4 h-4 text-purple-200" />
+                            <span>Order Radiologi (RSUD)</span>
+                          </button>
                         </div>
                       </div>
 
@@ -1420,6 +1649,35 @@ export default function UGDDashboard() {
                           placeholder="Instruksi observasi tanda vital berkala, posisi tirah baring..."
                         />
                       </div>
+
+                      {/* Action Toolbar Tab 2: Simpan Observasi & Lanjut ke Discharge */}
+                      <div className="pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-50 p-4">
+                        <div className="text-xs text-slate-600 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                          <span>Observasi bertahap: Tempat tidur tetap <strong>TERISI</strong> dan pasien tetap di antrean UGD.</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {canEditMedis && (
+                            <button
+                              type="button"
+                              onClick={handleSimpanObservasiMedis}
+                              disabled={isSavingObservasi}
+                              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                            >
+                              <Save className="w-4 h-4" />
+                              {isSavingObservasi ? 'Menyimpan...' : '💾 Simpan Observasi / Draf SOAP UGD'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('keputusan')}
+                            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all"
+                          >
+                            <span>Lanjut ke Keputusan & Discharge</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1428,30 +1686,33 @@ export default function UGDDashboard() {
               {/* TAB 3: KEPUTUSAN & DISCHARGE */}
               {activeTab === 'keputusan' && (
                 <div className="space-y-6 max-w-5xl mx-auto">
-                  {/* Banner Alur Terintegrasi RME Dokter */}
-                  <div className="bg-gradient-to-r from-emerald-700 to-teal-800 text-white p-4 shadow-md flex items-center justify-between mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-white/10 border border-white/20">
-                        <Stethoscope className="w-6 h-6 text-white" />
+                  {/* Banner Alur Terintegrasi RME Dokter (Hanya Ditampilkan untuk Dokter DPJP) */}
+                  {isDokter && (
+                    <div className="bg-slate-900 text-white p-4 shadow-sm border border-slate-800 flex items-center justify-between mb-5">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-slate-800 border border-slate-700">
+                          <Stethoscope className="w-6 h-6 text-emerald-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold uppercase tracking-wide">
+                            Discharge Planning & Keputusan Akhir di RME Dokter
+                          </h4>
+                          <p className="text-xs text-slate-300 mt-0.5">
+                            Dokter DPJP dapat menetapkan tindak lanjut (Boleh Pulang, Rawat Inap, Rujuk RS, atau Kematian UGD) dan membebaskan Tempat Tidur UGD melalui alur Discharge Planning di RME Dokter.
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-black uppercase tracking-wide">
-                          Discharge Planning & Keputusan Akhir di RME Dokter
-                        </h4>
-                        <p className="text-xs text-emerald-100 mt-0.5">
-                          Dokter DPJP dapat menetapkan tindak lanjut (Boleh Pulang, Rawat Inap, Rujuk RS, atau Kematian UGD) dan membebaskan Tempat Tidur UGD melalui alur Discharge Planning di RME Dokter.
-                        </p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
+                        className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-900 font-bold text-xs uppercase tracking-wider shadow-sm flex items-center gap-2 transition-colors whitespace-nowrap ml-4"
+                      >
+                        <Stethoscope className="w-4 h-4 text-emerald-600" />
+                        <span>Buka di RME Dokter</span>
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => router.push(`/dokter/rawat-jalan?kunjunganId=${selectedPatient.id}`)}
-                      className="px-4 py-2.5 bg-white hover:bg-emerald-50 text-emerald-900 font-extrabold text-xs uppercase tracking-wider shadow-lg flex items-center gap-2 transition-transform hover:scale-105 whitespace-nowrap ml-4"
-                    >
-                      <Stethoscope className="w-4 h-4 text-emerald-700" />
-                      Buka di RME Dokter ➔
-                    </button>
-                  </div>
+                  )}
 
                   <div className="bg-white p-6 shadow-sm border border-gray-200">
                     <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center border-b pb-3">
@@ -1683,16 +1944,50 @@ export default function UGDDashboard() {
                   Cetak Lembar UGD
                 </button>
 
-                {/* Tombol aksi khusus Dokter DPJP untuk menyelesaikan / discharge pasien */}
+                {/* Tombol aksi khusus Dokter DPJP */}
                 {canEditMedis ? (
-                  <button
-                    onClick={handleSimpanPemeriksaan}
-                    disabled={isSavingPemeriksaan}
-                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold flex items-center text-xs uppercase tracking-wider rounded-none shadow-sm transition-all"
-                  >
-                    <AlertOctagon className="w-4 h-4 mr-2" />
-                    {isSavingPemeriksaan ? 'Menyimpan...' : 'Selesaikan & Bebaskan Bed UGD'}
-                  </button>
+                  activeTab === 'pemeriksaan' ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSimpanObservasiMedis}
+                        disabled={isSavingObservasi}
+                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center text-xs uppercase tracking-wider rounded-none shadow-sm transition-all disabled:opacity-50"
+                      >
+                        <Save className="w-4 h-4 mr-1.5" />
+                        {isSavingObservasi ? 'Menyimpan...' : '💾 Simpan Observasi (Bed Tetap Terisi)'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('keputusan')}
+                        className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold flex items-center text-xs uppercase tracking-wider rounded-none shadow-sm transition-all"
+                      >
+                        <span>Ke Discharge UGD</span>
+                        <ArrowRight className="w-4 h-4 ml-1.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSimpanObservasiMedis}
+                        disabled={isSavingObservasi}
+                        className="px-4 py-2 border border-blue-600 text-blue-700 hover:bg-blue-50 font-bold flex items-center text-xs uppercase tracking-wider rounded-none shadow-sm transition-all disabled:opacity-50"
+                      >
+                        <Save className="w-4 h-4 mr-1.5" />
+                        {isSavingObservasi ? 'Menyimpan...' : 'Simpan Observasi Saja'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSimpanPemeriksaan}
+                        disabled={isSavingPemeriksaan}
+                        className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold flex items-center text-xs uppercase tracking-wider rounded-none shadow-sm transition-all"
+                      >
+                        <AlertOctagon className="w-4 h-4 mr-2" />
+                        {isSavingPemeriksaan ? 'Menyimpan...' : 'Selesaikan & Bebaskan Bed UGD'}
+                      </button>
+                    </div>
+                  )
                 ) : isReadOnlyForOtherDoctor ? (
                   <div className="flex items-center gap-2">
                     <div className="text-xs bg-amber-50 border border-amber-300 text-amber-800 px-3 py-2 font-bold flex items-center gap-1.5">
@@ -1726,6 +2021,26 @@ export default function UGDDashboard() {
         )}
       </div>
 
+      {/* MODAL ORDER LAB UGD */}
+      {isUgdLabModalOpen && selectedPatient && (
+        <OrderLabModal
+          isOpen={isUgdLabModalOpen}
+          onClose={() => setIsUgdLabModalOpen(false)}
+          selectedKunjungan={selectedPatient}
+          onSuccess={() => fetchData(false)}
+        />
+      )}
+
+      {/* MODAL ORDER RADIOLOGI UGD */}
+      {isUgdRadModalOpen && selectedPatient && (
+        <OrderRadiologiModal
+          isOpen={isUgdRadModalOpen}
+          onClose={() => setIsUgdRadModalOpen(false)}
+          selectedKunjungan={selectedPatient}
+          onSuccess={() => fetchData(false)}
+        />
+      )}
+
       {/* ============================================================ */}
       {/* MODAL QUICK TRIAGE & ADMIT PASIEN DARURAT (ANONIM) */}
       {/* ============================================================ */}
@@ -1744,9 +2059,9 @@ export default function UGDDashboard() {
               </div>
               <button
                 onClick={() => setIsAdmitModalOpen(false)}
-                className="text-rose-200 hover:text-white text-sm font-bold p-1"
+                className="text-rose-200 hover:text-white p-1 transition-colors"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -1808,7 +2123,7 @@ export default function UGDDashboard() {
                     <option value="">-- Pilih Dokter Jaga (DPJP) --</option>
                     {sortedDokterList.map((doc) => (
                       <option key={doc.id} value={doc.id}>
-                        {doc.namaLengkap || doc.username} {doc.role === 'DOKTER_UGD' ? '⭐ (Dokter Jaga UGD)' : `(Poli: ${doc.poliklinik?.namaPoli || 'Umum'})`}
+                        {doc.namaLengkap || doc.username} {doc.role === 'DOKTER_UGD' ? '(Dokter Jaga UGD)' : `(Poli: ${doc.poliklinik?.namaPoli || 'Umum'})`}
                       </option>
                     ))}
                   </select>

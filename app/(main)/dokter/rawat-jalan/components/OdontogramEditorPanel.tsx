@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Info, RefreshCw, X, Check } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Info, RefreshCw, X, Check, Search } from 'lucide-react';
 import { ToothCondition, ToothSurface, CONDITION_OPTIONS, getSurfaceColor } from './odontogram.types';
 
 interface OdontogramEditorPanelProps {
@@ -64,9 +64,9 @@ export default function OdontogramEditorPanel({
           <button
             type="button"
             onClick={handleMarkMissingTooth}
-            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-red-400 border border-red-500 font-extrabold text-xs rounded-none transition-colors"
+            className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-red-400 border border-red-500 font-extrabold text-xs rounded-none transition-colors flex items-center gap-1.5"
           >
-            ✖ Tandai Gigi Dicabut / Hilang (mis)
+            <X className="w-3.5 h-3.5" /> Tandai Gigi Dicabut / Hilang (mis)
           </button>
           <button
             type="button"
@@ -91,8 +91,8 @@ export default function OdontogramEditorPanel({
         
         {/* LEFT: LIVE MINIATUR ZOOM PREVIEW (2X SIZE) */}
         <div className="lg:col-span-4 bg-slate-950 p-4 border border-slate-800 flex flex-col items-center justify-center text-center">
-          <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest mb-2 flex items-center gap-1">
-            🔍 Live Preview Gigi #{selectedTooth}
+          <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <Search className="w-3.5 h-3.5" /> Live Preview Gigi #{selectedTooth}
           </span>
           
           <div className="p-3 bg-slate-900 border border-slate-700 rounded-none transform scale-125 my-3 shadow-inner">

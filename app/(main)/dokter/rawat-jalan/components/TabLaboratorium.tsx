@@ -1,5 +1,5 @@
 import React, { Dispatch, SetStateAction } from 'react';
-import { TestTubes, ChevronDown, ChevronRight, Loader2, Sparkles, Building2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { TestTubes, ChevronDown, ChevronRight, Loader2, Sparkles, Building2, CheckCircle2, AlertCircle, Check, ExternalLink, ArrowRight } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { QUICK_LAB_PACKAGES, isInternalLabTest, QuickLabPackage } from '../rawatJalan.constants';
 
@@ -103,10 +103,11 @@ export default function TabLaboratorium({
             <button
               type="button"
               onClick={onViewExistingLab}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 transition-colors shadow-sm shrink-0 self-start sm:self-center"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm shrink-0 self-start sm:self-center"
             >
               <TestTubes className="w-4 h-4" />
-              Tinjau Lembar Hasil Lab ➔
+              <span>Tinjau Lembar Hasil Lab</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
@@ -237,17 +238,21 @@ export default function TabLaboratorium({
       </div>
 
       {/* SUMMARY & SUBMIT */}
-      <div className="p-4 bg-indigo-50/80 border border-indigo-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 bg-slate-50 border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <p className="text-xs text-indigo-900 font-bold uppercase tracking-wider">Total Pemeriksaan Dipilih:</p>
-            <span className="text-lg font-extrabold text-indigo-950 font-mono">{labOrders.length} Parameter</span>
+            <p className="text-xs text-slate-700 font-bold uppercase tracking-wider">Total Pemeriksaan Dipilih:</p>
+            <span className="text-lg font-extrabold text-slate-900 font-mono">{labOrders.length} Parameter</span>
           </div>
 
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-600">
-            <span className="font-semibold text-emerald-700">✓ {internalCount} Uji Internal Faskes</span>
+            <span className="font-semibold text-slate-800 inline-flex items-center gap-1">
+              <Check className="w-3.5 h-3.5 text-emerald-600" /> {internalCount} Uji Internal Faskes
+            </span>
             <span>•</span>
-            <span className="font-semibold text-sky-700">↗ {externalCount} Rujukan Eksternal (Labkesda/RSUD)</span>
+            <span className="font-semibold text-slate-700 inline-flex items-center gap-1">
+              <ExternalLink className="w-3 h-3 text-slate-500" /> {externalCount} Rujukan Eksternal (Labkesda/RSUD)
+            </span>
           </div>
 
           {externalCount > 0 && (
@@ -282,10 +287,15 @@ export default function TabLaboratorium({
               // Error ditangani oleh store
             }
           }}
-          className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-none shadow-sm transition-colors flex items-center justify-center gap-2 text-xs"
+          className="bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-none shadow-sm transition-colors flex items-center justify-center gap-2 text-xs"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTubes className="w-4 h-4" />}
-          {isSaving ? 'Menyimpan Order...' : 'Simpan Order Lab & Lanjut Tindakan ➔'}
+          {isSaving ? 'Menyimpan Order...' : (
+            <>
+              <span>Simpan Order Lab & Lanjut Tindakan</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
         </button>
       </div>
       
