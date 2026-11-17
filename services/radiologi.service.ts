@@ -40,7 +40,7 @@ export const radiologiService = {
   },
 
   // 2. GET /api/radiologi/order (Daftar Order Radiologi dengan Filter)
-  getOrders: async (params?: { status?: string; kunjunganId?: string; search?: string }) => {
+  getOrders: async (params?: { status?: string; kunjunganId?: string; search?: string; tipe?: string; isRujukanLuar?: boolean }) => {
     const res = await api.get('/radiologi/order', { params });
     return res.data;
   },
@@ -60,6 +60,12 @@ export const radiologiService = {
   // 5. POST /api/radiologi/order/:id/hasil-rujukan (Input hasil fisik rontgen yang dibawa pasien dari RS luar)
   submitHasilRujukanLuar: async (id: string, payload: InputHasilRujukanRadiologiPayload) => {
     const res = await api.post(`/radiologi/order/${id}/hasil-rujukan`, payload);
+    return res.data;
+  },
+
+  // 6. DELETE /api/radiologi/order/:id (Membatalkan / Menghapus order radiologi)
+  deleteOrder: async (id: string) => {
+    const res = await api.delete(`/radiologi/order/${id}`);
     return res.data;
   },
 };

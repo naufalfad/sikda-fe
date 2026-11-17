@@ -7,7 +7,7 @@ interface LaboratoriumState {
   selectedOrder: any | null;
   error: string | null;
   
-  fetchAntrian: () => Promise<void>;
+  fetchAntrian: (params?: { tipe?: string; status?: string; search?: string }) => Promise<void>;
   pilihOrder: (order: any) => void;
   clearSelection: () => void;
   simpanHasil: (orderId: string, details: any[]) => Promise<{ success: boolean; message?: string }>;
@@ -19,10 +19,10 @@ export const useLaboratoriumStore = create<LaboratoriumState>((set, get) => ({
   selectedOrder: null,
   error: null,
 
-  fetchAntrian: async () => {
+  fetchAntrian: async (params?: { tipe?: string; status?: string; search?: string }) => {
     set({ isLoadingAntrian: true, error: null });
     try {
-      const res = await laboratoriumService.getAntrian();
+      const res = await laboratoriumService.getAntrian(params);
       if (res.success) {
         set({ antrian: res.data });
       }

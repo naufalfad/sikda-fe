@@ -1,4 +1,4 @@
-import { User, Clock, Heart, Activity, Thermometer, ShieldAlert, Sparkles, Columns, Users, TestTubes, X } from 'lucide-react';
+import { User, Clock, Heart, Activity, Thermometer, ShieldAlert, Sparkles, Columns, Users, TestTubes, X, Save, CheckCircle2 } from 'lucide-react';
 
 interface PatientHeaderProps {
   selectedKunjungan: any;
@@ -16,6 +16,9 @@ interface PatientHeaderProps {
   riwayatLabCount?: number;
   onOpenLabModal?: () => void;
   onCloseSelection?: () => void;
+  onSaveSOAP?: () => void;
+  onSelesaikan?: () => void;
+  isSaving?: boolean;
 }
 
 export default function PatientHeader({
@@ -34,6 +37,9 @@ export default function PatientHeader({
   riwayatLabCount = 0,
   onOpenLabModal,
   onCloseSelection,
+  onSaveSOAP,
+  onSelesaikan,
+  isSaving = false,
 }: PatientHeaderProps) {
   if (!selectedKunjungan) return null;
 
@@ -233,6 +239,37 @@ export default function PatientHeader({
               Tab RME Penuh
             </button>
           </div>
+
+          {/* Quick Action Save & Selesai in Header */}
+          {(onSaveSOAP || onSelesaikan) && (
+            <div className="flex items-center gap-1.5">
+              {onSaveSOAP && (
+                <button 
+                  type="button"
+                  onClick={onSaveSOAP}
+                  disabled={isSaving}
+                  className="bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-300 hover:border-slate-400 px-2.5 py-1.5 rounded-none font-bold text-xs flex items-center transition-all shadow-sm disabled:opacity-50"
+                  title="Simpan Draf SOAP Cepat (Shortcut: Ctrl + S)"
+                >
+                  <Save className="w-3.5 h-3.5 mr-1 text-blue-600" />
+                  <span>Draf</span>
+                </button>
+              )}
+
+              {onSelesaikan && (
+                <button 
+                  type="button"
+                  onClick={onSelesaikan}
+                  disabled={isSaving}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-700 px-3 py-1.5 rounded-none font-extrabold text-xs flex items-center transition-all shadow-sm disabled:opacity-50"
+                  title="Simpan & Lanjut ke Tindak Lanjut (Discharge)"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-white" />
+                  <span>Selesai</span>
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Antrian Card & Close Selection */}
           <div className="flex items-center gap-1.5">

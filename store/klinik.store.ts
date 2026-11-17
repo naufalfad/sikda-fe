@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Poliklinik, LayananKlinik, PoliklinikPayload, LayananKlinikPayload, DokterByPoli } from '../types/klinik.types';
 import { klinikService } from '../services/klinik.service';
 import { satusehatService } from '../services/satusehat.service';
+import { jadwalNakesService } from '../services/jadwalNakes.service';
 
 interface KlinikState {
   polikliniks: Poliklinik[];
@@ -18,7 +19,7 @@ interface KlinikState {
   fetchLayananByPoli: (poliId: string) => Promise<void>;
   createLayanan: (data: LayananKlinikPayload) => Promise<void>;
 
-  fetchDokterByPoli: (poliId: string) => Promise<void>;
+  fetchDokterByPoli: (poliId: string, tanggal?: string, jam?: string) => Promise<void>;
   syncLocationIHS: (poliId: string) => Promise<any>;
 }
 
@@ -85,9 +86,21 @@ export const useKlinikStore = create<KlinikState>((set, get) => ({
     }
   },
 
-  fetchDokterByPoli: async (poliId) => {
+  fetchDokterByPoli: async (poliId, tanggal, jam) => {
     set({ isLoadingDokter: true, error: null });
     try {
+      // Prioritaskan query dokter bertugas terintegrasi dengan jadwal dan cuti/izin
+      const res = await jadwalNakesService.getDokterBertugasByPoli(poliId, tanggal, false, jam);
+      if (res && res.dokters) {
+        set((state) => ({
+          dokters: {
+            ...state.dokters,
+            [poliId]: res.dokters,
+          },
+        }));
+        return;
+      }
+
       const dokters = await klinikService.getDokterByPoli(poliId);
       set((state) => ({
         dokters: {
@@ -96,7 +109,17 @@ export const useKlinikStore = create<KlinikState>((set, get) => ({
         },
       }));
     } catch (error) {
-      set({ error: (error as any).message });
+      try {
+        const dokters = await klinikService.getDokterByPoli(poliId);
+        set((state) => ({
+          dokters: {
+            ...state.dokters,
+            [poliId]: dokters,
+          },
+        }));
+      } catch (err: any) {
+        set({ error: err.message || (error as any).message });
+      }
     } finally {
       set({ isLoadingDokter: false });
     }

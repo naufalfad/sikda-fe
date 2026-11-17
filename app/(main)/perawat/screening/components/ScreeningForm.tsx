@@ -131,14 +131,6 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
     }
   };
 
-  const toTitleCase = (str: string | undefined | null): string | undefined => {
-    if (!str) return undefined;
-    return str.replace(
-      /\w\S*/g,
-      (text) => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
-    );
-  };
-
   const onSubmit = async (data: any) => {
     // Pastikan tidak tersimpan sebelum pengguna menyelesaikan Step 5 (Head to Toe)
     if (currentStep < 5) {
@@ -173,15 +165,15 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
       // Step 1: Umum & Vital
       jenisKedatangan: data.jenisKedatangan,
       usia: data.usia ?? calculatedAge,
-      keluhanUtama: toTitleCase(data.keluhanUtama),
-      lamaKeluhan: toTitleCase(data.lamaKeluhan),
-      riwayatPenyakitSekarang: toTitleCase(data.riwayatPenyakitSekarang),
-      riwayatPenyakitDahulu: toTitleCase(data.riwayatPenyakitDahulu),
-      riwayatAlergi: toTitleCase(data.riwayatAlergi),
-      riwayatOperasi: toTitleCase(data.riwayatOperasi),
-      riwayatRawatInap: toTitleCase(data.riwayatRawatInap),
-      riwayatTransfusi: toTitleCase(data.riwayatTransfusi),
-      riwayatPengobatan: toTitleCase(data.riwayatPengobatan),
+      keluhanUtama: data.keluhanUtama || null,
+      lamaKeluhan: data.lamaKeluhan || null,
+      riwayatPenyakitSekarang: data.riwayatPenyakitSekarang || null,
+      riwayatPenyakitDahulu: data.riwayatPenyakitDahulu || null,
+      riwayatAlergi: data.riwayatAlergi || null,
+      riwayatOperasi: data.riwayatOperasi || null,
+      riwayatRawatInap: data.riwayatRawatInap || null,
+      riwayatTransfusi: data.riwayatTransfusi || null,
+      riwayatPengobatan: data.riwayatPengobatan || null,
       tinggiBadan: data.tinggiBadan,
       beratBadan: data.beratBadan,
       lingkarPerut: data.lingkarPerut,
@@ -217,11 +209,11 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
       ptmStroke: data.ptmStroke || [],
       ptmKanker: data.ptmKanker || [],
       gulaDarahSewaktu: data.gulaDarahSewaktu,
-      catatanPenyakitKeluarga: toTitleCase(data.catatanPenyakitKeluarga),
-      catatanGayaHidup: toTitleCase(data.catatanGayaHidup),
-      catatanRisikoLain: toTitleCase(data.catatanRisikoLain),
-      catatanPtmKhusus: toTitleCase(data.catatanPtmKhusus),
-      catatanPengukuran: toTitleCase(data.catatanPengukuran),
+      catatanPenyakitKeluarga: data.catatanPenyakitKeluarga || null,
+      catatanGayaHidup: data.catatanGayaHidup || null,
+      catatanRisikoLain: data.catatanRisikoLain || null,
+      catatanPtmKhusus: data.catatanPtmKhusus || null,
+      catatanPengukuran: data.catatanPengukuran || null,
       // Step 4: TB & Jiwa
       gejalaTB: data.gejalaTB || [],
       kontakTB: data.kontakTB,
@@ -234,14 +226,14 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
       jiwaBunuhDiri: data.jiwaBunuhDiri || [],
       jiwaZat: data.jiwaZat || [],
       jiwaRiwayat: data.jiwaRiwayat || [],
-      catatanSkriningTB: toTitleCase(data.catatanSkriningTB),
-      catatanKesehatanJiwa: toTitleCase(data.catatanKesehatanJiwa),
+      catatanSkriningTB: data.catatanSkriningTB || null,
+      catatanKesehatanJiwa: data.catatanKesehatanJiwa || null,
       // Step 5: Head to Toe & Otomatisasi Kesimpulan Klinis
       headToToe: data.headToToe,
       statusKesehatan: derivedStatusKesehatan,
       prioritasPelayanan: derivedPrioritas,
       tindakLanjut: derivedTindakLanjut,
-      catatanPetugas: toTitleCase(data.catatanPetugas) || 'Skrining awal dan pemeriksaan fisik Head to Toe selesai. Pasien diteruskan ke antrean dokter.',
+      catatanPetugas: data.catatanPetugas || 'Skrining awal dan pemeriksaan fisik Head to Toe selesai. Pasien diteruskan ke antrean dokter.',
       // Poli Gigi & Mulut Fields (SATUSEHAT & OHIS)
       golonganDarah: data.golonganDarah,
       rhesus: data.rhesus,
@@ -250,8 +242,8 @@ export default function ScreeningForm({ kunjungan }: { kunjungan: Kunjungan }) {
       kalkulusIndex: data.kalkulusIndex,
       skorOhis: data.skorOhis,
       interpretasiOhis: data.interpretasiOhis,
-      riwayatAlergiAnestesi: toTitleCase(data.riwayatAlergiAnestesi),
-      riwayatPengencerDarah: toTitleCase(data.riwayatPengencerDarah),
+      riwayatAlergiAnestesi: data.riwayatAlergiAnestesi || null,
+      riwayatPengencerDarah: data.riwayatPengencerDarah || null,
     };
 
     try {

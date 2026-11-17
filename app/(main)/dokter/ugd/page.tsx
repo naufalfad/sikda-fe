@@ -582,11 +582,11 @@ export default function UGDDashboard() {
         title: 'Observasi & Tindakan UGD Disimpan!',
         html: `
           <div class="text-left text-xs space-y-2 mt-2">
-            <p>✅ Catatan SOAP dan <strong>${selectedProsedur.length} Tindakan/BMHP</strong> berhasil disimpan ke Rekam Medis.</p>
-            <p>🏥 <strong>Status Pasien:</strong> Pasien tetap berada dalam status <strong>OBSERVASI</strong> di antrean UGD.</p>
-            <p>🛏️ <strong>Status Tempat Tidur:</strong> Bed tetap <strong>TERISI</strong> untuk pemantauan klinis.</p>
+            <p>Catatan SOAP dan <strong>${selectedProsedur.length} Tindakan/BMHP</strong> berhasil disimpan ke Rekam Medis.</p>
+            <p><strong>Status Pasien:</strong> Pasien tetap berada dalam status <strong>OBSERVASI</strong> di antrean UGD.</p>
+            <p><strong>Status Tempat Tidur:</strong> Bed tetap <strong>TERISI</strong> untuk pemantauan klinis.</p>
             <div class="bg-blue-50 border border-blue-200 p-2 text-blue-900 mt-2">
-              💡 Dokter dapat menambahkan observasi berkala, tindakan baru, atau menyelesaikan discharge di Tab Keputusan ketika kondisi pasien stabil.
+              Dokter dapat menambahkan observasi berkala, tindakan baru, atau menyelesaikan discharge di Tab Keputusan ketika kondisi pasien stabil.
             </div>
           </div>
         `,
@@ -756,7 +756,7 @@ export default function UGDDashboard() {
   const availableUGDBeds = beds.filter(b => b.statusBed === 'TERSEDIA');
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-full bg-gray-50 overflow-hidden">
 
       {/* ============================================================ */}
       {/* LEFT PANEL: UGD QUEUE & BED STATUS */}
@@ -1665,7 +1665,7 @@ export default function UGDDashboard() {
                               className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
                             >
                               <Save className="w-4 h-4" />
-                              {isSavingObservasi ? 'Menyimpan...' : '💾 Simpan Observasi / Draf SOAP UGD'}
+                              {isSavingObservasi ? 'Menyimpan...' : 'Simpan Observasi / Draf SOAP UGD'}
                             </button>
                           )}
                           <button
@@ -1926,7 +1926,7 @@ export default function UGDDashboard() {
             </div>
 
             {/* Bottom Footer Action */}
-            <div className="bg-white p-4 border-t border-gray-200 flex justify-between items-center shadow-lg z-20">
+            <div className="shrink-0 bg-white p-4 border-t border-gray-200 flex justify-between items-center shadow-lg z-20">
               <div className="text-xs text-gray-500">
                 Bed saat ini: <strong className="text-blue-700">{selectedPatient.tempatTidurs?.[0]?.nomorBed || 'UGD'}</strong> (Otomatis menjadi TERSEDIA setelah discharge)
               </div>
@@ -1955,7 +1955,7 @@ export default function UGDDashboard() {
                         className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold flex items-center text-xs uppercase tracking-wider rounded-none shadow-sm transition-all disabled:opacity-50"
                       >
                         <Save className="w-4 h-4 mr-1.5" />
-                        {isSavingObservasi ? 'Menyimpan...' : '💾 Simpan Observasi (Bed Tetap Terisi)'}
+                        {isSavingObservasi ? 'Menyimpan...' : 'Simpan Observasi (Bed Tetap Terisi)'}
                       </button>
                       <button
                         type="button"

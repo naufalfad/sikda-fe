@@ -24,13 +24,15 @@ export default function CetakPengantarPenunjangModal({
   orderRadiologiData,
   defaultTab
 }: CetakPengantarPenunjangModalProps) {
-  // Saring item lab yang berstatus rujukan eksternal
-  const externalLabItems = (orderLabData?.details || []).filter((d: any) =>
-    d.isRujukanLuar === true || (d.isRujukanLuar === undefined && !['darah rutin', 'gds', 'gula darah', 'urinalisa', 'bta', 'tcm', 'plano'].some(k => (d.parameter || '').toLowerCase().includes(k)))
-  );
+  // Saring item lab yang berstatus rujukan eksternal (Single Source of Truth berdasar isRujukanLuar order)
+  const externalLabItems = (orderLabData?.details || []).filter((d: any) => d.isRujukanLuar === true);
 
   const hasLabRujukan = externalLabItems.length > 0;
-  const hasRadiologiRujukan = Boolean(orderRadiologiData && (orderRadiologiData.details?.length > 0 || orderRadiologiData.id));
+  const hasRadiologiRujukan = Boolean(
+    orderRadiologiData && 
+    orderRadiologiData.isRujukanLuar !== false && 
+    (orderRadiologiData.details?.length > 0 || orderRadiologiData.id)
+  );
 
   const [activeTab, setActiveTab] = useState<'LAB' | 'RADIOLOGI'>('LAB');
 
@@ -238,8 +240,8 @@ export default function CetakPengantarPenunjangModal({
                   <span className="w-4">:</span>
                   <span className="font-bold text-slate-800">
                     {metodeRujukanLab === 'KIRIM_SPESIMEN'
-                      ? '🧪 Pengiriman Sampel / Spesimen (Sampel diambil di Puskesmas dan dikirim via kurir faskes)'
-                      : '🚶‍♂️ Pengantar Pasien Langsung (Pasien datang langsung ke Labkesda/RS tujuan untuk pengambilan & uji)'}
+                      ? 'Pengiriman Sampel / Spesimen (Sampel diambil di Puskesmas dan dikirim via kurir faskes)'
+                      : 'Pengantar Pasien Langsung (Pasien datang langsung ke Labkesda/RS tujuan untuk pengambilan & uji)'}
                   </span>
                 </div>
               </div>

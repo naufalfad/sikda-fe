@@ -292,23 +292,43 @@ export default function MasterVaksinPage() {
         </div>
       </div>
 
-      {/* Modal Form Tambah / Edit */}
+      {/* Modern Pop-up Modal Form Tambah / Edit */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white max-w-md w-full border border-gray-200 shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
-                <Syringe className="w-4 h-4 text-cyan-600" />
-                {editingId ? 'Edit Master Vaksin' : 'Tambah Master Vaksin Baru'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Glassmorphic Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
+            onClick={() => !isSubmitting && setIsModalOpen(false)}
+          />
+
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200 z-10">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-cyan-50/50 via-slate-50/30 to-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-cyan-600 text-white rounded-xl shadow-md">
+                  <Syringe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900">
+                    {editingId ? 'Edit Master Vaksin' : 'Tambah Master Vaksin Baru'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Standarisasi Kamus Farmasi Alkes (KFA) SATUSEHAT Kemenkes RI
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                disabled={isSubmitting}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Kode KFA (Kamus Farmasi Alkes) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -317,13 +337,13 @@ export default function MasterVaksinPage() {
                   placeholder="Contoh: 9300101"
                   value={formData.kodeKfa}
                   onChange={(e) => setFormData({ ...formData, kodeKfa: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 text-xs font-mono font-bold text-gray-900 focus:bg-white focus:border-cyan-600 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-cyan-500 focus:outline-none transition-all"
                 />
-                <span className="text-[10px] text-gray-400 mt-1 block">Kode identitas resmi vaksin dari Kemenkes SATUSEHAT</span>
+                <span className="text-[11px] text-slate-400 mt-1 block">Kode identitas resmi vaksin dari Kemenkes SATUSEHAT</span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Nama Vaksin <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -332,12 +352,12 @@ export default function MasterVaksinPage() {
                   placeholder="Contoh: Vaksin BCG Kering (Bio Farma)"
                   value={formData.namaVaksin}
                   onChange={(e) => setFormData({ ...formData, namaVaksin: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 text-xs font-medium text-gray-900 focus:bg-white focus:border-cyan-600 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-cyan-500 focus:outline-none transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Target Penyakit / Indikasi Imunisasi
                 </label>
                 <input
@@ -345,38 +365,51 @@ export default function MasterVaksinPage() {
                   placeholder="Contoh: Tuberkulosis (TBC) / Polio / Campak"
                   value={formData.targetPenyakit}
                   onChange={(e) => setFormData({ ...formData, targetPenyakit: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 text-xs font-medium text-gray-900 focus:bg-white focus:border-cyan-600 outline-none"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm text-slate-800 focus:bg-white focus:ring-2 focus:ring-cyan-500 focus:outline-none transition-all"
                 />
               </div>
 
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="statusAktif"
-                  checked={formData.statusAktif}
-                  onChange={(e) => setFormData({ ...formData, statusAktif: e.target.checked })}
-                  className="rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
-                />
-                <label htmlFor="statusAktif" className="text-xs font-semibold text-gray-700 cursor-pointer">
-                  Vaksin Aktif &amp; Siap Digunakan dalam Layanan Imunisasi
+              <div className="pt-1">
+                <label className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/70 transition-colors">
+                  <input
+                    type="checkbox"
+                    id="statusAktif"
+                    checked={formData.statusAktif}
+                    onChange={(e) => setFormData({ ...formData, statusAktif: e.target.checked })}
+                    className="w-4 h-4 text-cyan-600 rounded border-slate-300 focus:ring-cyan-500 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Vaksin Aktif &amp; Siap Digunakan</span>
+                    <span className="text-[11px] text-slate-500">Tersedia untuk peresepan imunisasi nakes dan pendaftaran batch faskes</span>
+                  </div>
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-200">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 text-xs font-bold text-gray-700 hover:bg-gray-50"
+                  disabled={isSubmitting}
+                  className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 transition-colors"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-bold shadow-xs flex items-center gap-2"
+                  className="px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-300 text-white rounded-xl font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2"
                 >
-                  {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {editingId ? 'Simpan Perubahan' : 'Tambah Vaksin'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {editingId ? 'Simpan Perubahan' : 'Tambah Vaksin'}
+                    </>
+                  )}
                 </button>
               </div>
             </form>

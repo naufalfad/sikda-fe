@@ -36,4 +36,30 @@ export interface DokterByPoli {
   username: string;
   namaLengkap?: string | null;
   nama_lengkap?: string | null;
+  role?: string;
+  isBertugasHariIni?: boolean;
+  isShiftAktifSaatIni?: boolean;
+  shiftStatus?: 'AKTIF' | 'BELUM_DIMULAI' | 'SELESAI' | 'LIBUR' | 'CUTI';
+  shiftKeterangan?: string;
+  isPengganti?: boolean;
+  statusKehadiran?: string;
+  statusKeterangan?: string;
+  jadwalDetail?: {
+    id?: string;
+    hari?: string;
+    shift?: string;
+    jamMulai?: string;
+    jamSelesai?: string;
+    kuotaPasien?: number;
+  } | null;
+  cutiDetail?: {
+    tipeIzin?: string;
+    keterangan?: string | null;
+    tanggalMulai?: string;
+    tanggalSelesai?: string;
+    pengganti?: {
+      id: string;
+      namaLengkap: string | null;
+    } | null;
+  } | null;
 }

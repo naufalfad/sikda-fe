@@ -18,15 +18,22 @@ import {
   Check,
   Clock,
   Plus,
+  Minus,
+  Package,
   Info,
   Calendar,
   Pill,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Building2,
+  ExternalLink,
+  User,
+  Stethoscope
 } from 'lucide-react';
+import { useAuthStore } from '@/store/auth.store';
 import { useRawatJalanStore } from '@/store/rawatJalan.store';
 import { asetRuanganService } from '@/services/asetRuangan.service';
-import { imunisasiService, VaksinItem, BatchVaksinItem } from '@/services/imunisasi.service';
+import { imunisasiService, VaksinItem, BatchVaksinItem, BmhpVaksinItem } from '@/services/imunisasi.service';
 import { masterService } from '@/services/master.service';
 import Swal from 'sweetalert2';
 
@@ -68,6 +75,7 @@ export default function DischargePlanning() {
                 selectedKunjungan?.poliklinik?.namaPoli?.toUpperCase().includes('IGD');
   const ugdBed = (selectedKunjungan as any)?.tempatTidurs?.[0];
 
+  const { user: currentUser } = useAuthStore();
   const [activeMenu, setActiveMenu] = useState<'HOME' | 'VAKSIN' | 'RUJUKAN' | 'RAWAT_INAP'>('HOME');
 
   // ==========================================
@@ -81,6 +89,11 @@ export default function DischargePlanning() {
   const [isSubmittingVaksin, setIsSubmittingVaksin] = useState(false);
   const [riwayatVaksin, setRiwayatVaksin] = useState<any[]>([]);
   const [isLoadingRiwayat, setIsLoadingRiwayat] = useState(false);
+
+  // BMHP Terintegrasi Tindakan Vaksinasi
+  const [availableBmhp, setAvailableBmhp] = useState<any[]>([]);
+  const [isLoadingBmhp, setIsLoadingBmhp] = useState(false);
+  const [selectedBmhpList, setSelectedBmhpList] = useState<BmhpVaksinItem[]>([]);
 
   const [vaksinForm, setVaksinForm] = useState({
     dosisKe: 1,
@@ -142,8 +155,134 @@ export default function DischargePlanning() {
   if (!selectedKunjungan) return null;
 
   // -------------------------------------------------------------
-  // VAKSIN LOGIC & HANDLERS
+  // VAKSIN & BMHP LOGIC & HANDLERS
   // -------------------------------------------------------------
+  const fetchMasterBmhp = async () => {
+    setIsLoadingBmhp(true);
+    try {
+      const res = await masterService.getObat();
+      const raw = res?.data || res || [];
+      const filtered = (Array.isArray(raw) ? raw : []).filter((o: any) =>
+        (o.kategori && o.kategori.toUpperCase().includes('BMHP')) ||
+        (o.sediaan && ['Spuit', 'Kasa', 'Jarum', 'Plester', 'Benang', 'Infus', 'Ampul', 'Vial', 'Pcs', 'Swab', 'Kapas'].some((s: string) => o.sediaan.includes(s))) ||
+        ['spuit', 'kasa', 'jarum', 'swab', 'alkohol', 'plester', 'kapas', 'sarung tangan', 'needle'].some((k: string) => (o.namaObat || '').toLowerCase().includes(k))
+      );
+      setAvailableBmhp(filtered.length > 0 ? filtered : (Array.isArray(raw) ? raw.slice(0, 30) : []));
+    } catch (err) {
+      console.error('Failed to load master BMHP:', err);
+    } finally {
+      setIsLoadingBmhp(false);
+    }
+  };
+
+  const generatePresetBmhp = (vaksin: any, rute: string, bmhpSource: any[] = availableBmhp): BmhpVaksinItem[] => {
+    const namaLower = (vaksin?.namaVaksin || '').toLowerCase();
+    const ruteLower = (rute || '').toLowerCase();
+
+    // Vaksin rute oral (OPV, Rotavirus oral) tidak menggunakan jarum suntik
+    if (ruteLower.includes('oral') || namaLower.includes('polio oral') || namaLower.includes('bopv') || namaLower.includes('rotavirus')) {
+      return [];
+    }
+
+    const swab = bmhpSource.find((b: any) =>
+      (b.namaObat || '').toLowerCase().includes('swab') || (b.namaObat || '').toLowerCase().includes('alkohol')
+    );
+    const plester = bmhpSource.find((b: any) =>
+      (b.namaObat || '').toLowerCase().includes('plester') || (b.namaObat || '').toLowerCase().includes('hipafix')
+    );
+
+    let spuitItem: any = null;
+    let fallbackSpuitName = 'Spuit ADS 0.5 mL Disposable';
+
+    if (ruteLower.includes('intrakutan') || namaLower.includes('bcg')) {
+      spuitItem = bmhpSource.find((b: any) =>
+        (b.namaObat || '').toLowerCase().includes('0.05') ||
+        ((b.namaObat || '').toLowerCase().includes('spuit') && (b.namaObat || '').toLowerCase().includes('1'))
+      );
+      fallbackSpuitName = 'Spuit ADS 0.05 mL Intrakutan';
+    } else {
+      spuitItem = bmhpSource.find((b: any) =>
+        ((b.namaObat || '').toLowerCase().includes('0.5') && (b.namaObat || '').toLowerCase().includes('spuit')) ||
+        ((b.namaObat || '').toLowerCase().includes('spuit') && !(b.namaObat || '').toLowerCase().includes('3') && !(b.namaObat || '').toLowerCase().includes('5'))
+      );
+    }
+
+    const items: BmhpVaksinItem[] = [
+      {
+        obatId: spuitItem?.id || 'BMHP-SPU-05ML',
+        namaItem: spuitItem?.namaObat || fallbackSpuitName,
+        sediaan: spuitItem?.sediaan || 'Pcs',
+        jumlah: 1,
+        hargaSatuan: spuitItem?.harga || 2000,
+        subTotal: spuitItem?.harga || 2000,
+      },
+      {
+        obatId: swab?.id || 'BMHP-ALK-SWB',
+        namaItem: swab?.namaObat || 'Alcohol Swab 70% Antiseptik',
+        sediaan: swab?.sediaan || 'Sachet',
+        jumlah: 1,
+        hargaSatuan: swab?.harga || 500,
+        subTotal: swab?.harga || 500,
+      }
+    ];
+
+    if (plester) {
+      items.push({
+        obatId: plester.id,
+        namaItem: plester.namaObat,
+        sediaan: plester.sediaan || 'Pcs',
+        jumlah: 1,
+        hargaSatuan: plester.harga || 500,
+        subTotal: plester.harga || 500,
+      });
+    }
+
+    return items;
+  };
+
+  const handleUpdateBmhpQty = (index: number, newQty: number) => {
+    setSelectedBmhpList(prev => {
+      const updated = [...prev];
+      if (newQty <= 0) {
+        updated.splice(index, 1);
+      } else {
+        updated[index] = {
+          ...updated[index],
+          jumlah: newQty,
+          subTotal: newQty * (updated[index].hargaSatuan || 0)
+        };
+      }
+      return updated;
+    });
+  };
+
+  const handleRemoveBmhp = (index: number) => {
+    setSelectedBmhpList(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddBmhpItem = (obat: any) => {
+    setSelectedBmhpList(prev => {
+      const existingIdx = prev.findIndex(b => b.obatId === obat.id || b.namaItem === obat.namaObat);
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx].jumlah += 1;
+        updated[existingIdx].subTotal = updated[existingIdx].jumlah * (updated[existingIdx].hargaSatuan || 0);
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          obatId: obat.id,
+          namaItem: obat.namaObat,
+          sediaan: obat.sediaan || 'Pcs',
+          jumlah: 1,
+          hargaSatuan: obat.harga || 0,
+          subTotal: obat.harga || 0
+        }
+      ];
+    });
+  };
+
   const fetchVaksin = async () => {
     setIsLoadingVaksin(true);
     try {
@@ -178,6 +317,7 @@ export default function DischargePlanning() {
     if (activeMenu === 'VAKSIN') {
       fetchVaksin();
       fetchRiwayatPasien();
+      fetchMasterBmhp();
     }
   }, [activeMenu]);
 
@@ -228,6 +368,10 @@ export default function DischargePlanning() {
       ruteSuntik: defaultRute,
       catatan: ''
     }));
+
+    // Auto-populate preset BMHP terintegrasi sesuai jenis vaksin & rute
+    const presetBmhp = generatePresetBmhp(v, defaultRute);
+    setSelectedBmhpList(presetBmhp);
   };
 
   const submitVaksin = async () => {
@@ -253,14 +397,21 @@ export default function DischargePlanning() {
     const confirm = await Swal.fire({
       title: 'Konfirmasi Penyuntikan Vaksin',
       html: `
-        <div class="text-left text-sm space-y-1.5 p-2 bg-gray-50 border border-gray-200">
+        <div class="text-left text-sm space-y-1.5 p-3 bg-gray-50 border border-gray-200">
           <p><strong>Vaksin:</strong> ${selectedVaksin.namaVaksin}</p>
-          <p><strong>Batch:</strong> <span class="font-mono">${batch?.noBatch || '-'}</span> (ED: ${batch?.tanggalExpired ? new Date(batch.tanggalExpired).toLocaleDateString('id-ID') : '-'})</p>
+          <p><strong>Batch:</strong> <span class="font-mono font-bold">${batch?.noBatch || '-'}</span> (ED: ${batch?.tanggalExpired ? new Date(batch.tanggalExpired).toLocaleDateString('id-ID') : '-'})</p>
           <p><strong>Dosis:</strong> Ke-${vaksinForm.dosisKe} (${vaksinForm.dosisJumlah} ${vaksinForm.ruteSuntik === 'Oral' ? 'tetes' : 'mL'})</p>
           <p><strong>Rute & Lokasi:</strong> ${vaksinForm.ruteSuntik} • ${vaksinForm.lokasiSuntik}</p>
-          <div class="mt-2 pt-2 border-t border-gray-200 text-xs text-slate-700 font-semibold space-y-1">
-            <div>• 1 vial dipotong dari Cold-Chain</div>
-            <div>• Layanan vaksinasi (Rp 25.000) otomatis masuk ke kasir</div>
+          <p><strong>Petugas Vaksinator:</strong> ${currentUser?.namaLengkap || 'Dokter / Petugas Pelaksana'}</p>
+          <div class="mt-2.5 pt-2 border-t border-gray-200 text-xs text-slate-700 space-y-1">
+            <div class="font-bold text-teal-800">• 1 vial dipotong dari Cold-Chain Puskesmas</div>
+            ${selectedBmhpList.length > 0 ? `
+              <div class="font-bold text-indigo-900">• Pengurangan Stok BMHP Terintegrasi (${selectedBmhpList.length} item):</div>
+              <ul class="list-disc pl-5 text-[11px] text-slate-600 space-y-0.5">
+                ${selectedBmhpList.map(b => `<li>${b.namaItem}: <strong>${b.jumlah} ${b.sediaan || 'pcs'}</strong></li>`).join('')}
+              </ul>
+            ` : '<div class="text-slate-500 italic">• Tanpa jarum/BMHP (vaksin oral)</div>'}
+            <div class="text-[11px] text-slate-600">• Layanan vaksinasi (Rp 25.000) otomatis masuk ke rincian kasir</div>
           </div>
         </div>
       `,
@@ -284,13 +435,15 @@ export default function DischargePlanning() {
         lokasiSuntik: vaksinForm.lokasiSuntik,
         ruteSuntik: vaksinForm.ruteSuntik,
         catatan: vaksinForm.catatan || '',
+        petugasId: currentUser?.id ? String(currentUser.id) : undefined,
+        bmhpDetails: selectedBmhpList,
         isRiwayatLuar: false
       });
 
       await Swal.fire({
         icon: 'success',
         title: 'Vaksinasi Berhasil Dicatat!',
-        text: `Pemberian ${selectedVaksin.namaVaksin} telah dicatat. Stok Cold-Chain terpotong dan rincian kasir telah diperbarui.`,
+        text: `Pemberian ${selectedVaksin.namaVaksin} telah dicatat. Stok Cold-Chain & BMHP terpotong otomatis, dan rincian kasir telah diperbarui.`,
         timer: 2500,
         showConfirmButton: false
       });
@@ -920,7 +1073,14 @@ export default function DischargePlanning() {
                       </label>
                       <select
                         value={vaksinForm.ruteSuntik}
-                        onChange={e => setVaksinForm({ ...vaksinForm, ruteSuntik: e.target.value })}
+                        onChange={e => {
+                          const newRute = e.target.value;
+                          setVaksinForm({ ...vaksinForm, ruteSuntik: newRute });
+                          if (selectedVaksin) {
+                            const preset = generatePresetBmhp(selectedVaksin, newRute);
+                            setSelectedBmhpList(preset);
+                          }
+                        }}
                         className="w-full p-2 bg-white border border-gray-300 text-xs rounded-none focus:ring-1 focus:ring-teal-500 text-gray-900"
                       >
                         {RUTE_SUNTIK_OPTIONS.map(r => (
@@ -958,6 +1118,138 @@ export default function DischargePlanning() {
                         placeholder="Misal: Spuit ADS 0.5 mL, tidak ada kontraindikasi..."
                         className="w-full p-2 bg-white border border-gray-300 text-xs rounded-none focus:ring-1 focus:ring-teal-500 text-gray-900"
                       />
+                    </div>
+                  </div>
+
+                  {/* Identitas Petugas Vaksinator Terverifikasi */}
+                  <div className="p-3 bg-teal-50/70 border border-teal-200 text-xs flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 bg-teal-600 text-white shadow-2xs">
+                        <User className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-teal-950 block text-[11px]">Petugas Pelaksana / Vaksinator:</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-teal-900 font-extrabold text-xs">{currentUser?.namaLengkap || 'Dokter / Petugas Pelaksana'}</span>
+                          {currentUser?.role && (
+                            <span className="text-[10px] text-teal-700 bg-teal-100/80 px-1.5 py-0.2 border border-teal-300">
+                              {currentUser.role}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 border border-emerald-300 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Terverifikasi Sistem
+                    </span>
+                  </div>
+
+                  {/* ─── INTEGRASI BMHP (BAHAN MEDIS HABIS PAKAI) ─── */}
+                  <div className="border border-indigo-200 bg-indigo-50/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 bg-indigo-600 text-white shadow-2xs">
+                          <Package className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-indigo-950 uppercase tracking-wide">
+                            BMHP & Peralatan Medis Habis Pakai
+                          </h4>
+                          <p className="text-[11px] text-indigo-800/80">
+                            Peralatan suntik & antiseptik otomatis memotong stok logistik faskes saat tindakan dicatat.
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-indigo-100 text-indigo-900 px-2.5 py-0.5 border border-indigo-300">
+                        {selectedBmhpList.length} Item BMHP
+                      </span>
+                    </div>
+
+                    {/* Rincian BMHP yang Akan Digunakan */}
+                    {selectedBmhpList.length === 0 ? (
+                      <div className="p-3 bg-white border border-dashed border-indigo-200 text-center text-xs text-indigo-700">
+                        Tidak ada BMHP jarum/suntik yang dipilih (misal untuk vaksin tetes oral). Tambahkan manual di bawah jika diperlukan.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {selectedBmhpList.map((bmhp, bIdx) => (
+                          <div
+                            key={bIdx}
+                            className="bg-white p-2.5 border border-indigo-200 shadow-2xs flex items-center justify-between text-xs"
+                          >
+                            <div className="min-w-0 pr-2">
+                              <p className="font-bold text-gray-900 truncate text-[11px]">{bmhp.namaItem}</p>
+                              <p className="text-[10px] text-gray-500">
+                                Sediaan: {bmhp.sediaan || 'Pcs'} {bmhp.hargaSatuan ? `• Rp ${bmhp.hargaSatuan.toLocaleString('id-ID')}` : ''}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateBmhpQty(bIdx, bmhp.jumlah - 1)}
+                                className="w-6 h-6 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold border border-gray-300"
+                                title="Kurangi Kuantiti"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="w-6 text-center font-bold text-xs font-mono text-gray-900">
+                                {bmhp.jumlah}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateBmhpQty(bIdx, bmhp.jumlah + 1)}
+                                className="w-6 h-6 flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold border border-gray-300"
+                                title="Tambah Kuantiti"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveBmhp(bIdx)}
+                                className="w-6 h-6 flex items-center justify-center text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 ml-0.5"
+                                title="Hapus BMHP"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Quick Add BMHP dari Stok Farmasi */}
+                    <div className="pt-1 flex flex-col sm:flex-row items-center gap-2">
+                      <select
+                        onChange={(e) => {
+                          const found = availableBmhp.find((o: any) => o.id === e.target.value);
+                          if (found) {
+                            handleAddBmhpItem(found);
+                            e.target.value = '';
+                          }
+                        }}
+                        defaultValue=""
+                        className="w-full sm:flex-1 p-2 bg-white border border-indigo-200 text-xs focus:ring-1 focus:ring-indigo-500 text-gray-800"
+                      >
+                        <option value="" disabled>+ Tambah BMHP Tambahan dari Stok Faskes...</option>
+                        {availableBmhp.map((item: any) => (
+                          <option key={item.id} value={item.id}>
+                            {item.namaObat} ({item.sediaan || 'Pcs'})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (selectedVaksin) {
+                            const preset = generatePresetBmhp(selectedVaksin, vaksinForm.ruteSuntik);
+                            setSelectedBmhpList(preset);
+                          }
+                        }}
+                        className="w-full sm:w-auto px-3 py-2 bg-white hover:bg-indigo-50 text-indigo-800 font-bold text-xs border border-indigo-300 shrink-0"
+                        title="Kembalikan BMHP ke rekomendasi standar vaksin ini"
+                      >
+                        Reset Rekomendasi
+                      </button>
                     </div>
                   </div>
 
@@ -1028,6 +1320,9 @@ export default function DischargePlanning() {
                           <span>Volume: <strong>{item.dosisJumlah || '0.5'} mL</strong></span>
                           <span>Rute: <strong>{item.ruteSuntik}</strong></span>
                           <span>Lokasi: <strong>{item.lokasiSuntik}</strong></span>
+                          {item.petugas?.namaLengkap && (
+                            <span>Petugas: <strong className="text-teal-900">{item.petugas.namaLengkap}</strong></span>
+                          )}
                         </div>
                         {item.catatan && (
                           <div className="text-[11px] text-gray-500 mt-1 italic">
@@ -1082,33 +1377,124 @@ export default function DischargePlanning() {
   if (activeMenu === 'RUJUKAN') {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-gray-100 overflow-y-auto">
-        <div className="p-4 bg-white border-b shadow-sm flex items-center justify-between print:hidden">
+        <div className="p-4 bg-white border-b shadow-sm flex items-center justify-between print:hidden sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <button onClick={() => setActiveMenu('HOME')} className="p-2 hover:bg-gray-100 rounded-none">
+            <button onClick={() => setActiveMenu('HOME')} className="p-2 hover:bg-gray-100 rounded-none" title="Kembali ke Pilihan Tindak Lanjut">
               <ArrowLeft className="w-5 h-5 text-gray-600" />
             </button>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <ClipboardList className="w-5 h-5 text-indigo-600" /> Form Surat Rujukan
-            </h2>
+            <div>
+              <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-indigo-600" /> Rujukan Keluar Faskes / Rumah Sakit
+              </h2>
+              <p className="text-xs text-gray-500">
+                Pemeriksaan selesai. Isi faskes tujuan dan cetak surat rujukan untuk <strong>{selectedKunjungan.pasien.namaLengkap}</strong>
+              </p>
+            </div>
+          </div>
+
+          {/* Tombol Simpan & Cetak di Bagian Atas */}
+          <div className="flex items-center gap-2">
+            <button 
+              type="button"
+              onClick={submitRujukan} 
+              disabled={isSubmitting || !rujukanData.tujuanRS || !rujukanData.tujuanPoli}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md flex items-center gap-2 transition-all disabled:opacity-50 active:scale-95"
+              title="Simpan Data Rujukan & Cetak Surat Rujukan"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Menyimpan Rujukan...</span>
+                </>
+              ) : (
+                <>
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak Surat Rujukan & Selesai</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
         <div className="max-w-6xl w-full mx-auto flex gap-6 p-6 items-start h-full pb-20">
           {/* Panel Form Editor (Sembunyi saat print) */}
-          <div className="w-1/3 bg-white p-6 shadow-md border border-gray-200 print:hidden h-fit rounded-none sticky top-6">
-            <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-              <div className="p-3 bg-blue-50 border border-blue-100 mb-2 rounded-none">
-                <label className="block text-xs font-bold text-blue-800 mb-1">Kepada Yth. Teman Sejawat (TS)</label>
-                <input type="text" placeholder="dr. Spesialis / Nama RS" className="w-full border border-blue-200 rounded-none p-2 text-sm text-gray-900 focus:border-blue-500 outline-none mb-2" 
-                  value={rujukanData.tujuanDokter} onChange={e => setRujukanData({...rujukanData, tujuanDokter: e.target.value})} />
-                
-                <label className="block text-xs font-bold text-blue-800 mb-1">Di Poliklinik / Bagian</label>
-                <input type="text" placeholder="Poli Penyakit Dalam" className="w-full border border-blue-200 rounded-none p-2 text-sm text-gray-900 focus:border-blue-500 outline-none mb-2" 
-                  value={rujukanData.tujuanPoli} onChange={e => setRujukanData({...rujukanData, tujuanPoli: e.target.value})} />
-                  
-                <label className="block text-xs font-bold text-blue-800 mb-1">Rumah Sakit Tujuan</label>
-                <input type="text" placeholder="RSUD Kota / RS Siloam" className="w-full border border-blue-200 rounded-none p-2 text-sm text-gray-900 focus:border-blue-500 outline-none" 
-                  value={rujukanData.tujuanRS} onChange={e => setRujukanData({...rujukanData, tujuanRS: e.target.value})} />
+          <div className="w-1/3 bg-white p-6 shadow-md border border-gray-200 print:hidden h-fit rounded-none sticky top-20">
+            <div className="space-y-3 max-h-[72vh] overflow-y-auto pr-2 custom-scrollbar">
+              
+              {/* Seksi Faskes Rujukan Tujuan (Di Letakkan Paling Atas) */}
+              <div className="p-3.5 bg-indigo-50/80 border-2 border-indigo-200 mb-2 rounded-none space-y-3">
+                <div className="flex items-center justify-between border-b border-indigo-200 pb-2">
+                  <span className="text-xs font-black text-indigo-900 uppercase tracking-wide flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-indigo-700" />
+                    Tujuan Rujukan Eksternal
+                  </span>
+                  <span className="text-[10px] bg-indigo-200 text-indigo-900 font-bold px-1.5 py-0.2">
+                    Wajib Diisi
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-indigo-950 mb-1">
+                    Rumah Sakit / Faskes Tujuan *
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Contoh: RSUD Cibinong / RS Hermina" 
+                    className="w-full border border-indigo-300 rounded-none p-2 text-xs font-bold text-gray-900 bg-white focus:ring-1 focus:ring-indigo-500 outline-none" 
+                    value={rujukanData.tujuanRS} 
+                    onChange={e => setRujukanData({...rujukanData, tujuanRS: e.target.value})} 
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['RSUD Cibinong', 'RS PMI', 'RS Hermina', 'RSUD Ciawi'].map((rs) => (
+                      <button
+                        key={rs}
+                        type="button"
+                        onClick={() => setRujukanData({...rujukanData, tujuanRS: rs})}
+                        className="text-[10px] bg-white hover:bg-indigo-100 border border-indigo-200 px-1.5 py-0.5 text-indigo-800 font-medium"
+                      >
+                        + {rs}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-indigo-950 mb-1">
+                    Poliklinik / Spesialis Tujuan *
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Contoh: Poli Penyakit Dalam / Poli Anak" 
+                    className="w-full border border-indigo-300 rounded-none p-2 text-xs font-bold text-gray-900 bg-white focus:ring-1 focus:ring-indigo-500 outline-none" 
+                    value={rujukanData.tujuanPoli} 
+                    onChange={e => setRujukanData({...rujukanData, tujuanPoli: e.target.value})} 
+                  />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['Penyakit Dalam', 'Anak', 'Bedah', 'Obgyn', 'Mata', 'Saraf'].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setRujukanData({...rujukanData, tujuanPoli: `Poli ${p}`})}
+                        className="text-[10px] bg-white hover:bg-indigo-100 border border-indigo-200 px-1.5 py-0.5 text-indigo-800 font-medium"
+                      >
+                        + {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-indigo-950 mb-1">
+                    Kepada Yth. Dokter Spesialis (TS) (Opsional)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="Contoh: dr. Spesialis Penyakit Dalam, Sp.PD" 
+                    className="w-full border border-indigo-200 rounded-none p-2 text-xs text-gray-900 bg-white focus:ring-1 focus:ring-indigo-500 outline-none" 
+                    value={rujukanData.tujuanDokter} 
+                    onChange={e => setRujukanData({...rujukanData, tujuanDokter: e.target.value})} 
+                  />
+                </div>
               </div>
 
               <div>

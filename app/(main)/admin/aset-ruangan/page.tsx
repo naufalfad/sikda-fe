@@ -283,8 +283,8 @@ export default function AsetRuanganPage() {
           toast: true,
           position: 'top-end',
           icon: 'success',
-          title: 'Tempat tidur telah siap dan kosong untuk pasien berikutnya.',
-          timer: 2500,
+          title: 'Bed telah dikosongkan & siap untuk pasien berikutnya. Rincian tagihan otomatis diteruskan ke loket Kasir.',
+          timer: 3000,
           showConfirmButton: false
         });
       }

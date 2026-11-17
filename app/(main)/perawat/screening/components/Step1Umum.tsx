@@ -31,19 +31,6 @@ interface Step1Props {
 }
 
 export default function Step1Umum({ register, errors, watch, setValue, isPoliGigi }: Step1Props) {
-  const toTitleCase = (str: string) => {
-    if (!str) return str;
-    return str.replace(
-      /\w\S*/g,
-      (text) => text.charAt(0).toUpperCase() + text.substring(1).toLowerCase()
-    );
-  };
-
-  const handleTitleCaseChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, fieldName: keyof ScreeningFormData) => {
-    e.target.value = toTitleCase(e.target.value);
-    register(fieldName).onChange(e);
-  };
-
   const [masterAlergis, setMasterAlergis] = useState<any[]>([]);
   const [selectedAlergenId, setSelectedAlergenId] = useState('');
   const [selectedManifestasiKode, setSelectedManifestasiKode] = useState('');
@@ -262,7 +249,6 @@ export default function Step1Umum({ register, errors, watch, setValue, isPoliGig
               <input 
                 type="text" 
                 {...register('riwayatAlergiAnestesi')} 
-                onChange={(e) => handleTitleCaseChange(e, 'riwayatAlergiAnestesi')}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-none text-xs text-gray-900" 
                 placeholder="Misal: Alergi Lidocaine / Pehacain (atau ketik 'Tidak Ada')" 
               />
@@ -273,7 +259,6 @@ export default function Step1Umum({ register, errors, watch, setValue, isPoliGig
               <input 
                 type="text" 
                 {...register('riwayatPengencerDarah')} 
-                onChange={(e) => handleTitleCaseChange(e, 'riwayatPengencerDarah')}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-none text-xs text-gray-900" 
                 placeholder="Misal: Aspirin, Warfarin, Clopidogrel (atau ketik 'Tidak Ada')" 
               />
@@ -293,7 +278,6 @@ export default function Step1Umum({ register, errors, watch, setValue, isPoliGig
             <label className="block text-sm font-semibold text-gray-700 mb-2">Keluhan Utama <span className="text-red-500">*</span></label>
             <textarea 
               {...register('keluhanUtama')}
-              onChange={(e) => handleTitleCaseChange(e, 'keluhanUtama')}
               rows={2}
               className={`w-full px-4 py-2.5 rounded-none border ${errors.keluhanUtama ? 'border-red-500' : 'border-gray-300'} focus:ring-2 focus:ring-blue-500 placeholder-gray-400 text-gray-900`}
               placeholder="Keluhan utama pasien saat ini..."
@@ -301,31 +285,31 @@ export default function Step1Umum({ register, errors, watch, setValue, isPoliGig
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Lama Keluhan</label>
-            <input type="text" {...register('lamaKeluhan')} onChange={(e) => handleTitleCaseChange(e, 'lamaKeluhan')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Misal: 3 hari" />
+            <input type="text" {...register('lamaKeluhan')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Misal: 3 hari" />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Riwayat Penyakit Sekarang</label>
-            <input type="text" {...register('riwayatPenyakitSekarang')} onChange={(e) => handleTitleCaseChange(e, 'riwayatPenyakitSekarang')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Detail penyakit sekarang..." />
+            <input type="text" {...register('riwayatPenyakitSekarang')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Detail penyakit sekarang..." />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Riwayat Penyakit Dahulu</label>
-            <input type="text" {...register('riwayatPenyakitDahulu')} onChange={(e) => handleTitleCaseChange(e, 'riwayatPenyakitDahulu')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Penyakit yang pernah dialami..." />
+            <input type="text" {...register('riwayatPenyakitDahulu')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Penyakit yang pernah dialami..." />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Riwayat Operasi</label>
-            <input type="text" {...register('riwayatOperasi')} onChange={(e) => handleTitleCaseChange(e, 'riwayatOperasi')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Kapan & Jenis operasi..." />
+            <input type="text" {...register('riwayatOperasi')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Kapan & Jenis operasi..." />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Riwayat Rawat Inap</label>
-            <input type="text" {...register('riwayatRawatInap')} onChange={(e) => handleTitleCaseChange(e, 'riwayatRawatInap')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Pernah dirawat karena..." />
+            <input type="text" {...register('riwayatRawatInap')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Pernah dirawat karena..." />
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Riwayat Transfusi Darah</label>
-            <input type="text" {...register('riwayatTransfusi')} onChange={(e) => handleTitleCaseChange(e, 'riwayatTransfusi')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Pernah transfusi (Ya/Tidak, Kapan)..." />
+            <input type="text" {...register('riwayatTransfusi')} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Pernah transfusi (Ya/Tidak, Kapan)..." />
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Riwayat Pengobatan (MedicationStatement FHIR)</label>
-            <textarea {...register('riwayatPengobatan' as any)} onChange={(e) => handleTitleCaseChange(e, 'riwayatPengobatan' as any)} rows={2} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Tuliskan nama obat/suplemen yang rutin atau pernah dikonsumsi pasien..." />
+            <textarea {...register('riwayatPengobatan' as any)} rows={2} className="w-full px-4 py-2.5 rounded-none border border-gray-300 placeholder-gray-400 text-gray-900" placeholder="Tuliskan nama obat/suplemen yang rutin atau pernah dikonsumsi pasien..." />
           </div>
 
           {/* Pencatatan Alergi Standar SATUSEHAT */}

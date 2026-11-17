@@ -646,6 +646,20 @@ function DokterRawatJalanContent() {
     }
   };
 
+  // Shortcut keyboard Ctrl+S / Cmd+S untuk Simpan Draf SOAP
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (selectedKunjungan && fase === 1 && !isSaving) {
+          handleSaveSOAP();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedKunjungan, fase, isSaving, soapData, selectedProsedur]);
+
   const handleSaveDiagnosa = async () => {
     if (!soapData.diagnosisArr || soapData.diagnosisArr.length === 0) {
       Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Pilih minimal satu diagnosa ICD-10.' });
@@ -811,7 +825,7 @@ function DokterRawatJalanContent() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-full bg-gray-50 overflow-hidden">
       
       {/* LEFT PANEL: QUEUE */}
       <QueueSidebar 
@@ -859,6 +873,9 @@ function DokterRawatJalanContent() {
               riwayatLabCount={riwayatLabList.length}
               onOpenLabModal={openLabModal}
               onCloseSelection={handleCloseSelection}
+              onSaveSOAP={fase === 1 ? handleSaveSOAP : undefined}
+              onSelesaikan={fase === 1 ? handleSelesaikan : undefined}
+              isSaving={isSaving}
             />
 
             {/* Status Banner Penunjang & Loading Overlay Component */}

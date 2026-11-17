@@ -11,8 +11,8 @@ export const laboratoriumService = {
     }
   },
 
-  getAntrian: async (): Promise<any> => {
-    const res = await api.get('/laboratorium/antrian');
+  getAntrian: async (params?: { tipe?: string; status?: string; search?: string }): Promise<any> => {
+    const res = await api.get('/laboratorium/antrian', { params });
     return res.data;
   },
 
@@ -33,6 +33,11 @@ export const laboratoriumService = {
 
   getRiwayatLabByPasien: async (pasienId: string): Promise<any> => {
     const res = await api.get(`/laboratorium/riwayat-pasien/${pasienId}`);
+    return res.data;
+  },
+
+  deleteOrder: async (id: string): Promise<any> => {
+    const res = await api.delete(`/laboratorium/order/${id}`);
     return res.data;
   }
 };

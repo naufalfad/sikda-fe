@@ -98,21 +98,144 @@ export const fillDokterDummyDataHelper = (
 };
 
 export const AVAILABLE_LAB_TESTS = [
-  { category: 'HEMATOLOGI', defaultOpen: true, tests: ['Hematologi Rutin/CBC', 'Hematologi Lengkap (CBC, LED, Hitung Jenis)', 'Hemoglobin', 'LED', 'Eritrosit', 'Leukosit', 'Trombosit', 'Hematokrit', 'Golongan Darah A,B,O & Rh', 'Gambaran Darah Tepi'] },
-  { category: 'URINALISA & FAECES', defaultOpen: true, tests: ['Urine Rutin', 'Protein Total (Urine 24 jam)', 'Faeces Rutin', 'Darah Samar (FIT)'] },
-  { category: 'KIMIA DARAH DASAR', defaultOpen: true, tests: ['Glukosa Puasa', 'Glukosa 2 Jam PP', 'Glukosa Sewaktu', 'Ureum', 'Kreatinin', 'Cholesterol Total', 'Trigliserida', 'SGOT', 'SGPT'] },
-  { category: 'INFEKSI & HEPATITIS', defaultOpen: true, tests: ['HBsAg', 'Anti-HBs', 'Anti-HCV', 'Anti-HAV IgM', 'Widal', 'Dengue NS1 Antigen', 'Anti-Dengue IgG & IgM', 'Malaria (Mikroskopik)', 'Anti-HIV', 'VDRL/RPR'] },
-  { category: 'ANEMIA', defaultOpen: false, tests: ['Hematologi Rutin + Retikulosit', 'Retikulosit', 'Besi', 'UIBC Direk', 'TIBC', 'Ferritin', 'Transferrin'] },
-  { category: 'FAAL HEMOSTASIS', defaultOpen: false, tests: ['Waktu Perdarahan', 'Waktu Pembekuan', 'Waktu Protrombin', 'Waktu Trombin', 'APTT', 'Fibrinogen', 'D-Dimer', 'AT III'] },
-  { category: 'FAAL HATI (Lanjutan)', defaultOpen: false, tests: ['Gamma GT', 'Fosfatase Alkali', 'CHE', 'Bilirubin Total', 'Bilirubin Direk', 'Protein Total', 'Albumin', 'Globulin'] },
-  { category: 'DIABETES (Lanjutan)', defaultOpen: false, tests: ['TTGO', 'HbA1c', 'Insulin'] },
-  { category: 'LEMAK (Lanjutan)', defaultOpen: false, tests: ['Cholesterol LDL Direk', 'Cholesterol HDL', 'Apo A1', 'Apo B'] },
-  { category: 'JANTUNG', defaultOpen: false, tests: ['CK', 'CK-MB', 'Troponin I', 'hs-Troponin I Kuantitatif', 'LDH', 'NT-Pro BNP'] },
-  { category: 'GINJAL - HIPERTENSI (Lanjutan)', defaultOpen: false, tests: ['Asam Urat', 'Cystatin-C', 'Albumin Urine Kuantitatif', 'Rasio Albumin-Kreatinin', 'Renin (PRA)', 'Aldosteron'] },
-  { category: 'ELEKTROLIT - GAS DARAH', defaultOpen: false, tests: ['Na, K, Cl', 'Kalsium', 'Fosfor Anorganik', 'Magnesium', 'Analisis Gas Darah'] },
-  { category: 'TIROID', defaultOpen: false, tests: ['FT3', 'FT4', 'TSHs', 'T3 (Total)', 'T4 (Total)'] },
-  { category: 'TUMOR MARKER', defaultOpen: false, tests: ['AFP', 'CEA', 'PSA', 'CA 125', 'CA 15-3', 'CA 19-9'] },
-  { category: 'IMUNOLOGI', defaultOpen: false, tests: ['ASTO', 'RF', 'CRP Kualitatif', 'hs-CRP', 'ANA (IF)', 'Anti-dsDNA'] }
+  { 
+    category: 'HEMATOLOGI', 
+    defaultOpen: true, 
+    tests: [
+      'Hematologi Rutin/CBC', 
+      'Hematologi Lengkap (CBC, LED, Hitung Jenis)', 
+      'Hemoglobin', 
+      'Hematokrit', 
+      'Leukosit', 
+      'Trombosit', 
+      'Eritrosit', 
+      'LED', 
+      'Golongan Darah A,B,O & Rh', 
+      'Gambaran Darah Tepi',
+      'Retikulosit',
+      'Hematologi Rutin + Retikulosit'
+    ] 
+  },
+  { 
+    category: 'URINALISA & FAECES', 
+    defaultOpen: true, 
+    tests: [
+      'Urine Rutin', 
+      'Protein Total (Urine 24 jam)', 
+      'Faeces Rutin', 
+      'Darah Samar (FIT)',
+      'Tes Kehamilan Plano Test / hCG Urine',
+      'Skrining Narkoba 3 Parameter (AMP, THC, MOP)',
+      'Skrining Narkoba 6 Parameter (AMP, THC, MOP, MET, BZO, COC)'
+    ] 
+  },
+  { 
+    category: 'KIMIA DARAH DASAR', 
+    defaultOpen: true, 
+    tests: [
+      'Glukosa Sewaktu', 
+      'Glukosa Puasa', 
+      'Glukosa 2 Jam PP', 
+      'Cholesterol Total', 
+      'Cholesterol HDL', 
+      'Cholesterol LDL Direk', 
+      'Trigliserida', 
+      'Asam Urat', 
+      'Ureum', 
+      'Kreatinin', 
+      'SGOT', 
+      'SGPT'
+    ] 
+  },
+  { 
+    category: 'INFEKSI & HEPATITIS', 
+    defaultOpen: true, 
+    tests: [
+      'HBsAg', 
+      'Anti-HBs', 
+      'Anti-HCV', 
+      'Anti-HAV IgM', 
+      'Widal', 
+      'Dengue NS1 Antigen', 
+      'Anti-Dengue IgG & IgM', 
+      'Malaria (Mikroskopik)', 
+      'Anti-HIV', 
+      'VDRL/RPR',
+      'BTA Sputum TB (Ziehl-Neelsen)',
+      'TCM / GeneXpert MTB-RIF'
+    ] 
+  },
+  { 
+    category: 'FAAL HATI (Lanjutan)', 
+    defaultOpen: false, 
+    tests: [
+      'Albumin', 
+      'Bilirubin Total', 
+      'Bilirubin Direk', 
+      'Globulin', 
+      'Protein Total', 
+      'Gamma GT', 
+      'Fosfatase Alkali'
+    ] 
+  },
+  { 
+    category: 'DIABETES (Lanjutan)', 
+    defaultOpen: false, 
+    tests: [
+      'HbA1c', 
+      'TTGO'
+    ] 
+  },
+  { 
+    category: 'FAAL HEMOSTASIS', 
+    defaultOpen: false, 
+    tests: [
+      'Waktu Perdarahan', 
+      'Waktu Pembekuan', 
+      'D-Dimer'
+    ] 
+  },
+  { 
+    category: 'ELEKTROLIT - GAS DARAH', 
+    defaultOpen: false, 
+    tests: [
+      'Na, K, Cl', 
+      'Kalsium', 
+      'Analisis Gas Darah'
+    ] 
+  },
+  { 
+    category: 'JANTUNG', 
+    defaultOpen: false, 
+    tests: [
+      'CK-MB', 
+      'Troponin I'
+    ] 
+  },
+  { 
+    category: 'TIROID', 
+    defaultOpen: false, 
+    tests: [
+      'FT4', 
+      'TSHs'
+    ] 
+  },
+  { 
+    category: 'IMUNOLOGI', 
+    defaultOpen: false, 
+    tests: [
+      'CRP Kualitatif', 
+      'hs-CRP'
+    ] 
+  },
+  { 
+    category: 'SKRINING KANKER & SITOLOGI', 
+    defaultOpen: false, 
+    tests: [
+      'IVA Test (Inspeksi Visual Asam Asetat)', 
+      'Pap Smear Serviks'
+    ] 
+  }
 ];
 
 export interface QuickLabPackage {

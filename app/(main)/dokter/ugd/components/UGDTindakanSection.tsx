@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Syringe, Search, Plus, Trash2, Check, Loader2, Wrench, Package,
   ExternalLink, Sparkles, AlertCircle, ChevronDown, CheckCircle2,
-  X, RefreshCw
+  X, RefreshCw, Wind, Scissors, Droplets, Activity, Bandage, Building2, Stethoscope
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { icd9Service } from '@/services/icd9.service';
@@ -194,17 +194,17 @@ export default function UGDTindakanSection({
             <p>Prosedur <strong>${kode}</strong> - <em>${item.nama_prosedur}</em> merupakan pemeriksaan diagnostik.</p>
             <p class="font-bold text-slate-800">Tentukan lokasi pelaksanaannya:</p>
             <div class="p-2.5 bg-blue-50 border border-blue-200 text-blue-950">
-              <strong>🏢 Dikerjakan Internal UGD/Faskes:</strong> Jika faskes memiliki fasilitas sendiri. Pasien dikenakan tarif tindakan & alat di Kasir.
+              <strong>Pelaksanaan Internal UGD:</strong> Jika faskes memiliki fasilitas sendiri. Pasien dikenakan tarif tindakan & alat di Kasir.
             </div>
             <div class="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-950">
-              <strong>🏥 Rujukan Eksternal (Rp 0):</strong> Faskes belum memadai dan pasien dirujuk ke faskes luar (RSUD/Labkesda). Pasien <strong>tidak dikenakan biaya (Rp 0)</strong> di sini.
+              <strong>Rujukan Eksternal (Rp 0):</strong> Faskes belum memadai dan pasien dirujuk ke faskes luar (RSUD/Labkesda). Pasien <strong>tidak dikenakan biaya (Rp 0)</strong> di sini.
             </div>
           </div>
         `,
         showDenyButton: true,
         showCancelButton: true,
-        confirmButtonText: '🏢 Dikerjakan Internal',
-        denyButtonText: '🏥 Rujuk Eksternal (Rp 0)',
+        confirmButtonText: 'Dikerjakan Internal',
+        denyButtonText: 'Rujuk Eksternal (Rp 0)',
         cancelButtonText: 'Batal',
         confirmButtonColor: '#2563eb',
         denyButtonColor: '#059669'
@@ -222,67 +222,112 @@ export default function UGDTindakanSection({
       return;
     }
 
-    // Default smart presets jika ada
+    // 1. Prioritas: Ambil dari Paket Template Master ICD-9 jika sudah dikonfigurasi di Master Data
     let presetAlkes: any[] = [];
     let presetBmhp: any[] = [];
 
-    if (namaLower.includes('jahit') || namaLower.includes('hecting') || namaLower.includes('suture') || namaLower.includes('luka')) {
-      const minor = resolveAlkes('minor', 20000) || resolveAlkes('jahit', 20000);
-      if (minor) presetAlkes.push(minor);
-      presetBmhp = [
-        resolveBmhp('spuit', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000 }),
-        resolveBmhp('lidocaine', { obatId: 'BMHP-LID-2', namaItem: 'Lidocaine HCl 2% Ampul', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 5000 }),
-        resolveBmhp('benang', { obatId: 'BMHP-BNG-SLK', namaItem: 'Benang Jahit Silk 3-0 with Needle', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 12000 }),
-        resolveBmhp('kasa', { obatId: 'BMHP-KSA-STR', namaItem: 'Kasa Steril 16x16', sediaan: 'Lembar', jumlah: 2, hargaSatuan: 2000 }),
-        resolveBmhp('povidone', { obatId: 'BMHP-PVI-60ML', namaItem: 'Povidone Iodine 10%', sediaan: 'Botol', jumlah: 1, hargaSatuan: 8000 })
-      ];
-    } else if (namaLower.includes('infus') || namaLower.includes('iv line') || namaLower.includes('intravena')) {
-      const infPump = resolveAlkes('infusion pump', 25000);
-      if (infPump) presetAlkes.push(infPump);
-      presetBmhp = [
-        resolveBmhp('abocath', { obatId: 'BMHP-ABO-20G', namaItem: 'Abocath / IV Catheter 20G', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 8000 }),
-        resolveBmhp('infus set', { obatId: 'BMHP-INF-SET', namaItem: 'Infus Set Dewasa Makro', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000 }),
-        resolveBmhp('ringer', { obatId: 'BMHP-CRL-500', namaItem: 'Cairan Ringer Lactate 500ml', sediaan: 'Kolf', jumlah: 1, hargaSatuan: 12000 }),
-        resolveBmhp('plester', { obatId: 'BMHP-PLS-MED', namaItem: 'Plester Hipafix Medis', sediaan: 'Roll', jumlah: 1, hargaSatuan: 10000 }),
-        resolveBmhp('alkohol', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 2, hargaSatuan: 1000 })
-      ];
-    } else if (namaLower.includes('nebul') || namaLower.includes('inhalasi')) {
-      const neb = resolveAlkes('nebulizer', 25000);
-      if (neb) presetAlkes.push(neb);
-      presetBmhp = [
-        resolveBmhp('nebulizer', { obatId: 'BMHP-MSK-NEB', namaItem: 'Masker Nebulizer Dewasa Kit', sediaan: 'Set', jumlah: 1, hargaSatuan: 15000 }),
-        resolveBmhp('nacl', { obatId: 'BMHP-NCL-100', namaItem: 'Cairan NaCl 0.9% 100ml', sediaan: 'Botol', jumlah: 1, hargaSatuan: 8000 })
-      ];
-    } else if (namaLower.includes('ekg') || namaLower.includes('elektrokardiograf')) {
-      const ekg = resolveAlkes('ekg', 35000);
-      if (ekg) presetAlkes.push(ekg);
-      presetBmhp = [
-        resolveBmhp('ekg', { obatId: 'BMHP-KTS-EKG', namaItem: 'Kertas Thermal EKG & Gel', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000 })
-      ];
-    } else if (namaLower.includes('kateter') || namaLower.includes('catheter') || namaLower.includes('foley')) {
-      presetBmhp = [
-        resolveBmhp('kateter', { obatId: 'BMHP-FLY-16', namaItem: 'Foley Catheter 2-Way No 16', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 18000 }),
-        resolveBmhp('urine bag', { obatId: 'BMHP-URN-BAG', namaItem: 'Urine Bag 2000ml', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 10000 }),
-        resolveBmhp('spuit 10', { obatId: 'BMHP-SPU-10CC', namaItem: 'Spuit 10cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 4000 }),
-        resolveBmhp('aquabidest', { obatId: 'BMHP-AQB-25', namaItem: 'Aquabidest 25ml', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 5000 }),
-        resolveBmhp('gel', { obatId: 'BMHP-JLY-LUB', namaItem: 'Jelly Lubricant Medis', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 8000 })
-      ];
-    } else if (namaLower.includes('oksigen') || namaLower.includes('o2') || namaLower.includes('kanul')) {
-      const o2Tank = resolveAlkes('oksigen', 20000) || resolveAlkes('regulator', 20000);
-      if (o2Tank) presetAlkes.push(o2Tank);
-      presetBmhp = [
-        resolveBmhp('kanul', { obatId: 'BMHP-KNL-O2', namaItem: 'Nasal Canula O2 Dewasa', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 10000 })
-      ];
-    } else if (namaLower.includes('injeksi') || namaLower.includes('suntik')) {
-      presetBmhp = [
-        resolveBmhp('spuit', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000 }),
-        resolveBmhp('alkohol', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 1, hargaSatuan: 1000 })
-      ];
+    if (Array.isArray(item.templateAlkes) && item.templateAlkes.length > 0) {
+      presetAlkes = item.templateAlkes.map((a: any) => ({
+        asetId: a.asetId,
+        namaAset: a.namaAset,
+        kodeAset: a.kodeAset,
+        tarifPemakaian: Number(a.tarifPemakaian) || 0,
+      }));
+    }
+
+    if (Array.isArray(item.templateBmhp) && item.templateBmhp.length > 0) {
+      presetBmhp = item.templateBmhp.map((b: any) => ({
+        obatId: b.obatId,
+        namaItem: b.namaItem,
+        sediaan: b.sediaan || 'Pcs',
+        jumlah: Number(b.jumlah) || 1,
+        hargaSatuan: Number(b.hargaSatuan) || 0,
+        subTotal: (Number(b.hargaSatuan) || 0) * (Number(b.jumlah) || 1),
+      }));
+    }
+
+    // 2. Fallback smart presets jika belum dikonfigurasi secara kustom di Master Data
+    if (presetAlkes.length === 0 && presetBmhp.length === 0) {
+      if (namaLower.includes('jahit') || namaLower.includes('hecting') || namaLower.includes('suture') || namaLower.includes('luka')) {
+        const minor = resolveAlkes('minor', 20000) || resolveAlkes('jahit', 20000);
+        if (minor) presetAlkes.push(minor);
+        presetBmhp = [
+          resolveBmhp('spuit', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000 }),
+          resolveBmhp('lidocaine', { obatId: 'BMHP-LID-2', namaItem: 'Lidocaine HCl 2% Ampul', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 5000 }),
+          resolveBmhp('benang', { obatId: 'BMHP-BNG-SLK', namaItem: 'Benang Jahit Silk 3-0 with Needle', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 12000 }),
+          resolveBmhp('kasa', { obatId: 'BMHP-KSA-STR', namaItem: 'Kasa Steril 16x16', sediaan: 'Lembar', jumlah: 2, hargaSatuan: 2000 }),
+          resolveBmhp('povidone', { obatId: 'BMHP-PVI-60ML', namaItem: 'Povidone Iodine 10%', sediaan: 'Botol', jumlah: 1, hargaSatuan: 8000 })
+        ];
+      } else if (namaLower.includes('infus') || namaLower.includes('iv line') || namaLower.includes('intravena')) {
+        const infPump = resolveAlkes('infusion pump', 25000);
+        if (infPump) presetAlkes.push(infPump);
+        presetBmhp = [
+          resolveBmhp('abocath', { obatId: 'BMHP-ABO-20G', namaItem: 'Abocath / IV Catheter 20G', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 8000 }),
+          resolveBmhp('infus set', { obatId: 'BMHP-INF-SET', namaItem: 'Infus Set Dewasa Makro', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000 }),
+          resolveBmhp('ringer', { obatId: 'BMHP-CRL-500', namaItem: 'Cairan Ringer Lactate 500ml', sediaan: 'Kolf', jumlah: 1, hargaSatuan: 12000 }),
+          resolveBmhp('plester', { obatId: 'BMHP-PLS-MED', namaItem: 'Plester Hipafix Medis', sediaan: 'Roll', jumlah: 1, hargaSatuan: 10000 }),
+          resolveBmhp('alkohol', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 2, hargaSatuan: 1000 })
+        ];
+      } else if (namaLower.includes('nebul') || namaLower.includes('inhalasi')) {
+        const neb = resolveAlkes('nebulizer', 25000);
+        if (neb) presetAlkes.push(neb);
+        presetBmhp = [
+          resolveBmhp('nebulizer', { obatId: 'BMHP-MSK-NEB', namaItem: 'Masker Nebulizer Dewasa Kit', sediaan: 'Set', jumlah: 1, hargaSatuan: 15000 }),
+          resolveBmhp('nacl', { obatId: 'BMHP-NCL-100', namaItem: 'Cairan NaCl 0.9% 100ml', sediaan: 'Botol', jumlah: 1, hargaSatuan: 8000 })
+        ];
+      } else if (namaLower.includes('ekg') || namaLower.includes('elektrokardiograf')) {
+        const ekg = resolveAlkes('ekg', 35000);
+        if (ekg) presetAlkes.push(ekg);
+        presetBmhp = [
+          resolveBmhp('ekg', { obatId: 'BMHP-KTS-EKG', namaItem: 'Kertas Thermal EKG & Gel', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000 })
+        ];
+      } else if (namaLower.includes('kateter') || namaLower.includes('catheter') || namaLower.includes('foley')) {
+        presetBmhp = [
+          resolveBmhp('kateter', { obatId: 'BMHP-FLY-16', namaItem: 'Foley Catheter 2-Way No 16', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 18000 }),
+          resolveBmhp('urine bag', { obatId: 'BMHP-URN-BAG', namaItem: 'Urine Bag 2000ml', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 10000 }),
+          resolveBmhp('spuit 10', { obatId: 'BMHP-SPU-10CC', namaItem: 'Spuit 10cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 4000 }),
+          resolveBmhp('aquabidest', { obatId: 'BMHP-AQB-25', namaItem: 'Aquabidest 25ml', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 5000 }),
+          resolveBmhp('gel', { obatId: 'BMHP-JLY-LUB', namaItem: 'Jelly Lubricant Medis', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 8000 })
+        ];
+      } else if (namaLower.includes('oksigen') || namaLower.includes('o2') || namaLower.includes('kanul')) {
+        const o2Tank = resolveAlkes('oksigen', 20000) || resolveAlkes('regulator', 20000);
+        if (o2Tank) presetAlkes.push(o2Tank);
+        presetBmhp = [
+          resolveBmhp('kanul', { obatId: 'BMHP-KNL-O2', namaItem: 'Nasal Canula O2 Dewasa', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 10000 })
+        ];
+      } else if (namaLower.includes('injeksi') || namaLower.includes('suntik')) {
+        presetBmhp = [
+          resolveBmhp('spuit', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000 }),
+          resolveBmhp('alkohol', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 1, hargaSatuan: 1000 })
+        ];
+      }
     }
 
     addProcedureItem(item, presetAlkes, presetBmhp, 'INTERNAL');
     setIsIcd9DropdownOpen(false);
     setSearchTerm('');
+
+    // Rekomendasi penunjang diagnostik terhubung dari template master
+    if (Array.isArray(item.templatePenunjang) && item.templatePenunjang.length > 0) {
+      const penunjangList = item.templatePenunjang.map((p: any) => `• [${p.jenis}] <strong>${p.nama}</strong>${p.catatan ? ` <em>(${p.catatan})</em>` : ''}`).join('<br/>');
+      Swal.fire({
+        icon: 'info',
+        title: 'Rekomendasi Penunjang Terintegrasi',
+        html: `
+          <div class="text-left text-xs text-slate-700 space-y-2">
+            <p>Prosedur <strong>${item.nama_prosedur}</strong> memiliki rekomendasi diagnostik terhubung:</p>
+            <div class="p-2.5 bg-purple-50 border border-purple-200 text-purple-900 leading-relaxed">
+              ${penunjangList}
+            </div>
+            <p class="text-slate-500 text-[11px]">Silakan order melalui menu Penunjang UGD jika pemeriksaan tersebut diperlukan.</p>
+          </div>
+        `,
+        timer: 4500,
+        showConfirmButton: true,
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#0d9488'
+      });
+    }
   };
 
   // Quick Action Presets Gawat Darurat UGD
@@ -551,65 +596,73 @@ export default function UGDTindakanSection({
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('INFUS')}
-            className="text-[11px] px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            💉 Pasang Infus / IV Line
+            <Syringe className="w-3.5 h-3.5 text-blue-600" />
+            <span>Pasang Infus / IV Line</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('OKSIGEN')}
-            className="text-[11px] px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 border border-cyan-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            💨 Oksigenasi Kanul/Masker
+            <Wind className="w-3.5 h-3.5 text-cyan-600" />
+            <span>Oksigenasi Kanul/Masker</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('NEBULIZER')}
-            className="text-[11px] px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            🫁 Nebulisasi Darurat
+            <Stethoscope className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Nebulisasi Darurat</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('EKG')}
-            className="text-[11px] px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            📈 Rekam EKG 12-Lead
+            <Activity className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Rekam EKG 12-Lead</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('HECTING')}
-            className="text-[11px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            🧵 Hecting & Jahit Luka
+            <Scissors className="w-3.5 h-3.5 text-rose-600" />
+            <span>Hecting & Jahit Luka</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('KATETER')}
-            className="text-[11px] px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            💧 Pasang Kateter Urine
+            <Droplets className="w-3.5 h-3.5 text-amber-600" />
+            <span>Pasang Kateter Urine</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('INJEKSI')}
-            className="text-[11px] px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            💉 Injeksi Obat Darurat
+            <Syringe className="w-3.5 h-3.5 text-purple-600" />
+            <span>Injeksi Obat Darurat</span>
           </button>
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => applyQuickPresetUGD('DEBRIDEMENT')}
-            className="text-[11px] px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold flex items-center gap-1 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="text-[11px] px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-bold flex items-center gap-1.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            🩹 Rawat Luka / Debridement
+            <Bandage className="w-3.5 h-3.5 text-teal-600" />
+            <span>Rawat Luka / Debridement</span>
           </button>
         </div>
       </div>

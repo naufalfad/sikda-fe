@@ -98,16 +98,19 @@ export default function RawatInapDashboard() {
     setIsLoadingBeds(true);
     try {
       const [ruangans, beds] = await Promise.all([
-        asetRuanganService.getRuangans({ kategoriRuangan: 'RAWAT_INAP' }),
+        asetRuanganService.getRuangans(),
         asetRuanganService.getBeds()
       ]);
 
       const bedsList = Array.isArray(beds) ? beds : [];
-      // Filter bed rawat inap
-      const rawatInapBeds = bedsList.filter((b: any) => 
-        !b.ruangan || b.ruangan.kategoriRuangan === 'RAWAT_INAP' || b.ruangan.namaRuangan?.toLowerCase().includes('inap')
+      // Tampilkan seluruh bed rawat inap DAN seluruh bed aktif yang sedang terisi pasien (termasuk bed tindakan / observasi)
+      const targetBeds = bedsList.filter((b: any) => 
+        !b.ruangan || 
+        b.ruangan.kategoriRuangan === 'RAWAT_INAP' || 
+        b.ruangan.namaRuangan?.toLowerCase().includes('inap') ||
+        b.statusBed === 'TERISI' || 
+        Boolean(b.kunjunganAktifId)
       );
-      const targetBeds = rawatInapBeds.length > 0 ? rawatInapBeds : bedsList.filter((b: any) => b.ruangan?.kategoriRuangan === 'RAWAT_INAP');
 
       const grouped: { [key: string]: any[] } = {};
 
@@ -120,7 +123,7 @@ export default function RawatInapDashboard() {
       }
 
       targetBeds.forEach((b: any) => {
-        const roomKey = b.ruangan?.namaRuangan || 'Ruang Rawat Inap';
+        const roomKey = b.ruangan?.namaRuangan || 'Ruangan Rawat Inap / Tindakan';
         if (!grouped[roomKey]) grouped[roomKey] = [];
         const isTerisi = b.statusBed === 'TERISI' || Boolean(b.kunjunganAktifId);
         const kunjungan = b.kunjunganAktif;

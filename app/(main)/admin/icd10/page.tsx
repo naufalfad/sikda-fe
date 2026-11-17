@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, Search, Plus, Loader2, X } from 'lucide-react';
+import { Activity, Search, Plus, Loader2, X, CheckCircle2, ShieldAlert, AlertTriangle, Sparkles } from 'lucide-react';
 import { icd10Service } from '@/services/icd10.service';
 import Swal from 'sweetalert2';
 
@@ -124,62 +124,62 @@ export default function MasterICD10Page() {
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input 
               type="text" 
               placeholder="Cari kode atau nama..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
+              className="pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-full sm:w-64"
             />
           </div>
           <button 
             onClick={() => handleOpenModal()}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-none hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
+            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
           >
             <Plus className="w-4 h-4 mr-2" /> Tambah ICD-10
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-none shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-gray-600">
-            <thead className="text-sm font-medium text-gray-600 bg-gray-50 border-b border-gray-200">
+          <table className="w-full text-sm text-left text-slate-600">
+            <thead className="text-xs font-semibold text-slate-600 uppercase bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4 font-semibold">Kode ICD-10</th>
-                <th className="px-6 py-4 font-semibold w-1/2">Diagnosis</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                <th className="px-6 py-4 font-semibold text-center w-32">Aksi</th>
+                <th className="px-6 py-3.5">Kode ICD-10</th>
+                <th className="px-6 py-3.5 w-1/2">Diagnosis</th>
+                <th className="px-6 py-3.5 text-center">Status</th>
+                <th className="px-6 py-3.5 text-center w-32">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
                     <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
                   </td>
                 </tr>
               ) : icdList.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
                     Tidak ada data diagnosis.
                   </td>
                 </tr>
               ) : (
                 icdList.map((icd) => (
-                  <tr key={icd.id_icd10} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-mono text-gray-900 font-medium">{icd.kode_icd10}</td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{icd.nama_diagnosis}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-medium ${icd.status_aktif ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-800'}`}>
+                  <tr key={icd.id_icd10} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-3.5 font-mono text-slate-900 font-bold text-xs">{icd.kode_icd10}</td>
+                    <td className="px-6 py-3.5 font-medium text-slate-900">{icd.nama_diagnosis}</td>
+                    <td className="px-6 py-3.5 text-center">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${icd.status_aktif ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
                         {icd.status_aktif ? 'Aktif' : 'Nonaktif'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-3.5">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => handleOpenModal(icd)} className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-xs rounded-none transition-colors">
+                        <button onClick={() => handleOpenModal(icd)} className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-xs rounded-lg transition-colors">
                           Edit
                         </button>
                       </div>
@@ -192,65 +192,155 @@ export default function MasterICD10Page() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODERN POP-UP MODAL ICD-10 */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative bg-white rounded-none shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">
-                {editingId ? 'Edit ICD-10' : 'Tambah ICD-10'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-500 transition-colors">
+          {/* Glassmorphic Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in" 
+            onClick={() => !isSubmitting && setIsModalOpen(false)}
+          />
+
+          <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 z-10">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50/50 via-slate-50/30 to-white">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900">
+                    {editingId ? 'Edit Diagnosis ICD-10' : 'Tambah Diagnosis ICD-10'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Klasifikasi Statistik Internasional Penyakit &amp; Masalah Kesehatan WHO
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                disabled={isSubmitting}
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <form onSubmit={handleSave} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Kode ICD-10</label>
-                <input required type="text" value={formData.kode_icd10} onChange={e => setFormData({...formData, kode_icd10: e.target.value})} className="w-full border border-gray-300 p-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-500 rounded-none" placeholder="Misal: A00.0" />
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Kode ICD-10 <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  required 
+                  type="text" 
+                  value={formData.kode_icd10} 
+                  onChange={e => setFormData({...formData, kode_icd10: e.target.value})} 
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" 
+                  placeholder="Misal: A00.0, I10, J06.9" 
+                />
               </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">Nama Diagnosis</label>
-                <input required type="text" value={formData.nama_diagnosis} onChange={e => setFormData({...formData, nama_diagnosis: e.target.value})} className="w-full border border-gray-300 p-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-500 rounded-none" placeholder="Misal: Kolera" />
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Nama Diagnosis Penyakit <span className="text-red-500">*</span>
+                </label>
+                <input 
+                  required 
+                  type="text" 
+                  value={formData.nama_diagnosis} 
+                  onChange={e => setFormData({...formData, nama_diagnosis: e.target.value})} 
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" 
+                  placeholder="Misal: Cholera due to Vibrio cholerae 01, biovar cholerae" 
+                />
               </div>
               
-              <div className="border-t border-gray-200 pt-4 mt-2">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">Pengaturan Pelaporan & Status</h3>
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Pengaturan Karakteristik &amp; Pelaporan
+                </label>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <label className="flex items-center gap-2 cursor-pointer border border-gray-200 p-3 bg-gray-50 hover:bg-red-50 transition-colors">
-                    <input type="checkbox" checked={formData.penyakit_menular} onChange={e => setFormData({...formData, penyakit_menular: e.target.checked})} className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500 cursor-pointer" />
-                    <span className="text-xs font-bold text-gray-700">Penyakit Menular</span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.penyakit_menular} 
+                      onChange={e => setFormData({...formData, penyakit_menular: e.target.checked})} 
+                      className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500 cursor-pointer" 
+                    />
+                    <span className="text-xs font-bold text-slate-800">Penyakit Menular</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer border border-gray-200 p-3 bg-gray-50 hover:bg-orange-50 transition-colors">
-                    <input type="checkbox" checked={formData.penyakit_kronis} onChange={e => setFormData({...formData, penyakit_kronis: e.target.checked})} className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer" />
-                    <span className="text-xs font-bold text-gray-700">Penyakit Kronis</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer border border-gray-200 p-3 bg-gray-50 hover:bg-purple-50 transition-colors">
-                    <input type="checkbox" checked={formData.wajib_lapor} onChange={e => setFormData({...formData, wajib_lapor: e.target.checked})} className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer" />
-                    <span className="text-xs font-bold text-gray-700">Wabah / Wajib Lapor</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer border border-gray-200 p-3 bg-gray-50 hover:bg-emerald-50 transition-colors">
-                    <input type="checkbox" checked={formData.status_aktif} onChange={e => setFormData({...formData, status_aktif: e.target.checked})} className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer" />
-                    <span className="text-xs font-bold text-gray-700">Status Aktif</span>
-                  </label>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Kode Program Nasional (Opsional)</label>
-                  <input type="text" value={formData.kode_program} onChange={e => setFormData({...formData, kode_program: e.target.value})} className="w-full border border-gray-300 p-2.5 text-sm outline-none focus:ring-1 focus:ring-blue-500 rounded-none" placeholder="Misal: PRG-TB" />
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-orange-50 hover:border-orange-200 transition-colors cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.penyakit_kronis} 
+                      onChange={e => setFormData({...formData, penyakit_kronis: e.target.checked})} 
+                      className="w-4 h-4 text-orange-600 rounded border-slate-300 focus:ring-orange-500 cursor-pointer" 
+                    />
+                    <span className="text-xs font-bold text-slate-800">Penyakit Kronis</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-purple-50 hover:border-purple-200 transition-colors cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.wajib_lapor} 
+                      onChange={e => setFormData({...formData, wajib_lapor: e.target.checked})} 
+                      className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer" 
+                    />
+                    <span className="text-xs font-bold text-slate-800">Wajib Lapor Dinkes</span>
+                  </label>
+
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-emerald-50 hover:border-emerald-200 transition-colors cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.status_aktif} 
+                      onChange={e => setFormData({...formData, status_aktif: e.target.checked})} 
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer" 
+                    />
+                    <span className="text-xs font-bold text-slate-800">Status Aktif</span>
+                  </label>
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-3 mt-4 border-t border-gray-200">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-none font-bold text-sm transition-colors">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Kode Program Nasional Dinkes <span className="font-normal text-slate-400 capitalize">(Opsional)</span>
+                </label>
+                <input 
+                  type="text" 
+                  value={formData.kode_program} 
+                  onChange={e => setFormData({...formData, kode_program: e.target.value})} 
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" 
+                  placeholder="Misal: PRG-TB, PRG-DBD, PRG-HIV" 
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  disabled={isSubmitting}
+                  className="px-4 py-2.5 border border-slate-300 text-slate-700 rounded-xl font-semibold text-xs hover:bg-slate-50 transition-colors"
+                >
                   Batal
                 </button>
-                <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-none font-bold text-sm transition-colors disabled:bg-blue-300 flex items-center gap-2">
-                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Simpan
+                <button 
+                  type="submit" 
+                  disabled={isSubmitting} 
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-xl font-bold text-xs shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {editingId ? 'Simpan Perubahan' : 'Tambah ICD-10'}
+                    </>
+                  )}
                 </button>
               </div>
             </form>

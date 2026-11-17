@@ -149,9 +149,9 @@ export const portalPasienService = {
   },
 
   // 10. Ambil Master Data (Faskes, Poli, Dokter)
-  getMasterData: async (faskesId?: string, poliklinikId?: string) => {
+  getMasterData: async (faskesId?: string, poliklinikId?: string, tanggal?: string, jam?: string) => {
     const res = await api.get('/portal-pasien/master-data', {
-      params: { faskesId, poliklinikId }
+      params: { faskesId, poliklinikId, tanggal, jam }
     });
     return res.data;
   },

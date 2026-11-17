@@ -21,6 +21,15 @@ export interface BatchVaksinItem {
   statusAktif: boolean;
 }
 
+export interface BmhpVaksinItem {
+  obatId?: string;
+  namaItem: string;
+  sediaan?: string;
+  jumlah: number;
+  hargaSatuan?: number;
+  subTotal?: number;
+}
+
 export interface CatatImunisasiPayload {
   pasienId: string;
   kunjunganId: string;
@@ -32,6 +41,8 @@ export interface CatatImunisasiPayload {
   ruteSuntik: string;
   catatan?: string;
   tanggalSuntik?: string;
+  petugasId?: string;
+  bmhpDetails?: BmhpVaksinItem[];
 }
 
 export const imunisasiService = {

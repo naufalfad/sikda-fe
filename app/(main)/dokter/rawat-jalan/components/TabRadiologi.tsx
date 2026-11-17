@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Radio, Plus, Trash2, CheckCircle2, Clock, FileText, AlertCircle, Eye, Search, X, ExternalLink } from 'lucide-react';
+import { Radio, Plus, Trash2, CheckCircle2, Clock, FileText, AlertCircle, Eye, Search, X, ExternalLink, Check } from 'lucide-react';
 import { radiologiService } from '@/services/radiologi.service';
+import { klinikService } from '@/services/klinik.service';
 import Swal from 'sweetalert2';
 import CetakRadiologiModal from '@/components/kasir/CetakRadiologiModal';
 import { Printer, Building2 } from 'lucide-react';
@@ -14,10 +15,14 @@ interface TabRadiologiProps {
 const MASTER_RADIOLOGI_LOINC = [
   { kodeLoinc: '39051-8', namaPemeriksaan: 'Rontgen Thorax AP/PA (XR Thorax AP/PA)', modalitas: 'XR', bodySiteCode: '51185008', bodySiteDisplay: 'Thoracic structure' },
   { kodeLoinc: '26122-2', namaPemeriksaan: 'Rontgen Femur (XR Femur - Right/Left)', modalitas: 'XR', bodySiteCode: '29836001', bodySiteDisplay: 'Hip structure' },
+  { kodeLoinc: '36563-5', namaPemeriksaan: 'Rontgen Ekstremitas Atas / Antebrachii / Wrist', modalitas: 'XR', bodySiteCode: '53120007', bodySiteDisplay: 'Upper limb structure' },
+  { kodeLoinc: '36571-8', namaPemeriksaan: 'Rontgen Pelvis / Panggul AP', modalitas: 'XR', bodySiteCode: '12921003', bodySiteDisplay: 'Pelvis structure' },
+  { kodeLoinc: '36572-6', namaPemeriksaan: 'Rontgen Sinus Paranasal (XR Waters View)', modalitas: 'XR', bodySiteCode: '2095001', bodySiteDisplay: 'Nasal sinus structure' },
+  { kodeLoinc: '95611-0', namaPemeriksaan: 'Rontgen Panoramic / Dental Occlusal (XR Teeth Occlusal)', modalitas: 'XR', bodySiteCode: '39481002', bodySiteDisplay: 'Upper dental arch structure' },
   { kodeLoinc: '24558-9', namaPemeriksaan: 'USG Abdomen (Ultrasonography Abdomen)', modalitas: 'US', bodySiteCode: '80581009', bodySiteDisplay: 'Upper abdomen structure' },
+  { kodeLoinc: '24627-2', namaPemeriksaan: 'USG Kebidanan / Kandungan (Obstetric Ultrasound)', modalitas: 'US', bodySiteCode: '280397003', bodySiteDisplay: 'Fetal structure' },
   { kodeLoinc: '36424-0', namaPemeriksaan: 'CT Scan Abdomen (CT Abdomen WO/W Contrast)', modalitas: 'CT', bodySiteCode: '818983003', bodySiteDisplay: 'Abdomen structure' },
   { kodeLoinc: '36442-2', namaPemeriksaan: 'MRI Dada/Thorax (MR Chest WO/W Contrast)', modalitas: 'MR', bodySiteCode: '51185008', bodySiteDisplay: 'Thoracic structure' },
-  { kodeLoinc: '95611-0', namaPemeriksaan: 'Rontgen Panoramic / Dental Occlusal (XR Teeth Occlusal)', modalitas: 'XR', bodySiteCode: '39481002', bodySiteDisplay: 'Upper dental arch structure' },
 ];
 
 export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologiProps) {
@@ -30,6 +35,9 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedHasilModal, setSelectedHasilModal] = useState<any | null>(null);
   const [faskesTujuan, setFaskesTujuan] = useState('Instalasi Radiologi RSUD Kabupaten / Faskes Rujukan');
+  const [faskesRadLoinc, setFaskesRadLoinc] = useState<string[]>([]);
+  const [faskesInfo, setFaskesInfo] = useState<any>(null);
+  const [standardLoincList, setStandardLoincList] = useState<any[]>(MASTER_RADIOLOGI_LOINC);
   const [isCetakModalOpen, setIsCetakModalOpen] = useState(false);
   const [selectedOrderForCetak, setSelectedOrderForCetak] = useState<any>(null);
   const [isInputHasilOpen, setIsInputHasilOpen] = useState(false);
@@ -58,6 +66,24 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
 
   useEffect(() => {
     fetchOrders();
+    const fetchFaskesCap = async () => {
+      try {
+        const res = await klinikService.getFaskesKapabilitas();
+        if (res?.data?.faskes) {
+          setFaskesInfo(res.data.faskes);
+          setFaskesRadLoinc(res.data.faskes.radiologiInternalLoinc || []);
+          if (res.data.faskes.defaultRadRujukan) {
+            setFaskesTujuan(res.data.faskes.defaultRadRujukan);
+          }
+        }
+        if (Array.isArray(res?.data?.standardRadiologiLoinc) && res.data.standardRadiologiLoinc.length > 0) {
+          setStandardLoincList(res.data.standardRadiologiLoinc);
+        }
+      } catch (e) {
+        console.warn('Gagal memuat kapabilitas radiologi faskes:', e);
+      }
+    };
+    fetchFaskesCap();
   }, [kunjunganId]);
 
   const handleSimpanHasilRujukan = async (orderId: string) => {
@@ -100,14 +126,16 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
       return;
     }
 
+    const isAllInternal = selectedDetails.every((d: any) => faskesRadLoinc.includes(d.kodeLoinc));
+
     setIsSubmitting(true);
     try {
       const payload = {
         kunjunganId,
         prioritas,
         catatan,
-        isRujukanLuar: true,
-        faskesTujuan,
+        isRujukanLuar: !isAllInternal,
+        faskesTujuan: !isAllInternal ? faskesTujuan : undefined,
         details: selectedDetails.map((d: any) => ({
           kodeLoinc: d.kodeLoinc,
           namaPemeriksaan: d.namaPemeriksaan,
@@ -123,28 +151,39 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
         setCatatan('');
         fetchOrders();
 
-        const confirmPrint = await Swal.fire({
-          icon: 'success',
-          title: 'Surat Pengantar Radiologi Dibuat!',
-          html: `
-            <div class="text-left text-xs space-y-2 mt-2">
-              <p>✅ Permintaan rontgen berhasil didaftarkan.</p>
-              <p>🏥 <strong>RS Tujuan:</strong> ${faskesTujuan}</p>
-              <p>💰 <strong>Tarif Puskesmas:</strong> <strong class="text-emerald-700">Rp 0 (Rujukan Eksternal)</strong>.</p>
-              <p class="font-bold text-slate-800 mt-2">Cetak 1 Lembar Surat Pengantar Radiologi sekarang?</p>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: '🖨️ Cetak Surat Pengantar',
-          cancelButtonText: 'Selesai Tanpa Cetak',
-          confirmButtonColor: '#4f46e5',
-        });
+        if (isAllInternal) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Order Radiologi Internal Faskes Terkirim!',
+            text: 'Permintaan telah masuk ke Antrean Radiologi Internal Puskesmas dan ditagihkan di Kasir.',
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          if (setActiveTab) setActiveTab('TINDAKAN');
+        } else {
+          const confirmPrint = await Swal.fire({
+            icon: 'success',
+            title: 'Surat Pengantar Radiologi Rujukan Dibuat!',
+            html: `
+              <div class="text-left text-xs space-y-2 mt-2">
+                <p>Pemeriksaan radiologi memerlukan rujukan eksternal karena alat belum tersedia di faskes ini.</p>
+                <p><strong>RS Tujuan:</strong> ${faskesTujuan}</p>
+                <p><strong>Tarif Faskes:</strong> <strong class="text-emerald-700">Rp 0 (Pasien membayar di RS Rujukan)</strong>.</p>
+                <p class="font-bold text-slate-800 mt-2">Cetak 1 Lembar Surat Pengantar Radiologi sekarang?</p>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Cetak Surat Pengantar',
+            cancelButtonText: 'Selesai Tanpa Cetak',
+            confirmButtonColor: '#4f46e5',
+          });
 
-        if (confirmPrint.isConfirmed) {
-          setSelectedOrderForCetak(createdOrder);
-          setIsCetakModalOpen(true);
-        } else if (setActiveTab) {
-          setActiveTab('RESEP');
+          if (confirmPrint.isConfirmed) {
+            setSelectedOrderForCetak(createdOrder);
+            setIsCetakModalOpen(true);
+          } else if (setActiveTab) {
+            setActiveTab('RESEP');
+          }
         }
       }
     } catch (error: any) {
@@ -154,7 +193,7 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
     }
   };
 
-  const filteredLoincList = MASTER_RADIOLOGI_LOINC.filter(
+  const filteredLoincList = standardLoincList.filter(
     (item) =>
       item.namaPemeriksaan.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.kodeLoinc.toLowerCase().includes(searchQuery.toLowerCase())
@@ -162,10 +201,27 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
 
   return (
     <div className="p-8 space-y-6">
-      <h3 className="text-xl font-extrabold text-gray-900 mb-4 flex items-center gap-2 border-b pb-3">
-        <Radio className="w-6 h-6 text-purple-600" />
-        Order Pemeriksaan Radiologi (SATUSEHAT LOINC Radiologi)
-      </h3>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
+        <div>
+          <h3 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
+            <Radio className="w-6 h-6 text-purple-600" />
+            Order Pemeriksaan Radiologi (SATUSEHAT LOINC Radiologi)
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            Faskes: <strong>{faskesInfo?.namaFaskes || 'Puskesmas'}</strong> ({faskesRadLoinc.length} Modalitas Internal Tersedia)
+          </p>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Faskes Internal
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-50 text-sky-800 border border-sky-200 font-semibold text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span> Rujukan RSUD
+          </span>
+        </div>
+      </div>
 
       {/* FORM ORDER RADIOLOGI */}
       <div className="bg-slate-50 p-6 border border-slate-200 rounded-none space-y-5">
@@ -188,26 +244,40 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
             </div>
 
             <div className="max-h-48 overflow-y-auto border border-gray-200 bg-white divide-y">
-              {filteredLoincList.map((item) => (
-                <div
-                  key={item.kodeLoinc}
-                  className="p-2.5 flex items-center justify-between hover:bg-purple-50 transition-colors"
-                >
-                  <div>
-                    <span className="font-extrabold text-xs text-gray-900 block">{item.namaPemeriksaan}</span>
-                    <span className="text-[10px] text-purple-700 font-mono font-bold">
-                      LOINC: {item.kodeLoinc} | Modalitas: {item.modalitas}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAddItem(item)}
-                    className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-none transition-colors flex items-center gap-1"
+              {filteredLoincList.map((item) => {
+                const isInternal = faskesRadLoinc.includes(item.kodeLoinc);
+                return (
+                  <div
+                    key={item.kodeLoinc}
+                    className="p-2.5 flex items-center justify-between hover:bg-purple-50 transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Pilih
-                  </button>
-                </div>
-              ))}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-gray-900 block">{item.namaPemeriksaan}</span>
+                        {isInternal ? (
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold">
+                            Internal Faskes
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-sky-100 text-sky-800 border border-sky-300 text-[10px] font-bold">
+                            Rujukan RSUD
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-purple-700 font-mono font-bold">
+                        LOINC: {item.kodeLoinc} | Modalitas: {item.modalitas}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddItem(item)}
+                      className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-none transition-colors flex items-center gap-1"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Pilih
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -263,21 +333,46 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
           <div className="bg-white p-4 border border-slate-200 space-y-2">
             <h4 className="text-xs font-bold text-slate-900 uppercase">Pemeriksaan Ditambahkan:</h4>
             <div className="space-y-1.5">
-              {selectedDetails.map((item: any) => (
-                <div key={item.kodeLoinc} className="flex justify-between items-center bg-slate-50 p-2 border border-slate-200">
-                  <span className="text-xs font-bold text-slate-900">
-                    {item.namaPemeriksaan} <span className="font-mono text-[10px] text-slate-600">({item.kodeLoinc})</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item.kodeLoinc)}
-                    className="text-rose-600 hover:text-rose-800 text-xs font-bold"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+              {selectedDetails.map((item: any) => {
+                const isInternal = faskesRadLoinc.includes(item.kodeLoinc);
+                return (
+                  <div key={item.kodeLoinc} className="flex justify-between items-center bg-slate-50 p-2 border border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900">
+                        {item.namaPemeriksaan} <span className="font-mono text-[10px] text-slate-600">({item.kodeLoinc})</span>
+                      </span>
+                      {isInternal ? (
+                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold">Internal</span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 bg-sky-100 text-sky-800 text-[10px] font-bold">Rujukan RS</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItem(item.kodeLoinc)}
+                      className="text-rose-600 hover:text-rose-800 text-xs font-bold"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
+
+            {!selectedDetails.every((d: any) => faskesRadLoinc.includes(d.kodeLoinc)) && (
+              <div className="bg-sky-50 border border-sky-200 p-2.5 mt-2 space-y-1">
+                <label className="block text-[11px] font-bold text-sky-900 uppercase">
+                  RS / Faskes Rujukan Tujuan (Alat Tidak Tersedia Mandiri):
+                </label>
+                <input
+                  type="text"
+                  value={faskesTujuan}
+                  onChange={(e) => setFaskesTujuan(e.target.value)}
+                  placeholder="Instalasi Radiologi RSUD Terdekat"
+                  className="w-full text-xs px-2.5 py-1.5 bg-white border border-sky-300 font-medium"
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -360,7 +455,7 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
                       }}
                       className="px-3.5 py-1.5 bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-xs transition-colors"
                     >
-                      <FileText className="w-3.5 h-3.5" /> 📥 Input Hasil Kertas Rontgen RS
+                      <FileText className="w-3.5 h-3.5" /> Input Hasil Kertas Rontgen RS
                     </button>
                   ) : (
                     ord.hasil && (
@@ -400,8 +495,9 @@ export default function TabRadiologi({ kunjunganId, setActiveTab }: TabRadiologi
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
-              <h4 className="text-sm font-extrabold text-slate-900 uppercase">
-                📥 Input Hasil Ekspertise Rontgen dari RS Luar
+              <h4 className="text-sm font-extrabold text-slate-900 uppercase flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-purple-700" />
+                Input Hasil Ekspertise Rontgen dari RS Luar
               </h4>
               <button onClick={() => setIsInputHasilOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />

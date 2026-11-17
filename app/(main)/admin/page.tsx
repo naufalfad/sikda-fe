@@ -21,7 +21,8 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Wallet,
-  BarChart3
+  BarChart3,
+  TestTubes
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
@@ -145,6 +146,23 @@ const ADMIN_MODULES: AdminModule[] = [
       borderHover: 'hover:border-teal-500'
     },
     highlight: 'Inventaris & Kalibrasi'
+  },
+  {
+    id: 'kapabilitas-penunjang',
+    title: 'Kapabilitas Lab & Radiologi',
+    href: '/admin/kapabilitas-penunjang',
+    category: 'fasilitas',
+    categoryLabel: 'Penunjang Medis Faskes',
+    description: 'Atur kendali pemeriksaan laboratorium & radiologi yang sanggup dikerjakan mandiri di faskes ini vs yang harus otomatis dirujuk ke Labkesda/RSUD.',
+    icon: TestTubes,
+    colorScheme: {
+      bg: 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white',
+      text: 'text-indigo-600',
+      badgeBg: 'bg-indigo-50',
+      badgeText: 'text-indigo-700 border-indigo-200',
+      borderHover: 'hover:border-indigo-500'
+    },
+    highlight: 'Kendali Mandiri Faskes'
   },
   {
     id: 'logistik-apotek',

@@ -1,7 +1,28 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Users, Edit, Trash2, ShieldAlert } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Users,
+  Edit2,
+  Trash2,
+  ShieldAlert,
+  ShieldCheck,
+  CheckCircle2,
+  XCircle,
+  X,
+  Stethoscope,
+  Building,
+  Key,
+  IdCard,
+  RefreshCw,
+  Sparkles,
+  AlertCircle,
+  UserPlus,
+  UserCheck
+} from 'lucide-react';
+import Swal from 'sweetalert2';
 import { useDokterStore } from '@/store/dokter.store';
 import { useKlinikStore } from '@/store/klinik.store';
 import { useAuthStore } from '@/store/auth.store';
@@ -15,6 +36,7 @@ export default function MasterDokterPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [isCheckingNik, setIsCheckingNik] = useState<boolean>(false);
   
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,7 +77,7 @@ export default function MasterDokterPage() {
       namaLengkap: '',
       username: '',
       password: '',
-      poliklinikId: '',
+      poliklinikId: polikliniks.length > 0 ? polikliniks[0].id : '',
       role: 'DOKTER',
       nik: '',
       noIHS: ''
@@ -69,7 +91,7 @@ export default function MasterDokterPage() {
     setFormData({
       namaLengkap: dokter.namaLengkap || '',
       username: dokter.username,
-      password: '', // Leave blank unless they want to change it
+      password: '', // Leave blank unless changing
       poliklinikId: dokter.poliklinikId || '',
       role: dokter.role === 'DOKTER_UGD' ? 'DOKTER_UGD' : 'DOKTER',
       nik: dokter.tenagaMedis?.nik || '',
@@ -90,44 +112,98 @@ export default function MasterDokterPage() {
           role: formData.role,
           nik: formData.nik
         });
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil Diperbarui',
+          text: `Data dokter ${formData.namaLengkap || formData.username} berhasil disimpan.`,
+          timer: 1600,
+          showConfirmButton: false,
+        });
       } else {
         await createDokter({
           ...formData,
           poliklinikId: formData.role === 'DOKTER_UGD' ? undefined : formData.poliklinikId,
         });
+        Swal.fire({
+          icon: 'success',
+          title: 'Dokter Ditambahkan',
+          text: `Dokter ${formData.namaLengkap || formData.username} berhasil terdaftar di faskes.`,
+          timer: 1800,
+          showConfirmButton: false,
+        });
       }
       setIsModalOpen(false);
     } catch (error: any) {
-      alert(error.message || 'Gagal menyimpan data');
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Menyimpan Data',
+        text: error.message || 'Terjadi kesalahan saat menyimpan data dokter.',
+      });
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Yakin ingin menghapus dokter ini?')) {
+  const handleDelete = async (id: string, nama: string) => {
+    const confirm = await Swal.fire({
+      title: 'Hapus Dokter?',
+      text: `Apakah Anda yakin ingin menghapus akun dokter ${nama}? Tindakan ini tidak dapat dibatalkan.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+    });
+
+    if (confirm.isConfirmed) {
       try {
         await deleteDokter(id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Dihapus',
+          text: 'Data dokter berhasil dihapus.',
+          timer: 1500,
+          showConfirmButton: false,
+        });
       } catch (error: any) {
-        alert(error.message || 'Gagal menghapus dokter');
+        Swal.fire('Error', error.message || 'Gagal menghapus dokter', 'error');
       }
     }
   };
 
   const handleSyncIHS = async (userId: string, existingNik?: string) => {
-    const nik = window.prompt("Masukkan NIK Dokter (16 digit):", existingNik || "");
-    if (!nik) return; // User cancelled
-    
-    if (nik.length !== 16) {
-      alert('NIK harus terdiri dari 16 digit angka!');
-      return;
-    }
+    const { value: nik } = await Swal.fire({
+      title: 'Sinkronisasi SATUSEHAT',
+      input: 'text',
+      inputLabel: 'Masukkan 16 Digit NIK Dokter:',
+      inputValue: existingNik || '',
+      inputPlaceholder: 'Contoh: 3201010101900001',
+      showCancelButton: true,
+      confirmButtonText: 'Tarik Data IHS',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#2563eb',
+      inputValidator: (value) => {
+        if (!value || value.length !== 16 || !/^\d+$/.test(value)) {
+          return 'NIK harus terdiri dari tepat 16 digit angka!';
+        }
+        return null;
+      }
+    });
+
+    if (!nik) return;
     
     setSyncingId(userId);
     try {
       const store = useDokterStore.getState();
       await store.syncDokterIHS(nik, userId);
-      alert('Berhasil sinkronisasi IHS Dokter!');
+      Swal.fire({
+        icon: 'success',
+        title: 'Tersinkronisasi',
+        text: 'Nomor IHS Dokter berhasil ditarik dari SATUSEHAT Kemenkes RI.',
+        timer: 1800,
+        showConfirmButton: false,
+      });
     } catch (error: any) {
-      alert(error.message || 'Gagal sinkronisasi IHS');
+      Swal.fire('Error Sinkronisasi', error.message || 'Gagal sinkronisasi IHS', 'error');
     } finally {
       setSyncingId(null);
     }
@@ -135,155 +211,199 @@ export default function MasterDokterPage() {
 
   const handleCheckNik = async () => {
     if (formData.nik.length !== 16) {
-      alert("NIK harus 16 digit");
+      Swal.fire('Peringatan', 'NIK dokter harus terdiri dari 16 digit angka.', 'warning');
       return;
     }
     
+    setIsCheckingNik(true);
     try {
       const data = await checkIHSNik(formData.nik);
       if (data.success) {
         setFormData(prev => ({ 
           ...prev, 
-          namaLengkap: data.data.practitionerName,
+          namaLengkap: data.data.practitionerName || prev.namaLengkap,
           noIHS: data.data.ihsNumber 
         }));
-        alert("Berhasil menarik data dari SATUSEHAT!");
+        Swal.fire({
+          icon: 'success',
+          title: 'Data Kemenkes Ditemukan!',
+          text: `Nama Resmi: ${data.data.practitionerName} (IHS: ${data.data.ihsNumber})`,
+          timer: 2200,
+          showConfirmButton: false,
+        });
       }
     } catch (err: any) {
-      alert(err.message || "Gagal menarik data dari SATUSEHAT");
+      Swal.fire({
+        icon: 'warning',
+        title: 'Verifikasi SATUSEHAT',
+        text: err.message || 'Data tenaga medis tidak ditemukan di SATUSEHAT. Anda tetap dapat memasukkan data secara manual.',
+      });
+    } finally {
+      setIsCheckingNik(false);
     }
   };
 
   const filteredDokters = dokters.filter(d => 
     d.namaLengkap?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.username.toLowerCase().includes(searchQuery.toLowerCase())
+    d.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    d.poliklinik?.namaPoli.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          {user?.faskes?.namaFaskes && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 mb-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-              {user.faskes.namaFaskes}
-            </div>
-          )}
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Users className="w-8 h-8 text-blue-600" />
-            Master Dokter
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Kelola data dokter, akses login, dan penugasan poliklinik {user?.faskes?.namaFaskes ? `di ${user.faskes.namaFaskes}` : 'faskes'}.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari dokter..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-64"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* HEADER SECTION */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            {user?.faskes?.namaFaskes && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200 mb-2.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                <span>{user.faskes.namaFaskes}</span>
+              </div>
+            )}
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 flex items-center gap-3">
+              <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md">
+                <Users className="w-6 h-6" />
+              </div>
+              Master Dokter Faskes
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Kelola data tenaga medis dokter, hak akses login, dan penugasan poliklinik faskes terintegrasi SATUSEHAT.
+            </p>
           </div>
-          <button 
-            onClick={openAddModal}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-none hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Tambah Dokter
-          </button>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[220px]">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Cari dokter, poli, username..."
+                className="w-full pl-9 pr-3.5 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 focus:bg-white transition"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <button 
+              onClick={openAddModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-md hover:shadow-lg transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Tambah Dokter</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-none shadow-sm border border-gray-200 overflow-hidden">
+      {/* TABLE SECTION */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left text-gray-600">
-            <thead className="text-sm font-medium text-gray-600 bg-gray-50 border-b border-gray-200">
+          <table className="w-full text-sm text-left text-slate-600">
+            <thead className="text-xs font-semibold uppercase tracking-wider text-slate-700 bg-slate-100/80 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4 font-semibold">Nama Lengkap & Gelar</th>
-                <th className="px-6 py-4 font-semibold">Username Login</th>
-                <th className="px-6 py-4 font-semibold">Poliklinik Penugasan</th>
-                <th className="px-6 py-4 font-semibold">Identitas SATUSEHAT</th>
-                <th className="px-6 py-4 font-semibold text-center w-36">Aksi</th>
+                <th className="px-6 py-4">Nama Lengkap & Gelar</th>
+                <th className="px-6 py-4">Username Login</th>
+                <th className="px-6 py-4">Poliklinik Penugasan</th>
+                <th className="px-6 py-4">Identitas SATUSEHAT</th>
+                <th className="px-6 py-4 text-center min-w-[140px]">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-slate-100">
               {isLoading && dokters.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    Memuat data dokter...
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
+                    Memuat data dokter faskes...
                   </td>
                 </tr>
               ) : filteredDokters.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    {searchQuery ? 'Tidak ada dokter yang cocok dengan pencarian.' : 'Belum ada data dokter.'}
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                    {searchQuery ? 'Tidak ada dokter yang cocok dengan pencarian.' : 'Belum ada data dokter terdaftar di faskes ini.'}
                   </td>
                 </tr>
               ) : (
                 filteredDokters.map((dokter) => (
-                  <tr key={dokter.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={dokter.id} className="hover:bg-slate-50/70 transition-colors">
+                    {/* Nama */}
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{dokter.namaLengkap || '-'}</div>
+                      <div className="font-bold text-slate-800">{dokter.namaLengkap || '-'}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">ID: {dokter.id.substring(0, 10)}...</div>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs">{dokter.username}</td>
+
+                    {/* Username */}
+                    <td className="px-6 py-4 font-mono text-xs text-slate-700 font-semibold">
+                      @{dokter.username}
+                    </td>
+
+                    {/* Penugasan */}
                     <td className="px-6 py-4">
                       {dokter.role === 'DOKTER_UGD' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-none text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                          <ShieldAlert className="w-3 h-3 text-rose-600" /> Unit Gawat Darurat (UGD)
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                          <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Dokter Emergency UGD</span>
                         </span>
                       ) : dokter.poliklinik ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-medium bg-blue-100 text-blue-800">
-                          {dokter.poliklinik.namaPoli}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                          <span>{dokter.poliklinik.namaPoli}</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-medium bg-gray-100 text-gray-800">
-                          Belum Ditugaskan
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-500">
+                          Lintas Unit / Belum Ditugaskan
                         </span>
                       )}
                     </td>
+
+                    {/* Identitas SATUSEHAT */}
                     <td className="px-6 py-4">
                       {dokter.tenagaMedis?.noIHS ? (
                         <div className="flex flex-col gap-1">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-none text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                            IHS: {dokter.tenagaMedis.noIHS}
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>IHS: {dokter.tenagaMedis.noIHS}</span>
                           </span>
-                          <span className="text-xs text-gray-500 font-mono">NIK: {dokter.tenagaMedis.nik}</span>
+                          <span className="text-[11px] text-slate-500 font-mono">
+                            NIK: {dokter.tenagaMedis.nik}
+                          </span>
                         </div>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-none text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                          Belum Tersinkronisasi
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Belum Terhubung IHS</span>
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap items-center justify-center gap-2">
+
+                    {/* Aksi */}
+                    <td className="px-6 py-4 text-center">
+                      <div className="inline-flex items-center gap-1.5">
                         {!dokter.tenagaMedis?.noIHS && (
                           <button 
                             onClick={() => handleSyncIHS(dokter.id, dokter.tenagaMedis?.nik)}
                             disabled={syncingId === dokter.id}
-                            className="px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium text-xs rounded-none transition-colors w-full sm:w-auto text-center"
-                            title="Sync IHS Kemenkes"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-semibold text-xs rounded-lg transition"
+                            title="Sinkronisasi IHS Kemenkes"
                           >
-                            {syncingId === dokter.id ? 'Sync...' : 'Sync IHS'}
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncingId === dokter.id ? 'animate-spin' : ''}`} />
+                            <span>Sync</span>
                           </button>
                         )}
+
                         <button 
                           onClick={() => openEditModal(dokter)}
-                          className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium text-xs rounded-none transition-colors flex-1"
-                          title="Edit"
+                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                          title="Edit Data Dokter"
                         >
-                          Edit
+                          <Edit2 className="w-4 h-4" />
                         </button>
+
                         <button 
-                          onClick={() => handleDelete(dokter.id)}
-                          className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 font-medium text-xs rounded-none transition-colors flex-1"
-                          title="Hapus"
+                          onClick={() => handleDelete(dokter.id, dokter.namaLengkap || dokter.username)}
+                          className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          title="Hapus Dokter"
                         >
-                          Hapus
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -295,27 +415,49 @@ export default function MasterDokterPage() {
         </div>
       </div>
 
-      {/* Modal Form */}
+      {/* ========================================================================= */}
+      {/* MODAL MODERN: TAMBAH / EDIT DOKTER BARU                                   */}
+      {/* ========================================================================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative bg-white rounded-none shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">
-                {isEditMode ? 'Edit Dokter' : 'Tambah Dokter Baru'}
-              </h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto border border-slate-100 animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-600 text-white rounded-xl shadow-md">
+                  {isEditMode ? <UserCheck className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    {isEditMode ? 'Edit Profil Dokter' : 'Tambah Dokter Baru'}
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Pendaftaran nakes dokter faskes terintegrasi SATUSEHAT Kemenkes RI.
+                  </p>
+                </div>
+              </div>
+
               <button 
+                type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-500 p-1"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 transition"
               >
-                &times;
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  NIK Dokter * <span className="text-xs font-normal text-gray-500">(Wajib 16 digit untuk sinkronisasi IHS)</span>
-                </label>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4.5">
+              {/* SECTION 1: NIK & SINKRONISASI SATUSEHAT */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+                    <IdCard className="w-4 h-4 text-blue-600" />
+                    <span>NIK Dokter Kemenkes <span className="text-rose-500">*</span></span>
+                  </label>
+                  <span className="text-[11px] text-slate-400">16 digit KTP</span>
+                </div>
+
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -323,81 +465,109 @@ export default function MasterDokterPage() {
                     required
                     maxLength={16}
                     value={formData.nik}
-                    onChange={(e) => setFormData(prev => ({...prev, nik: e.target.value.replace(/[^0-9]/g, '')}))}
-                    placeholder="Masukkan 16 digit NIK"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    onChange={(e) => setFormData(prev => ({ ...prev, nik: e.target.value.replace(/[^0-9]/g, '') }))}
+                    placeholder="Contoh: 3201010101900001"
+                    className="flex-1 px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
                   />
                   <button
                     type="button"
                     onClick={handleCheckNik}
-                    disabled={isLoading || formData.nik.length !== 16}
-                    className="px-3 py-2 bg-blue-100 text-blue-700 font-medium text-sm rounded-none border border-blue-200 hover:bg-blue-200 disabled:opacity-50 transition-colors whitespace-nowrap"
+                    disabled={isCheckingNik || formData.nik.length !== 16}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs disabled:opacity-50 transition"
                   >
-                    {isLoading ? 'Mengecek...' : 'Cek SATUSEHAT'}
+                    {isCheckingNik ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Mengecek...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Cek SATUSEHAT</span>
+                      </>
+                    )}
                   </button>
                 </div>
+
+                {formData.noIHS ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between animate-in fade-in">
+                    <div>
+                      <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Data Resmi SATUSEHAT Ditemukan</span>
+                      </div>
+                      <div className="text-xs text-slate-600 font-mono mt-0.5">
+                        Practitioner IHS: <strong className="text-emerald-900">{formData.noIHS}</strong>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md uppercase">
+                      Terverifikasi
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Tips: Klik <strong>"Cek SATUSEHAT"</strong> untuk menarik otomatis nama resmi dan nomor IHS dokter dari Kemenkes.
+                  </p>
+                )}
               </div>
-              
-              {formData.noIHS && (
-                <div className="bg-green-50 p-3 rounded-none border border-green-200 flex items-center justify-between">
-                  <div className="text-sm">
-                    <span className="text-green-700 font-medium">Data Kemenkes Ditemukan!</span>
-                    <br />
-                    <span className="text-gray-600 font-mono mt-1 inline-block">ID IHS: {formData.noIHS}</span>
-                  </div>
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                  </div>
-                </div>
-              )}
-              
+
+              {/* SECTION 2: IDENTITAS & AKUN LOGIN */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap & Gelar</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Nama Lengkap & Gelar <span className="text-rose-500">*</span>
+                </label>
                 <input
                   type="text"
                   name="namaLengkap"
                   required={!isEditMode}
                   value={formData.namaLengkap}
                   onChange={handleInputChange}
-                  placeholder="Bisa dikosongkan (Akan otomatis dari Kemenkes)"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username Login *</label>
-                <input
-                  type="text"
-                  name="username"
-                  required
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  placeholder="Contoh: dr.budi"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                  placeholder="Contoh: dr. Budi Santoso, Sp.A"
+                  className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password Login {isEditMode ? '(Kosongkan jika tidak diubah)' : '* (Akan di-set ke "dokter123" jika kosong)'}
-                </label>
-                <input
-                  type="text"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  placeholder={isEditMode ? "Tulis password baru" : "dokter123"}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Username Login <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    required
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    placeholder="Contoh: dr.budi"
+                    className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Password Akun {isEditMode ? '(Kosongkan jika tetap)' : '*'}
+                  </label>
+                  <input
+                    type="text"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder={isEditMode ? 'Tulis jika ingin ganti' : 'Default: dokter123'}
+                    className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unit Penugasan Dokter *
+              {/* SECTION 3: PENUGASAN POLIKLINIK / UGD */}
+              <div className="space-y-2.5 pt-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Unit Penugasan di Faskes <span className="text-rose-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 gap-3 mb-2">
-                  <label className={`flex items-center gap-2 p-2.5 border cursor-pointer text-xs font-semibold ${
-                    formData.role === 'DOKTER' ? 'border-blue-500 bg-blue-50/70 text-blue-800' : 'border-gray-200 text-gray-700'
+                <div className="grid grid-cols-2 gap-3">
+                  <label className={`flex items-center gap-2.5 p-3 border rounded-xl cursor-pointer text-xs font-bold transition ${
+                    formData.role === 'DOKTER'
+                      ? 'border-blue-500 bg-blue-50/70 text-blue-900 ring-2 ring-blue-500/20'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}>
                     <input
                       type="radio"
@@ -405,12 +575,18 @@ export default function MasterDokterPage() {
                       value="DOKTER"
                       checked={formData.role === 'DOKTER'}
                       onChange={() => setFormData(prev => ({ ...prev, role: 'DOKTER' }))}
-                      className="text-blue-600"
+                      className="w-4 h-4 text-blue-600"
                     />
-                    <span>Poliklinik (Rawat Jalan)</span>
+                    <div className="flex items-center gap-2">
+                      <Stethoscope className="w-4 h-4 text-blue-600" />
+                      <span>Poliklinik (Rawat Jalan)</span>
+                    </div>
                   </label>
-                  <label className={`flex items-center gap-2 p-2.5 border cursor-pointer text-xs font-semibold ${
-                    formData.role === 'DOKTER_UGD' ? 'border-rose-500 bg-rose-50/70 text-rose-800' : 'border-gray-200 text-gray-700'
+
+                  <label className={`flex items-center gap-2.5 p-3 border rounded-xl cursor-pointer text-xs font-bold transition ${
+                    formData.role === 'DOKTER_UGD'
+                      ? 'border-rose-500 bg-rose-50/70 text-rose-900 ring-2 ring-rose-500/20'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}>
                     <input
                       type="radio"
@@ -418,58 +594,62 @@ export default function MasterDokterPage() {
                       value="DOKTER_UGD"
                       checked={formData.role === 'DOKTER_UGD'}
                       onChange={() => setFormData(prev => ({ ...prev, role: 'DOKTER_UGD', poliklinikId: '' }))}
-                      className="text-rose-600"
+                      className="w-4 h-4 text-rose-600"
                     />
-                    <span>Dokter Jaga UGD</span>
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-rose-600" />
+                      <span>Dokter Jaga UGD</span>
+                    </div>
                   </label>
                 </div>
               </div>
 
               {formData.role === 'DOKTER' ? (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tugaskan ke Poliklinik</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                    <Building className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Pilih Poliklinik Penugasan Utama</span>
+                  </label>
                   <select
                     name="poliklinikId"
                     value={formData.poliklinikId}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-none text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-medium"
                   >
-                    <option value="">-- Tidak Ditugaskan / Bebas --</option>
+                    <option value="">-- Lintas Unit / Belum Ditugaskan --</option>
                     {polikliniks.map(poli => (
-                      <option key={poli.id} value={poli.id}>{poli.namaPoli}</option>
+                      <option key={poli.id} value={poli.id}>{poli.namaPoli} ({poli.kodePoli})</option>
                     ))}
                   </select>
                 </div>
               ) : (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-xs text-rose-800">
-                  <span className="font-bold">Penugasan Otomatis: </span>
-                  Dokter ini akan bertugas sebagai Dokter Jaga di Unit Gawat Darurat (UGD/IGD) dan akan muncul pada antrean triase DPJP pasien darurat.
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+                  <ShieldAlert className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Penugasan Otomatis UGD: </span>
+                    Dokter ini akan bertugas menangani pasien gawat darurat dan triase DPJP UGD puskesmas.
+                  </div>
                 </div>
               )}
 
-              <div className="pt-4 flex items-center justify-end gap-3">
+              {/* Modal Footer */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-none hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md transition disabled:opacity-50"
                 >
-                  {isLoading ? 'Memvalidasi ke SATUSEHAT...' : 'Simpan Data'}
+                  {isLoading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                  <span>{isEditMode ? 'Simpan Perubahan' : 'Simpan Data Dokter'}</span>
                 </button>
               </div>
-              
-              {isLoading && (
-                <div className="text-xs text-blue-600 mt-2 text-right flex items-center justify-end gap-2">
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  Sedang mengecek NIK ke server Kemenkes...
-                </div>
-              )}
             </form>
           </div>
         </div>

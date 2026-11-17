@@ -28,7 +28,8 @@ import {
   Syringe,
   Sparkles,
   Layers,
-  MapPin
+  MapPin,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -147,6 +148,11 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-indigo-900">Doctor & Nurse Fee</span>
               </Link>
 
+              <Link href="/admin/jadwal-nakes" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/jadwal-nakes' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Calendar className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/jadwal-nakes' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Jadwal & Cuti Nakes</span>
+              </Link>
+
               <Link href="/laporan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/laporan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <FileText className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/laporan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Pusat Laporan Faskes</span>
@@ -172,6 +178,11 @@ export default function DashboardLayout({
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-indigo-900">Doctor & Nurse Fee</span>
               </Link>
 
+              <Link href="/admin/jadwal-nakes" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/jadwal-nakes' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <Calendar className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/jadwal-nakes' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap font-bold text-blue-900">Jadwal & Cuti Nakes</span>
+              </Link>
+
               {/* <Link href="/admin/perusahaan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Building className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname === '/admin/perusahaan' ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Master Perusahaan</span>
@@ -185,6 +196,11 @@ export default function DashboardLayout({
               <Link href="/admin/aset-ruangan" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname.startsWith('/admin/aset-ruangan') ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
                 <Package className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname.startsWith('/admin/aset-ruangan') ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
                 <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Aset & Ruangan</span>
+              </Link>
+
+              <Link href="/admin/kapabilitas-penunjang" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname.startsWith('/admin/kapabilitas-penunjang') ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
+                <TestTubes className={`w-7 h-7 flex-shrink-0 transition-colors ${pathname.startsWith('/admin/kapabilitas-penunjang') ? 'text-blue-600' : 'text-gray-400 md:group-hover:text-blue-600'}`} />
+                <span className="ml-4 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity duration-300 whitespace-nowrap">Kapabilitas Penunjang</span>
               </Link>
 
               <Link href="/admin/master-dokter" onClick={closeMobileMenu} className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${pathname === '/admin/master-dokter' ? 'text-blue-700 bg-blue-50 border-r-4 border-blue-600' : 'text-gray-600 hover:bg-blue-50 hover:text-blue-700'}`}>
@@ -592,7 +608,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className={`flex-1 min-h-0 ${pathname?.startsWith('/dokter/rawat-jalan') || pathname?.startsWith('/dokter/ugd') ? 'overflow-hidden h-[calc(100vh-4rem)]' : 'overflow-y-auto'}`}>
           {children}
         </main>
       </div>

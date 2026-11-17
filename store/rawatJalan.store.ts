@@ -30,7 +30,7 @@ interface RawatJalanState {
   simpanDiagnosa: (diagnosa: DiagnosaItem[]) => Promise<void>;
   simpanAlergi: (alergiArr: any[]) => Promise<void>;
   simpanTindakan: (tindakan: any[]) => Promise<void>;
-  simpanOrderLab: (payload: OrderLaboratoriumPayload) => Promise<void>;
+  simpanOrderLab: (payload: OrderLaboratoriumPayload) => Promise<any>;
   selesaikanPemeriksaan: () => Promise<void>;
   tundaPemeriksaan: (payload: SOAPPayload) => Promise<void>;
 
@@ -232,8 +232,9 @@ export const useRawatJalanStore = create<RawatJalanState>((set, get) => ({
   simpanOrderLab: async (payload: OrderLaboratoriumPayload) => {
     set({ isSaving: true, error: null });
     try {
-      await laboratoriumService.createOrder(payload);
+      const res = await laboratoriumService.createOrder(payload);
       set({ isSaving: false });
+      return res;
     } catch (err: any) {
       set({
         error: err?.response?.data?.error || 'Gagal menyimpan order laboratorium',

@@ -39,4 +39,15 @@ export const klinikService = {
     const response = await api.put(`/klinik/layanan/${id}`, data);
     return response.data;
   },
+
+  // Kapabilitas Penunjang Faskes (Terisolasi Otomatis sesuai Sesi Akun)
+  getFaskesKapabilitas: async (): Promise<any> => {
+    const response = await api.get('/klinik/kapabilitas');
+    return response.data;
+  },
+
+  updateFaskesKapabilitas: async (data: any): Promise<any> => {
+    const response = await api.put('/klinik/kapabilitas', data);
+    return response.data;
+  },
 };

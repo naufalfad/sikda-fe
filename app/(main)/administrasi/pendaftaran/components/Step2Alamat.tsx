@@ -145,7 +145,6 @@ export default function Step2Alamat({ register, errors, watch, setValue }: Step2
     setValue('rtRw', `${rtVal}/${val}`);
   };
   const formatPascalCase = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.target.value = e.target.value.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
     return e;
   };
 

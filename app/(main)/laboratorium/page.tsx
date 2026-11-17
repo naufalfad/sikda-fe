@@ -32,6 +32,7 @@ export default function LaboratoriumDashboard() {
       menunggu: number;
       sedangDilayani: number;
       selesai: number;
+      rujukanEksternal?: number;
     };
     chartData: { day: string; date: string; count: number }[];
     selesaiTerakhir: any[];
@@ -41,6 +42,7 @@ export default function LaboratoriumDashboard() {
       menunggu: 0,
       sedangDilayani: 0,
       selesai: 0,
+      rujukanEksternal: 0,
     },
     chartData: [],
     selesaiTerakhir: [],
@@ -115,65 +117,86 @@ export default function LaboratoriumDashboard() {
 
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Card 1 */}
-          <div className="bg-white border border-gray-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between rounded-none">
-            <div className="absolute top-6 right-6 w-10 h-10 bg-indigo-100 flex items-center justify-center rounded-none">
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between rounded-none">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-indigo-100 flex items-center justify-center rounded-none">
               <Users className="w-5 h-5 text-indigo-600" />
             </div>
             
             <div className="relative z-10">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Total Order Uji Lab</p>
-              <h3 className="text-4xl font-extrabold text-gray-900">
-                {isLoading ? <Loader2 className="w-8 h-8 animate-spin text-indigo-600" /> : stats.totalHariIni}
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Total Order Lab</p>
+              <h3 className="text-3xl font-extrabold text-gray-900">
+                {isLoading ? <Loader2 className="w-7 h-7 animate-spin text-indigo-600" /> : stats.totalHariIni}
               </h3>
-              <p className="text-sm text-gray-500 mt-1">Hari ini dari rawat jalan / IGD</p>
+              <p className="text-xs text-gray-500 mt-1">Hari ini dari rawat jalan / UGD</p>
             </div>
             
-            <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-              <span>{stats.totalHariIni > 0 ? `${stats.totalHariIni} pasien terdaftar hari ini` : 'Belum ada order masuk hari ini'}</span>
+            <div className="relative z-10 mt-5 flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+              <span>{stats.totalHariIni > 0 ? `${stats.totalHariIni} pasien terdaftar hari ini` : 'Belum ada order hari ini'}</span>
             </div>
           </div>
 
           {/* Card 2 */}
-          <div className="bg-white border border-gray-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between rounded-none">
-            <div className="absolute top-6 right-6 w-10 h-10 bg-amber-100 flex items-center justify-center rounded-none">
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between rounded-none">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-amber-100 flex items-center justify-center rounded-none">
               <Clock className="w-5 h-5 text-amber-600" />
             </div>
             
             <div className="relative z-10">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Antrean Aktif</p>
-              <h3 className="text-4xl font-extrabold text-gray-900">
-                {isLoading ? <Loader2 className="w-8 h-8 animate-spin text-amber-600" /> : stats.menunggu}
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Antrean Internal</p>
+              <h3 className="text-3xl font-extrabold text-gray-900">
+                {isLoading ? <Loader2 className="w-7 h-7 animate-spin text-amber-600" /> : stats.menunggu}
               </h3>
-              <p className="text-sm text-gray-500 mt-1">Menunggu diambil sampel</p>
+              <p className="text-xs text-gray-500 mt-1">Menunggu ambil sampel di lab</p>
             </div>
             
-            <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-bold text-amber-600">
+            <div className="relative z-10 mt-5 flex items-center gap-1.5 text-[11px] font-bold text-amber-600">
               <div className="w-2 h-2 rounded-none bg-amber-400"></div>
-              <span>{stats.sedangDilayani} spesimen sedang diproses analis</span>
+              <span>{stats.sedangDilayani} sedang diuji analis</span>
             </div>
           </div>
 
-          {/* Card 3 */}
-          <div className="bg-white border border-gray-200 shadow-sm p-6 relative overflow-hidden flex flex-col justify-between rounded-none">
-            <div className="absolute top-6 right-6 w-10 h-10 bg-emerald-100 flex items-center justify-center rounded-none">
+          {/* Card 3 - Rujukan Eksternal */}
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between rounded-none">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-sky-100 flex items-center justify-center rounded-none">
+              <ClipboardList className="w-5 h-5 text-sky-600" />
+            </div>
+            
+            <div className="relative z-10">
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Rujukan Eksternal</p>
+              <h3 className="text-3xl font-extrabold text-sky-900">
+                {isLoading ? <Loader2 className="w-7 h-7 animate-spin text-sky-600" /> : (stats.rujukanEksternal || 0)}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Dirujuk ke Labkesda / RSUD</p>
+            </div>
+            
+            <div className="relative z-10 mt-5 flex items-center gap-1.5 text-[11px] font-bold text-sky-700">
+              <Link href="/laboratorium/antrian" className="hover:underline flex items-center gap-1">
+                <span>Kelola rujukan spesimen &rarr;</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 4 */}
+          <div className="bg-white border border-gray-200 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between rounded-none">
+            <div className="absolute top-5 right-5 w-9 h-9 bg-emerald-100 flex items-center justify-center rounded-none">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
             
             <div className="relative z-10">
-              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">Selesai Diuji</p>
-              <h3 className="text-4xl font-extrabold text-gray-900">
-                {isLoading ? <Loader2 className="w-8 h-8 animate-spin text-emerald-600" /> : stats.selesai}
+              <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Selesai Diuji</p>
+              <h3 className="text-3xl font-extrabold text-gray-900">
+                {isLoading ? <Loader2 className="w-7 h-7 animate-spin text-emerald-600" /> : stats.selesai}
               </h3>
-              <p className="text-sm text-gray-500 mt-1">Hasil telah dikirim ke dokter</p>
+              <p className="text-xs text-gray-500 mt-1">Hasil dikirim ke RME dokter</p>
             </div>
             
-            <div className="relative z-10 mt-6 flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+            <div className="relative z-10 mt-5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
               <span>
                 {stats.totalHariIni > 0 
-                  ? `${Math.round((stats.selesai / stats.totalHariIni) * 100)}% dari total order hari ini` 
-                  : 'Siap melayani pemeriksaan baru'}
+                  ? `${Math.round((stats.selesai / stats.totalHariIni) * 100)}% selesai hari ini` 
+                  : 'Siap melayani order baru'}
               </span>
             </div>
           </div>

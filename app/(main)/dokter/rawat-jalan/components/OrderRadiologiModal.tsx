@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { radiologiService } from '@/services/radiologi.service';
+import { klinikService } from '@/services/klinik.service';
 import CetakRadiologiModal from '@/components/kasir/CetakRadiologiModal';
 
 interface OrderRadiologiModalProps {
@@ -53,6 +54,9 @@ export default function OrderRadiologiModal({
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [faskesTujuan, setFaskesTujuan] = useState('Instalasi Radiologi RSUD Kabupaten / Faskes Rujukan');
+  const [faskesRadLoinc, setFaskesRadLoinc] = useState<string[]>([]);
+  const [faskesInfo, setFaskesInfo] = useState<any>(null);
+  const [standardLoincList, setStandardLoincList] = useState<any[]>(MASTER_RADIOLOGI_LOINC);
   const [isCetakModalOpen, setIsCetakModalOpen] = useState(false);
   const [lastSavedOrder, setLastSavedOrder] = useState<any>(null);
   const [isInputHasilOpen, setIsInputHasilOpen] = useState(false);
@@ -86,8 +90,36 @@ export default function OrderRadiologiModal({
       setCatatan('');
       setPrioritas('routine');
       setSearchQuery('');
+
+      const fetchFaskesCap = async () => {
+        try {
+          const res = await klinikService.getFaskesKapabilitas();
+          if (res?.data?.faskes) {
+            setFaskesInfo(res.data.faskes);
+            setFaskesRadLoinc(res.data.faskes.radiologiInternalLoinc || []);
+            if (res.data.faskes.defaultRadRujukan) {
+              setFaskesTujuan(res.data.faskes.defaultRadRujukan);
+            }
+          }
+          if (Array.isArray(res?.data?.standardRadiologiLoinc) && res.data.standardRadiologiLoinc.length > 0) {
+            setStandardLoincList(res.data.standardRadiologiLoinc);
+          }
+        } catch (e) {
+          console.warn('Gagal memuat kapabilitas radiologi faskes dokter:', e);
+        }
+      };
+      fetchFaskesCap();
     }
   }, [isOpen, selectedKunjungan?.id]);
+
+  const checkIsInternal = (kodeLoinc: string): boolean => {
+    return Array.isArray(faskesRadLoinc) && faskesRadLoinc.includes(kodeLoinc);
+  };
+
+  const internalCount = selectedDetails.filter((d) => checkIsInternal(d.kodeLoinc)).length;
+  const externalCount = selectedDetails.filter((d) => !checkIsInternal(d.kodeLoinc)).length;
+  const isAllInternal = selectedDetails.length > 0 && externalCount === 0;
+  const isMixed = internalCount > 0 && externalCount > 0;
 
   if (!isOpen || !selectedKunjungan) return null;
 
@@ -139,8 +171,8 @@ export default function OrderRadiologiModal({
         dokterId: selectedKunjungan.dokterTujuan?.id || selectedKunjungan.dokterId,
         prioritas,
         catatan,
-        isRujukanLuar: true,
-        faskesTujuan,
+        isRujukanLuar: !isAllInternal,
+        faskesTujuan: externalCount > 0 ? faskesTujuan : undefined,
         details: selectedDetails.map((d) => ({
           kodeLoinc: d.kodeLoinc,
           namaPemeriksaan: d.namaPemeriksaan,
@@ -154,27 +186,41 @@ export default function OrderRadiologiModal({
         const createdOrder = res.data || res;
         setLastSavedOrder(createdOrder);
 
-        const confirmPrint = await Swal.fire({
-          icon: 'success',
-          title: 'Surat Pengantar Radiologi Dibuat!',
-          html: `
-            <div class="text-left text-xs space-y-2 mt-2">
-              <p>✅ Permintaan <strong>${selectedDetails.length} Foto Radiologi</strong> berhasil didaftarkan.</p>
-              <p>🏥 <strong>RS Tujuan:</strong> ${faskesTujuan}</p>
-              <p>💰 <strong>Tarif Puskesmas:</strong> <strong class="text-emerald-700">Rp 0 (Rujukan Eksternal)</strong>.</p>
-              <p class="font-bold text-slate-800 mt-2">Cetak 1 Lembar Surat Pengantar Radiologi sekarang?</p>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: '🖨️ Cetak Surat Pengantar Radiologi',
-          cancelButtonText: 'Selesai Tanpa Cetak',
-          confirmButtonColor: '#4f46e5',
-        });
+        if (isAllInternal) {
+          await Swal.fire({
+            icon: 'success',
+            title: 'Order Radiologi Internal Faskes Terkirim!',
+            html: `
+              <div class="text-left text-xs space-y-2 mt-2">
+                <p>Total <strong>${selectedDetails.length} Pemeriksaan Radiologi Internal (${faskesInfo?.namaFaskes || 'Puskesmas'})</strong> berhasil didaftarkan.</p>
+                <p class="text-emerald-700 font-bold">✓ Order langsung masuk antrean pemeriksaan radiologi internal faskes & tersinkron ke kasir faskes.</p>
+              </div>
+            `,
+            timer: 2500,
+            showConfirmButton: false,
+          });
+        } else {
+          const confirmPrint = await Swal.fire({
+            icon: 'success',
+            title: isMixed ? 'Order Radiologi Disimpan (Ada Rujukan Eksternal)!' : 'Surat Pengantar Radiologi Dibuat!',
+            html: `
+              <div class="text-left text-xs space-y-2 mt-2">
+                ${internalCount > 0 ? `<p>• <strong>${internalCount} Pemeriksaan Internal:</strong> Diteruskan ke unit radiologi faskes & kasir.</p>` : ''}
+                <p>• <strong>${externalCount} Pemeriksaan Rujukan RS:</strong> Tarif di Puskesmas <strong class="text-emerald-700">Rp 0</strong> (pasien bayar di ${faskesTujuan}).</p>
+                <p class="font-bold text-slate-800 mt-2">Cetak 1 Lembar Surat Pengantar Radiologi sekarang?</p>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Cetak Surat Pengantar Radiologi',
+            cancelButtonText: 'Selesai Tanpa Cetak',
+            confirmButtonColor: '#4f46e5',
+          });
 
-        if (confirmPrint.isConfirmed) {
-          setIsCetakModalOpen(true);
-          if (onSuccess) onSuccess();
-          return;
+          if (confirmPrint.isConfirmed) {
+            setIsCetakModalOpen(true);
+            if (onSuccess) onSuccess();
+            return;
+          }
         }
 
         if (onSuccess) {
@@ -189,10 +235,10 @@ export default function OrderRadiologiModal({
     }
   };
 
-  const filteredLoincList = MASTER_RADIOLOGI_LOINC.filter((item) => {
+  const filteredLoincList = standardLoincList.filter((item) => {
     const matchQuery =
-      item.namaPemeriksaan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.kodeLoinc.toLowerCase().includes(searchQuery.toLowerCase());
+      (item.namaPemeriksaan || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (item.kodeLoinc || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchModalitas = selectedModalitas === 'ALL' || item.modalitas === selectedModalitas;
     return matchQuery && matchModalitas;
   });
@@ -210,14 +256,20 @@ export default function OrderRadiologiModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-extrabold uppercase tracking-wide">
-                  Surat Pengantar Radiologi (Rujukan Eksternal RSUD)
+                  Formulir Permintaan Pemeriksaan Radiologi (LOINC)
                 </h3>
-                <span className="px-2 py-0.5 bg-purple-700 text-white font-bold text-[10px] uppercase tracking-wider">
-                  Tarif Rp 0 di Puskesmas
-                </span>
+                {faskesRadLoinc.length > 0 ? (
+                  <span className="px-2 py-0.5 bg-emerald-600 text-white font-bold text-[10px] uppercase tracking-wider">
+                    {faskesRadLoinc.length} Alat Internal Faskes
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-purple-700 text-white font-bold text-[10px] uppercase tracking-wider">
+                    Rujukan Eksternal (Tarif Rp 0)
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-300 mt-0.5 font-medium">
-                Pasien: <strong className="text-white">{selectedKunjungan.pasien?.namaLengkap}</strong> • No. RM: <strong className="text-white">{selectedKunjungan.pasien?.noRM}</strong> • Poli: {selectedKunjungan.poliklinik?.namaPoli || 'Rawat Jalan'}
+                Pasien: <strong className="text-white">{selectedKunjungan.pasien?.namaLengkap}</strong> • No. RM: <strong className="text-white">{selectedKunjungan.pasien?.noRM}</strong> • Faskes: <strong className="text-white">{faskesInfo?.namaFaskes || 'Puskesmas'}</strong>
               </p>
             </div>
           </div>
@@ -259,7 +311,7 @@ export default function OrderRadiologiModal({
                 onClick={() => setIsInputHasilOpen(true)}
                 className="px-2.5 py-1 bg-purple-700 hover:bg-purple-800 text-white text-[11px] font-bold flex items-center gap-1 transition-colors shadow-xs"
               >
-                <FileText className="w-3.5 h-3.5" /> 📥 Input Hasil Kertas RS
+                <FileText className="w-3.5 h-3.5" /> Input Hasil Kertas RS
               </button>
             </div>
           </div>
@@ -268,30 +320,44 @@ export default function OrderRadiologiModal({
         {/* MODAL BODY */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50">
           
-          {/* BANNER INFORMASI RUJUKAN EKSTERNAL FKTP */}
-          <div className="bg-purple-50 border-l-4 border-purple-600 p-3.5 flex items-start gap-3 text-xs text-purple-950">
-            <Building2 className="w-5 h-5 text-purple-700 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-extrabold uppercase tracking-wide">Rujukan Parsial Penunjang Radiologi (FKTP Puskesmas)</p>
-              <p className="text-[11px] text-purple-800 mt-0.5">
-                Puskesmas tidak memiliki instalasi radiologi mandiri. Seluruh permintaan foto rontgen digabungkan dalam <strong>1 Lembar Surat Pengantar Radiologi Eksternal</strong> (Tarif di Kasir Puskesmas otomatis Rp 0). Pasien membawa hasil foto kembali ke dokter Puskesmas.
-              </p>
+          {/* BANNER INFORMASI KAPABILITAS RADIOLOGI FASKES */}
+          {faskesRadLoinc.length > 0 ? (
+            <div className="bg-emerald-50 border-l-4 border-emerald-600 p-3.5 flex items-start gap-3 text-xs text-emerald-950">
+              <Building2 className="w-5 h-5 text-emerald-700 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold uppercase tracking-wide">Kapabilitas Radiologi Faskes: {faskesInfo?.namaFaskes || 'Puskesmas'}</p>
+                <p className="text-[11px] text-emerald-800 mt-0.5">
+                  Faskes memiliki <strong>{faskesRadLoinc.length} pemeriksaan internal</strong> (bertanda <strong className="text-emerald-900">[✓ Internal Faskes]</strong>). Pemeriksaan internal otomatis masuk ke antrean radiologi faskes & kasir faskes. Pemeriksaan bertanda <strong>[Rujukan RS]</strong> akan diterbitkan sebagai <strong>Surat Pengantar Rujukan Luar RSUD</strong> (Tarif di Puskesmas Rp 0).
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-purple-50 border-l-4 border-purple-600 p-3.5 flex items-start gap-3 text-xs text-purple-950">
+              <Building2 className="w-5 h-5 text-purple-700 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-extrabold uppercase tracking-wide">Rujukan Radiologi Eksternal (FKTP Puskesmas)</p>
+                <p className="text-[11px] text-purple-800 mt-0.5">
+                  Faskes ini saat ini belum mengoperasikan instalasi radiologi mandiri. Seluruh permintaan foto radiologi diterbitkan dalam <strong>1 Lembar Surat Pengantar Radiologi Eksternal</strong> ke faskes rujukan (Tarif di Kasir Puskesmas otomatis <strong>Rp 0</strong>).
+                </p>
+              </div>
+            </div>
+          )}
 
-          {/* INPUT RS / FASKES TUJUAN */}
-          <div className="bg-white p-4 border border-slate-300">
-            <label className="block text-xs font-black text-slate-800 uppercase tracking-wide mb-1">
-              Rumah Sakit / Instalasi Radiologi Rujukan Tujuan: *
-            </label>
-            <input
-              type="text"
-              value={faskesTujuan}
-              onChange={(e) => setFaskesTujuan(e.target.value)}
-              placeholder="Misal: Instalasi Radiologi RSUD Cibinong / RS PMI Bogor / Lab Rekanan..."
-              className="w-full px-3 py-2 bg-white border border-slate-300 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-            />
-          </div>
+          {/* INPUT RS / FASKES TUJUAN RUJUKAN (HANYA DITAMPILKAN JIKA ADA PEMERIKSAAN RUJUKAN LUAR ATAU BELUM ADA ALAT INTERNAL) */}
+          {(externalCount > 0 || faskesRadLoinc.length === 0) && (
+            <div className="bg-white p-4 border border-slate-300">
+              <label className="block text-xs font-black text-slate-800 uppercase tracking-wide mb-1">
+                Rumah Sakit / Instalasi Radiologi Rujukan Tujuan: *
+              </label>
+              <input
+                type="text"
+                value={faskesTujuan}
+                onChange={(e) => setFaskesTujuan(e.target.value)}
+                placeholder="Misal: Instalasi Radiologi RSUD Cibinong / RS PMI Bogor / Lab Rekanan..."
+                className="w-full px-3 py-2 bg-white border border-slate-300 text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+              />
+            </div>
+          )}
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* KOLOM KIRI: KATALOG LOINC & FILTER */}
@@ -366,6 +432,13 @@ export default function OrderRadiologiModal({
                         <div className="flex items-center gap-2 mt-1 text-[10px]">
                           <span className="px-1.5 py-0.2 bg-purple-100 text-purple-800 font-mono font-bold">
                             LOINC: {item.kodeLoinc}
+                          </span>
+                          <span className={`px-1.5 py-0.2 font-mono font-bold text-[10px] border ${
+                            checkIsInternal(item.kodeLoinc)
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                              : 'bg-slate-100 text-slate-700 border-slate-300'
+                          }`}>
+                            {checkIsInternal(item.kodeLoinc) ? '✓ Internal Faskes' : 'Rujukan RS'}
                           </span>
                           <span className="text-slate-400">•</span>
                           <span className="font-bold text-slate-600">Modalitas: {item.modalitas}</span>
@@ -488,9 +561,18 @@ export default function OrderRadiologiModal({
                         className="flex justify-between items-center bg-purple-50/80 p-2.5 border border-purple-200"
                       >
                         <div>
-                          <span className="text-xs font-bold text-purple-950 block leading-tight">
-                            {item.namaPemeriksaan}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-purple-950 block leading-tight">
+                              {item.namaPemeriksaan}
+                            </span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 border ${
+                              checkIsInternal(item.kodeLoinc)
+                                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                : 'bg-slate-100 text-slate-700 border-slate-300'
+                            }`}>
+                              {checkIsInternal(item.kodeLoinc) ? 'Internal Faskes' : 'Rujukan RS'}
+                            </span>
+                          </div>
                           <span className="font-mono text-[10px] text-purple-700">
                             {item.kodeLoinc} • Modalitas {item.modalitas}
                           </span>
@@ -516,10 +598,17 @@ export default function OrderRadiologiModal({
 
         {/* MODAL FOOTER */}
         <div className="p-4 bg-white border-t border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-600 font-bold uppercase tracking-wider">Total Pemeriksaan:</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-600 font-bold uppercase tracking-wider">Total:</span>
             <span className="text-base font-black text-purple-900 font-mono">{selectedDetails.length} Modalitas</span>
-            <span className="text-xs text-slate-400">•</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
+              {internalCount} Internal
+            </span>
+            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 border border-purple-200">
+              {externalCount} Rujukan RS
+            </span>
+            <span className="text-slate-300">•</span>
             <span className={`text-xs font-extrabold ${prioritas === 'stat' ? 'text-red-600' : 'text-slate-600'}`}>
               Prioritas: {prioritas === 'stat' ? 'STAT / CITO' : 'Routine'}
             </span>
@@ -577,8 +666,9 @@ export default function OrderRadiologiModal({
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="bg-white max-w-lg w-full border border-slate-300 shadow-2xl p-6 space-y-4">
             <div className="flex justify-between items-center border-b pb-2">
-              <h4 className="text-sm font-extrabold text-slate-900 uppercase">
-                📥 Input Hasil Ekspertise Rontgen dari RS Luar
+              <h4 className="text-sm font-extrabold text-slate-900 uppercase flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-purple-700" />
+                Input Hasil Ekspertise Rontgen dari RS Luar
               </h4>
               <button onClick={() => setIsInputHasilOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />

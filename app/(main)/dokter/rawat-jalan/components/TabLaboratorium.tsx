@@ -1,7 +1,9 @@
-import React, { Dispatch, SetStateAction } from 'react';
-import { TestTubes, ChevronDown, ChevronRight, Loader2, Sparkles, Building2, CheckCircle2, AlertCircle, Check, ExternalLink, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
+import { TestTubes, ChevronDown, ChevronRight, Loader2, Sparkles, Building2, CheckCircle2, AlertCircle, Check, ExternalLink, ArrowRight, Printer } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { QUICK_LAB_PACKAGES, isInternalLabTest, QuickLabPackage } from '../rawatJalan.constants';
+import { klinikService } from '@/services/klinik.service';
+import SuratRujukanSpesimenModal from '@/components/laboratorium/SuratRujukanSpesimenModal';
 
 interface TabLaboratoriumProps {
   availableLabTests: any[];
@@ -13,7 +15,7 @@ interface TabLaboratoriumProps {
   setLabNote: Dispatch<SetStateAction<string>>;
   isSaving: boolean;
   selectedKunjungan: any;
-  simpanOrderLab: (data: any) => Promise<void>;
+  simpanOrderLab: (data: any) => Promise<any>;
   clearSelection: () => void;
   fetchAntrian: () => void;
   setActiveTab: (tab: string) => void;
@@ -38,6 +40,39 @@ export default function TabLaboratorium({
   existingLabCount = 0,
   onViewExistingLab,
 }: TabLaboratoriumProps) {
+  const [isSuratRujukanOpen, setIsSuratRujukanOpen] = useState(false);
+  const [rujukanOrderData, setRujukanOrderData] = useState<any | null>(null);
+  const [faskesLabParams, setFaskesLabParams] = useState<string[] | null>(null);
+  const [defaultLabTarget, setDefaultLabTarget] = useState<string>('UPT Labkesda Kabupaten / RSUD Terdekat');
+  const [faskesInfo, setFaskesInfo] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchCap = async () => {
+      try {
+        const res = await klinikService.getFaskesKapabilitas();
+        if (res?.data?.faskes) {
+          setFaskesInfo(res.data.faskes);
+          if (Array.isArray(res.data.faskes.labInternalParams) && res.data.faskes.labInternalParams.length > 0) {
+            setFaskesLabParams(res.data.faskes.labInternalParams);
+          }
+          if (res.data.faskes.defaultLabRujukan) {
+            setDefaultLabTarget(res.data.faskes.defaultLabRujukan);
+          }
+        }
+      } catch (err) {
+        console.warn('Gagal memuat kapabilitas faskes di RME Lab:', err);
+      }
+    };
+    fetchCap();
+  }, [selectedKunjungan?.faskesId]);
+
+  const checkIsInternal = (testName: string = ''): boolean => {
+    if (faskesLabParams && faskesLabParams.length > 0) {
+      const lower = testName.toLowerCase().trim();
+      return faskesLabParams.some(p => lower.includes(p.toLowerCase()) || p.toLowerCase().includes(lower));
+    }
+    return isInternalLabTest(testName);
+  };
   
   const handleApplyPackage = (pkg: QuickLabPackage) => {
     const isAllIncluded = pkg.tests.every(t => labOrders.includes(t));
@@ -54,8 +89,8 @@ export default function TabLaboratorium({
     }
   };
 
-  const internalCount = labOrders.filter(t => isInternalLabTest(t)).length;
-  const externalCount = labOrders.filter(t => !isInternalLabTest(t)).length;
+  const internalCount = labOrders.filter(t => checkIsInternal(t)).length;
+  const externalCount = labOrders.filter(t => !checkIsInternal(t)).length;
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -68,7 +103,7 @@ export default function TabLaboratorium({
             Order Pemeriksaan Laboratorium
           </h3>
           <p className="text-xs text-gray-500 mt-1">
-            Pilih paket cepat Puskesmas atau pilih parameter pemeriksaan mandiri di bawah.
+            Faskes: <strong>{faskesInfo?.namaFaskes || selectedKunjungan?.faskes?.namaFaskes || 'Puskesmas'}</strong> ({faskesLabParams ? `${faskesLabParams.length} Uji Internal` : 'Standar Lab Internal Tersedia'})
           </p>
         </div>
 
@@ -188,7 +223,7 @@ export default function TabLaboratorium({
                 {isOpen && (
                   <div className="p-2 space-y-1 bg-yellow-50/10 divide-y divide-slate-100">
                     {cat.tests.map((test: string, i: number) => {
-                      const isInternal = isInternalLabTest(test);
+                      const isInternal = checkIsInternal(test);
                       const isChecked = labOrders.includes(test);
 
                       return (
@@ -268,21 +303,71 @@ export default function TabLaboratorium({
           onClick={async () => {
             if (!selectedKunjungan) return;
             try {
-              await simpanOrderLab({
+              const res = await simpanOrderLab({
                 kunjunganId: selectedKunjungan.id,
                 pasienId: selectedKunjungan.pasien.id,
                 dokterId: selectedKunjungan.dokterTujuan?.id || 'dummy-dokter-id',
                 catatanKlinis: labNote,
                 tests: labOrders
               });
-              Swal.fire({
-                icon: 'success',
-                title: 'Permintaan Lab Berhasil Dikirim!',
-                text: 'Order lab telah diteruskan ke antrean analis lab dan rincian retribusi otomatis tersinkron ke kasir.',
-                timer: 2000,
-                showConfirmButton: false,
-              });
-              setActiveTab('TINDAKAN');
+
+              const isAllExternal = internalCount === 0 && externalCount > 0;
+              const hasExternal = externalCount > 0;
+
+              if (hasExternal) {
+                const externalTestNames = labOrders.filter(t => !checkIsInternal(t));
+                const orderDataForModal = {
+                  ...(res || {}),
+                  pasien: selectedKunjungan.pasien,
+                  dokter: selectedKunjungan.dokterTujuan || { namaLengkap: 'dr. Dokter Pemeriksa' },
+                  catatanKlinis: labNote,
+                  tanggalOrder: new Date(),
+                  details: labOrders.map((test) => ({
+                    parameter: test,
+                    isRujukanLuar: !checkIsInternal(test),
+                    faskesTujuan: defaultLabTarget,
+                  })),
+                };
+
+                const confirmPrint = await Swal.fire({
+                  icon: 'success',
+                  title: isAllExternal ? 'Rujukan Lab Eksternal Dibuat!' : 'Order Lab Berhasil Disimpan!',
+                  html: `
+                    <div class="text-left text-xs space-y-2 mt-2">
+                      ${isAllExternal ? `
+                        <p class="font-bold text-slate-900">Seluruh ${externalCount} pemeriksaan dirujuk keluar (Labkesda/RSUD) karena keterbatasan alat di faskes ini.</p>
+                        <p class="text-emerald-700 font-bold bg-emerald-50 p-2 border border-emerald-200">
+                          Pasien tidak perlu mengantre di lab faskes ini dan order tidak masuk ke antrean analis internal.
+                        </p>
+                      ` : `
+                        <p><strong>${internalCount} Uji Internal:</strong> Masuk antrean lab faskes ini.</p>
+                        <p><strong>${externalCount} Rujukan Luar:</strong> (${externalTestNames.join(', ')}) dirujuk ke Labkesda/RSUD dan tidak mengotori antrean internal.</p>
+                      `}
+                      <p class="font-bold text-slate-800 pt-1">Cetak Surat Pengantar Rujukan Lab untuk dibawa pasien sekarang?</p>
+                    </div>
+                  `,
+                  showCancelButton: true,
+                  confirmButtonText: 'Cetak Surat Pengantar',
+                  cancelButtonText: 'Lanjut ke Tindakan',
+                  confirmButtonColor: '#0284c7',
+                });
+
+                if (confirmPrint.isConfirmed) {
+                  setRujukanOrderData(orderDataForModal);
+                  setIsSuratRujukanOpen(true);
+                } else {
+                  setActiveTab('TINDAKAN');
+                }
+              } else {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Order Lab Internal Berhasil Dikirim!',
+                  text: 'Permintaan lab telah diteruskan ke antrean analis lab internal faskes.',
+                  timer: 2000,
+                  showConfirmButton: false,
+                });
+                setActiveTab('TINDAKAN');
+              }
             } catch (error) {
               // Error ditangani oleh store
             }
@@ -304,6 +389,18 @@ export default function TabLaboratorium({
           Lewati & Lanjut ke Tindakan &rarr;
         </button>
       </div>
+
+      {/* MODAL CETAK SURAT RUJUKAN LAB DOKTER */}
+      {isSuratRujukanOpen && rujukanOrderData && (
+        <SuratRujukanSpesimenModal
+          isOpen={isSuratRujukanOpen}
+          onClose={() => {
+            setIsSuratRujukanOpen(false);
+            setActiveTab('TINDAKAN');
+          }}
+          order={rujukanOrderData}
+        />
+      )}
     </div>
   );
 }

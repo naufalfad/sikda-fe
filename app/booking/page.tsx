@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, CalendarCheck, ChevronRight, CheckCircle2, 
+import {
+  Building2, CalendarCheck, ChevronRight, CheckCircle2,
   AlertCircle, Clock, User, ShieldCheck, ArrowLeft,
-  Smartphone, KeyRound, UserCheck, Plus, Check, 
+  Smartphone, KeyRound, UserCheck, Plus, Check,
   Printer, LogOut, RefreshCw, Send, Users, QrCode,
   MapPin, Stethoscope, FileText, ChevronDown, CheckCircle,
   Zap, Calendar, X
@@ -40,7 +40,7 @@ export default function BookingPortalPage() {
   const [selectedPoliId, setSelectedPoliId] = useState('');
   const [selectedDokterId, setSelectedDokterId] = useState('');
   const [selectedKeluargaId, setSelectedKeluargaId] = useState<string>('NEW');
-  
+
   // Patient Identity Form
   const [nik, setNik] = useState('');
   const [namaLengkap, setNamaLengkap] = useState('');
@@ -67,7 +67,7 @@ export default function BookingPortalPage() {
   const [pekerjaan, setPekerjaan] = useState('Wiraswasta');
   const [statusPerkawinan, setStatusPerkawinan] = useState('Belum Kawin');
   const [kewarganegaraan, setKewarganegaraan] = useState('WNI');
-  
+
   // Alamat Kependudukan
   const [alamatKtp, setAlamatKtp] = useState('');
   const [alamatDomisili, setAlamatDomisili] = useState('');
@@ -148,6 +148,19 @@ export default function BookingPortalPage() {
     }
   };
 
+  // Pre-fill from query params (e.g. from Landing Page direktori dokter)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const qFaskes = params.get('faskesId');
+      const qPoli = params.get('poliId');
+      const qDokter = params.get('dokterId');
+      if (qFaskes) setSelectedFaskesId(qFaskes);
+      if (qPoli) setSelectedPoliId(qPoli);
+      if (qDokter) setSelectedDokterId(qDokter);
+    }
+  }, []);
+
   // When selected Faskes changes, reload Poli
   useEffect(() => {
     if (selectedFaskesId) {
@@ -155,15 +168,15 @@ export default function BookingPortalPage() {
     }
   }, [selectedFaskesId]);
 
-  // When selected Poli changes, reload Dokter for that poli
+  // When selected Poli or Tanggal Kunjungan changes, reload Dokter for that poli
   useEffect(() => {
     if (selectedFaskesId && selectedPoliId) {
-      loadDokter(selectedFaskesId, selectedPoliId);
+      loadDokter(selectedFaskesId, selectedPoliId, tanggalKunjungan);
     } else {
       setDokterList([]);
       setSelectedDokterId('');
     }
-  }, [selectedFaskesId, selectedPoliId]);
+  }, [selectedFaskesId, selectedPoliId, tanggalKunjungan]);
 
   const loadPoli = async (faskesId: string) => {
     try {
@@ -172,7 +185,7 @@ export default function BookingPortalPage() {
         const polis = res.data.poliList || [];
         setPoliList(polis);
         if (polis.length > 0) {
-          setSelectedPoliId(polis[0].id);
+          setSelectedPoliId(prev => (prev && polis.some((p: any) => p.id === prev)) ? prev : polis[0].id);
         } else {
           setSelectedPoliId('');
           setDokterList([]);
@@ -184,14 +197,15 @@ export default function BookingPortalPage() {
     }
   };
 
-  const loadDokter = async (faskesId: string, poliId: string) => {
+  const loadDokter = async (faskesId: string, poliId: string, tanggal?: string) => {
     try {
-      const res = await portalPasienService.getMasterData(faskesId, poliId);
+      const res = await portalPasienService.getMasterData(faskesId, poliId, tanggal);
       if (res.success && res.data) {
         const doctors = res.data.dokterList || [];
         setDokterList(doctors);
         if (doctors.length > 0) {
-          setSelectedDokterId(doctors[0].id);
+          const eligibleDoc = doctors.find((d: any) => d.canBook !== false);
+          setSelectedDokterId(prev => (prev && doctors.some((d: any) => d.id === prev && d.canBook !== false)) ? prev : (eligibleDoc ? eligibleDoc.id : ''));
         } else {
           setSelectedDokterId('');
         }
@@ -470,6 +484,12 @@ export default function BookingPortalPage() {
       return;
     }
 
+    const chosenDoc = dokterList.find((d: any) => d.id === selectedDokterId);
+    if (chosenDoc && chosenDoc.canBook === false) {
+      alert(`Dokter ${chosenDoc.namaLengkap} tidak dapat dipilih saat ini (${chosenDoc.statusKeterangan}). Mohon pilih dokter yang sedang aktif bertugas.`);
+      return;
+    }
+
     if (nik.length < 16) {
       alert('NIK harus 16 digit angka');
       return;
@@ -548,7 +568,7 @@ export default function BookingPortalPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      
+
       {/* HEADER / NAVIGATION BAR */}
       <header className="bg-slate-900 text-white sticky top-0 z-50 shadow-md border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -580,8 +600,8 @@ export default function BookingPortalPage() {
                 </button>
               </div>
             ) : (
-              <Link 
-                href="/" 
+              <Link
+                href="/"
                 className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1 transition-colors uppercase tracking-wider"
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> Beranda
@@ -619,14 +639,14 @@ export default function BookingPortalPage() {
 
       {/* MAIN CONTAINER */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 flex-1">
-        
+
         {/* ============================================================ */}
         {/* STATE A: BELUM LOGIN / AUTENTIKASI WHATSAPP & PIN */}
         {/* ============================================================ */}
         {!token ? (
           <div className="max-w-md mx-auto my-6 animate-in fade-in zoom-in-95 duration-300">
             <div className="bg-white shadow-xl border border-slate-200 overflow-hidden">
-              
+
               {/* Card Header */}
               <div className="bg-slate-900 text-white p-6 border-b border-slate-800">
                 <div className="w-12 h-12 bg-emerald-600/20 border border-emerald-500/40 rounded-none flex items-center justify-center text-emerald-400 mb-3">
@@ -646,7 +666,7 @@ export default function BookingPortalPage() {
 
               {/* Card Body Form */}
               <div className="p-6">
-                
+
                 {/* Alerts */}
                 {authError && (
                   <div className="mb-5 bg-rose-50 border-l-4 border-rose-500 p-3 flex items-start gap-2.5 text-xs text-rose-800">
@@ -874,12 +894,12 @@ export default function BookingPortalPage() {
             </div>
           </div>
         ) : (
-          
+
           /* ============================================================ */
           /* STATE B: SUDAH LOGIN DENGAN WHATSAPP + PIN */
           /* ============================================================ */
           <div className="space-y-6 animate-in fade-in duration-300">
-            
+
             {/* TICKET POPUP / MODAL IF JUST CREATED */}
             {bookingResult && (
               <div className="bg-emerald-900 text-white p-6 sm:p-8 border-4 border-emerald-500 shadow-2xl relative mb-8">
@@ -1007,33 +1027,30 @@ export default function BookingPortalPage() {
             <div className="flex border-b border-slate-200 bg-white">
               <button
                 onClick={() => setActiveTab('BOOKING')}
-                className={`py-3.5 px-6 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 ${
-                  activeTab === 'BOOKING'
+                className={`py-3.5 px-6 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 ${activeTab === 'BOOKING'
                     ? 'border-blue-600 text-blue-600 bg-blue-50/50'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <CalendarCheck className="w-4 h-4" /> Ambil Antrean Baru
               </button>
 
               <button
                 onClick={() => setActiveTab('HISTORY')}
-                className={`py-3.5 px-6 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 ${
-                  activeTab === 'HISTORY'
+                className={`py-3.5 px-6 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 ${activeTab === 'HISTORY'
                     ? 'border-blue-600 text-blue-600 bg-blue-50/50'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <FileText className="w-4 h-4" /> Riwayat Antrean ({userProfile?.bookings?.length || 0})
               </button>
 
               <button
                 onClick={() => setActiveTab('FAMILY')}
-                className={`py-3.5 px-6 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 ${
-                  activeTab === 'FAMILY'
+                className={`py-3.5 px-6 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all border-b-2 ${activeTab === 'FAMILY'
                     ? 'border-blue-600 text-blue-600 bg-blue-50/50'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 <Users className="w-4 h-4" /> NIK Keluarga Tersimpan ({userProfile?.keluarga?.length || 0})
               </button>
@@ -1044,7 +1061,7 @@ export default function BookingPortalPage() {
             {/* ============================================================ */}
             {activeTab === 'BOOKING' && (
               <form onSubmit={handleBookingSubmit} className="bg-white shadow-sm border border-slate-200 p-6 sm:p-8 space-y-8">
-                
+
                 {/* BAGIAN 1: PILIH FASILITAS KESEHATAN */}
                 <div>
                   <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 mb-4">
@@ -1066,11 +1083,10 @@ export default function BookingPortalPage() {
                         <div
                           key={faskes.id}
                           onClick={() => setSelectedFaskesId(faskes.id)}
-                          className={`p-4 border-2 cursor-pointer transition-all ${
-                            isSelected
+                          className={`p-4 border-2 cursor-pointer transition-all ${isSelected
                               ? 'border-blue-600 bg-blue-50/50 shadow-sm'
                               : 'border-slate-200 hover:border-slate-300 bg-white'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="font-bold text-slate-900 text-sm">{faskes.namaFaskes}</div>
@@ -1138,18 +1154,36 @@ export default function BookingPortalPage() {
                           {!selectedPoliId
                             ? '-- Pilih Poliklinik Terlebih Dahulu --'
                             : dokterList.length === 0
-                            ? '-- Tidak Ada Dokter Bertugas --'
-                            : '-- Pilih Dokter Bertugas * --'}
+                              ? '-- Tidak Ada Dokter Bertugas --'
+                              : '-- Pilih Dokter Bertugas * --'}
                         </option>
-                        {dokterList.map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.namaLengkap}
-                          </option>
-                        ))}
+                        {dokterList.map((d: any) => {
+                          const isEligible = d.canBook !== false;
+                          let statusLabel = '';
+                          if (!d.isBertugasHariIni) {
+                            statusLabel = '[Tidak Ada Jadwal Hari Ini]';
+                          } else if (d.statusKeterangan) {
+                            statusLabel = `[${d.statusKeterangan}]`;
+                          } else {
+                            statusLabel = `[${d.jamBertugas || 'Pagi'}]`;
+                          }
+
+                          return (
+                            <option key={d.id} value={d.id} disabled={!isEligible}>
+                              {d.namaLengkap} {statusLabel}
+                            </option>
+                          );
+                        })}
                       </select>
                       {selectedPoliId && dokterList.length === 0 && (
                         <p className="text-xs text-amber-600 font-semibold mt-1">
                           Belum ada dokter yang bertugas di poli ini. Silakan pilih poli lain atau hubungi faskes.
+                        </p>
+                      )}
+                      {selectedPoliId && dokterList.length > 0 && !dokterList.some((d: any) => d.canBook !== false) && (
+                        <p className="text-xs text-amber-600 font-semibold mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          Tidak ada dokter yang aktif pada jam saat ini. Dokter terjadwal hari ini bertugas pada shift lain (belum dimulai atau sudah berakhir).
                         </p>
                       )}
                     </div>
@@ -1172,7 +1206,7 @@ export default function BookingPortalPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <button
                       type="button"
                       onClick={() => setShowAddFamilyModal(true)}
@@ -1195,11 +1229,10 @@ export default function BookingPortalPage() {
                             <div
                               key={k.id}
                               onClick={() => handleSelectKeluarga(k)}
-                              className={`p-3 border cursor-pointer transition-all ${
-                                isSelected
+                              className={`p-3 border cursor-pointer transition-all ${isSelected
                                   ? 'border-blue-600 bg-blue-50/60 shadow-sm'
                                   : 'border-slate-200 hover:border-slate-300 bg-slate-50'
-                              }`}
+                                }`}
                             >
                               <div className="flex justify-between items-center">
                                 <span className="font-bold text-slate-900 text-xs">{k.namaLengkap}</span>
@@ -1213,11 +1246,10 @@ export default function BookingPortalPage() {
                         })}
                         <div
                           onClick={handleSelectNewPatient}
-                          className={`p-3 border border-dashed cursor-pointer transition-all flex items-center justify-center text-center ${
-                            selectedKeluargaId === 'NEW'
+                          className={`p-3 border border-dashed cursor-pointer transition-all flex items-center justify-center text-center ${selectedKeluargaId === 'NEW'
                               ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold'
                               : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-                          }`}
+                            }`}
                         >
                           <span className="text-xs">+ Input NIK Lainnya</span>
                         </div>
@@ -1495,7 +1527,7 @@ export default function BookingPortalPage() {
                           <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
                             <span className="w-2 h-2 bg-blue-600"></span> Alamat Tempat Tinggal (Sesuai KTP)
                           </div>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div className="sm:col-span-2">
                               <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
@@ -1586,7 +1618,7 @@ export default function BookingPortalPage() {
                           <div className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3 flex items-center gap-2">
                             <span className="w-2 h-2 bg-blue-600"></span> Kontak Darurat & Penjamin Pembayaran
                           </div>
-                          
+
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                               <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider mb-1">
@@ -1674,7 +1706,7 @@ export default function BookingPortalPage() {
                             <ShieldCheck className="w-4 h-4 text-emerald-600" />
                             Persetujuan Pasien (General Consent) — Cukup Dilakukan Sekali Saja
                           </div>
-                          
+
                           <label className="flex items-start gap-2.5 cursor-pointer text-xs text-slate-700">
                             <input
                               type="checkbox"

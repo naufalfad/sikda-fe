@@ -325,7 +325,6 @@ export default function Step1Identitas({ register, errors, watch, setValue, rese
   };
 
   const formatPascalCase = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.target.value = e.target.value.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
     return e;
   };
 

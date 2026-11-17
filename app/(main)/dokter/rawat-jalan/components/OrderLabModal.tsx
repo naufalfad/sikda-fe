@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   TestTubes, 
   X, 
@@ -12,7 +12,11 @@ import {
   Check,
   ExternalLink,
   ArrowRight,
-  Loader2
+  Loader2,
+  User,
+  FlaskConical,
+  Info,
+  Printer
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { 
@@ -22,6 +26,7 @@ import {
   QuickLabPackage 
 } from '../rawatJalan.constants';
 import { laboratoriumService } from '@/services/laboratorium.service';
+import { klinikService } from '@/services/klinik.service';
 import CetakLaboratoriumModal from '@/components/kasir/CetakLaboratoriumModal';
 
 interface OrderLabModalProps {
@@ -47,8 +52,11 @@ export default function OrderLabModal({
   const [metodeRujukan, setMetodeRujukan] = useState<'KIRIM_PASIEN' | 'KIRIM_SPESIMEN'>('KIRIM_PASIEN');
   const [isCetakModalOpen, setIsCetakModalOpen] = useState(false);
   const [lastSavedOrder, setLastSavedOrder] = useState<any>(null);
+  const [faskesLabParams, setFaskesLabParams] = useState<string[] | null>(null);
+  const [faskesInfo, setFaskesInfo] = useState<any>(null);
+  const [masterLabList, setMasterLabList] = useState<any[]>([]);
 
-  // Initialize or prefill from existing order
+  // Initialize or prefill from existing order & load faskes capabilities
   useEffect(() => {
     if (isOpen) {
       if (existingOrder?.details && Array.isArray(existingOrder.details)) {
@@ -59,12 +67,56 @@ export default function OrderLabModal({
         setLabNote('');
       }
       setSearchQuery('');
+
+      const fetchFaskesCap = async () => {
+        try {
+          const res = await klinikService.getFaskesKapabilitas();
+          if (res?.data?.faskes) {
+            setFaskesInfo(res.data.faskes);
+            if (Array.isArray(res.data.faskes.labInternalParams)) {
+              setFaskesLabParams(res.data.faskes.labInternalParams);
+            }
+            if (res.data.faskes.defaultLabRujukan) {
+              setFaskesTujuan(res.data.faskes.defaultLabRujukan);
+            }
+          }
+          if (Array.isArray(res?.data?.masterLab) && res.data.masterLab.length > 0) {
+            setMasterLabList(res.data.masterLab);
+          }
+        } catch (err) {
+          console.warn('Gagal memuat kapabilitas lab faskes dokter:', err);
+        }
+      };
+      fetchFaskesCap();
     }
   }, [isOpen, existingOrder]);
+
+  // Bangun kategori laboratorium dinamis dari database (MasterLaboratorium)
+  const labCategoryList = useMemo(() => {
+    if (masterLabList && masterLabList.length > 0) {
+      const catMap: Record<string, string[]> = {};
+      masterLabList.forEach((m: any) => {
+        const cat = m.kategori || 'LAIN-LAIN';
+        if (!catMap[cat]) catMap[cat] = [];
+        catMap[cat].push(m.parameter);
+      });
+      return Object.entries(catMap).map(([category, tests]) => ({
+        category,
+        tests,
+      }));
+    }
+    return AVAILABLE_LAB_TESTS;
+  }, [masterLabList]);
 
   const [openLabCategories, setOpenLabCategories] = useState<string[]>(
     AVAILABLE_LAB_TESTS.map(c => c.category)
   );
+
+  useEffect(() => {
+    if (labCategoryList && labCategoryList.length > 0) {
+      setOpenLabCategories(labCategoryList.map(c => c.category));
+    }
+  }, [labCategoryList]);
 
   if (!isOpen || !selectedKunjungan) return null;
 
@@ -77,7 +129,7 @@ export default function OrderLabModal({
   };
 
   const handleExpandAll = () => {
-    setOpenLabCategories(AVAILABLE_LAB_TESTS.map(c => c.category));
+    setOpenLabCategories(labCategoryList.map(c => c.category));
   };
 
   const handleCollapseAll = () => {
@@ -102,8 +154,16 @@ export default function OrderLabModal({
     }
   };
 
-  const internalCount = labOrders.filter(t => isInternalLabTest(t)).length;
-  const externalCount = labOrders.filter(t => !isInternalLabTest(t)).length;
+  const checkIsInternal = (testName: string = ''): boolean => {
+    if (faskesLabParams && Array.isArray(faskesLabParams)) {
+      const lower = testName.toLowerCase().trim();
+      return faskesLabParams.some(p => lower.includes(p.toLowerCase()) || p.toLowerCase().includes(lower));
+    }
+    return isInternalLabTest(testName);
+  };
+
+  const internalCount = labOrders.filter(t => checkIsInternal(t)).length;
+  const externalCount = labOrders.filter(t => !checkIsInternal(t)).length;
 
   const handleSubmit = async () => {
     if (labOrders.length === 0) {
@@ -114,7 +174,7 @@ export default function OrderLabModal({
     setIsSubmitting(true);
     try {
       const payloadTests = labOrders.map((t) => {
-        const isLuar = !isInternalLabTest(t);
+        const isLuar = !checkIsInternal(t);
         return {
           parameter: t,
           isRujukanLuar: isLuar,
@@ -141,13 +201,13 @@ export default function OrderLabModal({
           title: 'Permintaan Lab Berhasil Disimpan!',
           html: `
             <div class="text-left text-xs space-y-2 mt-2">
-              <p>✅ <strong>${internalCount} Uji Internal:</strong> Diteruskan ke analis lab Puskesmas & masuk kasir.</p>
-              <p>🟠 <strong>${externalCount} Uji Rujukan Luar:</strong> Otomatis <strong>Rp 0 di Kasir Puskesmas</strong> (pasien bayar di ${faskesTujuan}).</p>
+              <p><strong>${internalCount} Uji Internal:</strong> Diteruskan ke analis lab Puskesmas & masuk kasir.</p>
+              <p><strong>${externalCount} Uji Rujukan Luar:</strong> Otomatis <strong>Rp 0 di Kasir Puskesmas</strong> (pasien bayar di ${faskesTujuan}).</p>
               <p class="font-bold text-slate-800 mt-2">Cetak 1 Lembar Surat Pengantar Rujukan Lab sekarang?</p>
             </div>
           `,
           showCancelButton: true,
-          confirmButtonText: '🖨️ Cetak Surat Pengantar Lab',
+          confirmButtonText: 'Cetak Surat Pengantar Lab',
           cancelButtonText: 'Selesai Tanpa Cetak',
           confirmButtonColor: '#2563eb',
         });
@@ -178,8 +238,8 @@ export default function OrderLabModal({
     }
   };
 
-  // Filter categories and tests based on search query
-  const filteredCategories = AVAILABLE_LAB_TESTS.map(cat => {
+  // Filter categories and tests based on search query (dari database MasterLaboratorium)
+  const filteredCategories = labCategoryList.map(cat => {
     const matchingTests = cat.tests.filter(t => 
       t.toLowerCase().includes(searchQuery.toLowerCase()) || 
       cat.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -212,7 +272,7 @@ export default function OrderLabModal({
                 )}
               </div>
               <p className="text-xs text-amber-200 mt-0.5 font-medium">
-                Pasien: <strong className="text-white">{selectedKunjungan.pasien?.namaLengkap}</strong> • No. RM: <strong className="text-white">{selectedKunjungan.pasien?.noRM}</strong> • Poli: {selectedKunjungan.poliklinik?.namaPoli || 'Rawat Jalan'}
+                Pasien: <strong className="text-white">{selectedKunjungan.pasien?.namaLengkap}</strong> • No. RM: <strong className="text-white">{selectedKunjungan.pasien?.noRM}</strong> • Faskes: <strong className="text-white">{faskesInfo?.namaFaskes || 'Puskesmas'}</strong> ({faskesLabParams?.length ?? 0} Uji Internal)
               </p>
             </div>
           </div>
@@ -221,11 +281,11 @@ export default function OrderLabModal({
             {/* Legend */}
             <div className="hidden sm:flex items-center gap-2 text-[11px] bg-black/20 px-3 py-1 border border-white/10">
               <span className="inline-flex items-center gap-1 font-bold text-emerald-300">
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> 🟢 Internal Puskesmas (Tersedia)
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Internal Puskesmas (Tersedia)
               </span>
               <span className="text-white/40">|</span>
               <span className="inline-flex items-center gap-1 font-bold text-amber-300">
-                <span className="w-2 h-2 rounded-full bg-amber-400"></span> 🟠 Rujuk Lab Luar / Labkesda (Rp 0)
+                <span className="w-2 h-2 rounded-full bg-amber-400"></span> Rujuk Lab Luar / Labkesda (Rp 0)
               </span>
             </div>
 
@@ -325,89 +385,10 @@ export default function OrderLabModal({
 
         {/* MODAL BODY (SCROLLABLE LAB CATALOGUE) */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-100/50">
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
-            {filteredCategories.map((cat, idx) => {
-              const isOpen = openLabCategories.includes(cat.category) || searchQuery.length > 0;
-              const selectedInCat = cat.tests.filter((t: string) => labOrders.includes(t)).length;
 
-              return (
-                <div key={idx} className="bg-white border border-slate-300 shadow-xs break-inside-avoid">
-                  {/* Category Header */}
-                  <div 
-                    onClick={() => handleToggleLabCategory(cat.category)}
-                    className="font-extrabold text-xs text-slate-900 bg-amber-100/70 hover:bg-amber-200/80 px-3 py-2.5 uppercase tracking-wide border-b border-slate-300 cursor-pointer flex justify-between items-center transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{cat.category}</span>
-                      {selectedInCat > 0 && (
-                        <span className="px-1.5 py-0.2 bg-amber-700 text-white text-[10px] font-mono font-bold">
-                          {selectedInCat}
-                        </span>
-                      )}
-                    </div>
-                    {isOpen ? <ChevronDown className="w-4 h-4 text-slate-700" /> : <ChevronRight className="w-4 h-4 text-slate-700" />}
-                  </div>
-
-                  {/* Tests List */}
-                  {isOpen && (
-                    <div className="p-2.5 space-y-1 divide-y divide-slate-100">
-                      {cat.matchingTests.map((test: string, i: number) => {
-                        const isInternal = isInternalLabTest(test);
-                        const isChecked = labOrders.includes(test);
-
-                        return (
-                          <label 
-                            key={i} 
-                            className={`pt-1.5 flex items-start justify-between gap-2 cursor-pointer p-1.5 transition-colors ${
-                              isChecked ? 'bg-amber-50/80 font-bold' : 'hover:bg-slate-50'
-                            }`}
-                          >
-                            <div className="flex items-start gap-2.5 flex-1">
-                              <input 
-                                type="checkbox" 
-                                className="w-4 h-4 mt-0.5 text-amber-700 border-slate-400 focus:ring-amber-600 cursor-pointer" 
-                                checked={isChecked}
-                                onChange={() => handleToggleLab(test)}
-                              />
-                              <span className="text-xs text-slate-800 leading-snug">
-                                {test}
-                              </span>
-                            </div>
-                            
-                            <span className={`shrink-0 text-[10px] px-1.5 py-0.2 font-extrabold border ${
-                              isInternal 
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
-                                : 'bg-amber-50 text-amber-800 border-amber-300'
-                            }`}>
-                              {isInternal ? '🟢 Tersedia Internal' : '🟠 Rujuk Lab Luar'}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {filteredCategories.length === 0 && (
-            <div className="text-center py-10 bg-white border border-slate-200 p-6">
-              <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <p className="text-sm font-bold text-slate-700">Tidak ada pemeriksaan laboratorium yang cocok dengan kata kunci &quot;{searchQuery}&quot;</p>
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="mt-2 text-xs font-bold text-amber-700 underline"
-              >
-                Reset Pencarian
-              </button>
-            </div>
-          )}
-
-          {/* PENGATURAN RUJUKAN LAB LUAR (MUNCUL OTOMATIS JIKA ADA ITEM EKSTERNAL) */}
+          {/* PENGATURAN RUJUKAN LAB LUAR (MUNCUL OTOMATIS DI ATAS JIKA ADA ITEM EKSTERNAL) */}
           {externalCount > 0 && (
-            <div className="bg-amber-50/80 border-2 border-amber-300 p-4 space-y-3 animate-in fade-in duration-150">
+            <div className="bg-amber-50/90 border-2 border-amber-400 p-4 space-y-3 shadow-sm animate-in fade-in duration-150">
               <div className="flex items-center justify-between border-b border-amber-200 pb-2">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-950">
                   <Building2 className="w-4 h-4 text-amber-700" />
@@ -457,7 +438,10 @@ export default function OrderLabModal({
                         onChange={() => setMetodeRujukan('KIRIM_PASIEN')}
                         className="sr-only"
                       />
-                      <div className="text-[11px] font-bold">🚶‍♂️ Kirim Pasien</div>
+                      <div className="text-[11px] font-bold flex items-center justify-center gap-1.5">
+                        <User className="w-3.5 h-3.5 text-amber-800" />
+                        <span>Kirim Pasien</span>
+                      </div>
                       <div className="text-[9px] text-slate-500">Pasien datang sendiri ke lab luar</div>
                     </label>
 
@@ -476,16 +460,100 @@ export default function OrderLabModal({
                         onChange={() => setMetodeRujukan('KIRIM_SPESIMEN')}
                         className="sr-only"
                       />
-                      <div className="text-[11px] font-bold">🧪 Kirim Spesimen</div>
+                      <div className="text-[11px] font-bold flex items-center justify-center gap-1.5">
+                        <FlaskConical className="w-3.5 h-3.5 text-amber-800" />
+                        <span>Kirim Spesimen</span>
+                      </div>
                       <div className="text-[9px] text-slate-500">Sampel diambil Puskesmas & kurir</div>
                     </label>
                   </div>
                 </div>
               </div>
 
-              <p className="text-[11px] text-amber-800 bg-amber-100/60 p-2 border border-amber-200">
-                💡 Seluruh parameter rujukan luar ini akan otomatis digabungkan dalam <strong>1 Lembar Surat Pengantar Rujukan Lab</strong> (tanpa dipisah-pisah per item).
-              </p>
+              <div className="text-[11px] text-amber-800 bg-amber-100/60 p-2.5 border border-amber-200 flex items-start gap-2">
+                <Info className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <span>Seluruh parameter rujukan luar ini akan otomatis digabungkan dalam <strong>1 Lembar Surat Pengantar Rujukan Lab</strong> (tanpa dipisah-pisah per item).</span>
+              </div>
+            </div>
+          )}
+
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
+            {filteredCategories.map((cat, idx) => {
+              const isOpen = openLabCategories.includes(cat.category) || searchQuery.length > 0;
+              const selectedInCat = cat.tests.filter((t: string) => labOrders.includes(t)).length;
+
+              return (
+                <div key={idx} className="bg-white border border-slate-300 shadow-xs break-inside-avoid">
+                  {/* Category Header */}
+                  <div 
+                    onClick={() => handleToggleLabCategory(cat.category)}
+                    className="font-extrabold text-xs text-slate-900 bg-amber-100/70 hover:bg-amber-200/80 px-3 py-2.5 uppercase tracking-wide border-b border-slate-300 cursor-pointer flex justify-between items-center transition-colors select-none"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span>{cat.category}</span>
+                      {selectedInCat > 0 && (
+                        <span className="px-1.5 py-0.2 bg-amber-700 text-white text-[10px] font-mono font-bold">
+                          {selectedInCat}
+                        </span>
+                      )}
+                    </div>
+                    {isOpen ? <ChevronDown className="w-4 h-4 text-slate-700" /> : <ChevronRight className="w-4 h-4 text-slate-700" />}
+                  </div>
+
+                  {/* Tests List */}
+                  {isOpen && (
+                    <div className="p-2.5 space-y-1 divide-y divide-slate-100">
+                      {cat.matchingTests.map((test: string, i: number) => {
+                        const isInternal = checkIsInternal(test);
+                        const isChecked = labOrders.includes(test);
+
+                        return (
+                          <label 
+                            key={i} 
+                            className={`pt-1.5 flex items-start justify-between gap-2 cursor-pointer p-1.5 transition-colors ${
+                              isChecked ? 'bg-amber-50/80 font-bold' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5 flex-1">
+                              <input 
+                                type="checkbox" 
+                                className="w-4 h-4 mt-0.5 text-amber-700 border-slate-400 focus:ring-amber-600 cursor-pointer" 
+                                checked={isChecked}
+                                onChange={() => handleToggleLab(test)}
+                              />
+                              <span className="text-xs text-slate-800 leading-snug">
+                                {test}
+                              </span>
+                            </div>
+                            
+                            <span className={`shrink-0 text-[10px] px-1.5 py-0.2 font-extrabold border ${
+                              isInternal 
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
+                                : 'bg-amber-50 text-amber-800 border-amber-300'
+                            }`}>
+                              {isInternal ? 'Tersedia Internal' : 'Rujuk Lab Luar'}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredCategories.length === 0 && (
+            <div className="text-center py-10 bg-white border border-slate-200 p-6">
+              <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700">Tidak ada pemeriksaan laboratorium yang cocok dengan kata kunci &quot;{searchQuery}&quot;</p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="mt-2 text-xs font-bold text-amber-700 underline"
+              >
+                Reset Pencarian
+              </button>
             </div>
           )}
 
@@ -568,9 +636,9 @@ export default function OrderLabModal({
             ...(lastSavedOrder || existingOrder || {}),
             details: labOrders.map((t) => ({
               parameter: t,
-              isRujukanLuar: !isInternalLabTest(t),
-              faskesTujuan: !isInternalLabTest(t) ? faskesTujuan : undefined,
-              metodeRujukan: !isInternalLabTest(t) ? metodeRujukan : undefined,
+              isRujukanLuar: !checkIsInternal(t),
+              faskesTujuan: !checkIsInternal(t) ? faskesTujuan : undefined,
+              metodeRujukan: !checkIsInternal(t) ? metodeRujukan : undefined,
             })),
             catatanKlinis: labNote,
             faskesTujuan,

@@ -242,10 +242,10 @@ export default function TabSubjektif({
                     const items = masterAlergis.filter(m => m.kategori === kat);
                     if (items.length === 0) return null;
                     const labelMap: Record<string, string> = {
-                      medication: '💊 Obat-obatan (Medication / KFA)',
-                      food: '🍤 Makanan & Minuman (Food)',
-                      environment: '🌿 Lingkungan & Cuaca (Environment)',
-                      biologic: '🧤 Biologik, Kontak & Lateks (Biologic)'
+                      medication: 'Obat-obatan (Medication / KFA)',
+                      food: 'Makanan & Minuman (Food)',
+                      environment: 'Lingkungan & Cuaca (Environment)',
+                      biologic: 'Biologik, Kontak & Lateks (Biologic)'
                     };
                     return (
                       <optgroup key={kat} label={labelMap[kat] || kat.toUpperCase()}>

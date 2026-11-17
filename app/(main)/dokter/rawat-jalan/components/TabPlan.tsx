@@ -23,7 +23,9 @@ import {
   HelpCircle,
   CheckCircle2,
   RefreshCw,
-  X
+  X,
+  Building2,
+  Building
 } from 'lucide-react';
 import { SOAPPayload, TindakanItem, BmhpTindakanItem, AlkesTindakanItem } from '@/types/rawatJalan.types';
 import { icd9Service } from '@/services/icd9.service';
@@ -33,6 +35,9 @@ import { AsetRuangan } from '@/types/asetRuangan.types';
 import Swal from 'sweetalert2';
 import OrderLabModal from './OrderLabModal';
 import OrderRadiologiModal from './OrderRadiologiModal';
+import CetakPengantarPenunjangModal from '@/components/penunjang/CetakPengantarPenunjangModal';
+import { laboratoriumService } from '@/services/laboratorium.service';
+import { radiologiService } from '@/services/radiologi.service';
 
 interface TabPlanProps {
   soapData: SOAPPayload;
@@ -79,15 +84,127 @@ export default function TabPlan({
   const [availableBmhp, setAvailableBmhp] = useState<any[]>([]);
   const [isLoadingAlkes, setIsLoadingAlkes] = useState(false);
 
-  // ─── Modal Rujukan Penunjang Luar (Radiologi / Lab Eksternal) ───
-  const [isRujukanPenunjangOpen, setIsRujukanPenunjangOpen] = useState(false);
-  const [rujukanPenunjangForm, setRujukanPenunjangForm] = useState({
-    jenisPenunjang: 'RADIOLOGI', // 'RADIOLOGI' | 'LABORATORIUM'
-    pemeriksaanDiminta: '',
-    faskesTujuan: 'RSUD Kabupaten / Lab Rujukan Rekanan',
-    alasanKlinis: '',
-    catatanTambahan: '',
-  });
+  // ─── Modal Cetak Surat Pengantar Penunjang Resmi (Lab & Radiologi Terintegrasi Order) ───
+  const [isCetakPengantarModalOpen, setIsCetakPengantarModalOpen] = useState(false);
+  const [cetakDefaultTab, setCetakDefaultTab] = useState<'LAB' | 'RADIOLOGI'>('LAB');
+
+  // ─── Deteksi Otomatis Rujukan Keluar Faskes Berdasar Order Nyata ───
+  const externalLabItems = useMemo(() => {
+    return (orderLabData?.details || []).filter((d: any) => d.isRujukanLuar === true);
+  }, [orderLabData]);
+
+  const hasExternalLab = externalLabItems.length > 0;
+  const hasExternalRadiologi = Boolean(
+    orderRadiologiList && 
+    orderRadiologiList.length > 0 && 
+    orderRadiologiList[0]?.isRujukanLuar === true
+  );
+  const externalProcedures = useMemo(() => {
+    return (selectedProsedur || []).filter(p => p.tipePelaksanaan === 'EKSTERNAL');
+  }, [selectedProsedur]);
+  const hasExternalProc = externalProcedures.length > 0;
+
+  const hasAnyRujukan = hasExternalLab || hasExternalRadiologi || hasExternalProc;
+
+  // ─── Reset / Batalkan Order Penunjang State & Handlers ───
+  const [isDeletingLab, setIsDeletingLab] = useState(false);
+  const [isDeletingRadiologi, setIsDeletingRadiologi] = useState(false);
+
+  const handleResetOrderLab = async () => {
+    if (!orderLabData) return;
+
+    // Cek apakah status sudah diproses oleh analis
+    if (['DIPROSES', 'SELESAI'].includes(orderLabData.status)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Tidak Dapat Dibatalkan',
+        text: 'Permintaan lab ini sedang atau sudah selesai diproses oleh analis laboratorium dan tidak dapat dibatalkan.',
+      });
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Batalkan Permintaan Lab?',
+      text: 'Seluruh parameter uji laboratorium untuk kunjungan ini akan dibatalkan dan dihapus dari antrean laboratorium.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Batalkan Order',
+      cancelButtonText: 'Kembali',
+    });
+
+    if (confirm.isConfirmed) {
+      setIsDeletingLab(true);
+      try {
+        await laboratoriumService.deleteOrder(orderLabData.id || selectedKunjungan?.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Order Dibatalkan',
+          text: 'Permintaan laboratorium berhasil dibatalkan dan dihapus dari antrean.',
+          timer: 1600,
+          showConfirmButton: false,
+        });
+        if (onRefreshOrderLab) onRefreshOrderLab();
+      } catch (err: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Membatalkan Order',
+          text: err?.response?.data?.message || err?.message || 'Terjadi kesalahan sistem saat membatalkan order.',
+        });
+      } finally {
+        setIsDeletingLab(false);
+      }
+    }
+  };
+
+  const handleResetOrderRadiologi = async () => {
+    const activeOrder = orderRadiologiList && orderRadiologiList.length > 0 ? orderRadiologiList[0] : null;
+    if (!activeOrder) return;
+
+    if (['IN_PROGRESS', 'COMPLETED'].includes(activeOrder.status)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Tidak Dapat Dibatalkan',
+        text: 'Pemeriksaan radiologi ini sedang atau sudah selesai diproses dan tidak dapat dibatalkan.',
+      });
+      return;
+    }
+
+    const confirm = await Swal.fire({
+      title: 'Batalkan Order Radiologi?',
+      text: 'Seluruh permintaan foto radiologi untuk kunjungan ini akan dibatalkan dan dihapus dari antrean.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Ya, Batalkan Order',
+      cancelButtonText: 'Kembali',
+    });
+
+    if (confirm.isConfirmed) {
+      setIsDeletingRadiologi(true);
+      try {
+        await radiologiService.deleteOrder(activeOrder.id || selectedKunjungan?.id);
+        Swal.fire({
+          icon: 'success',
+          title: 'Order Dibatalkan',
+          text: 'Permintaan radiologi berhasil dibatalkan dan dihapus dari antrean.',
+          timer: 1600,
+          showConfirmButton: false,
+        });
+        if (onRefreshOrderRadiologi) onRefreshOrderRadiologi();
+      } catch (err: any) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal Membatalkan Order',
+          text: err?.response?.data?.message || err?.message || 'Terjadi kesalahan sistem saat membatalkan order.',
+        });
+      } finally {
+        setIsDeletingRadiologi(false);
+      }
+    }
+  };
 
   // Load active medical devices for procedure selection
   const fetchMasterData = async () => {
@@ -192,17 +309,17 @@ export default function TabPlan({
             <p>Prosedur <strong>${kode}</strong> - <em>${item.nama_prosedur}</em> merupakan pemeriksaan diagnostik penunjang.</p>
             <p class="font-bold text-slate-800">Tentukan lokasi pelaksanaannya:</p>
             <div class="p-2.5 bg-indigo-50 border border-indigo-200 text-indigo-950">
-              <strong>🏢 Dikerjakan Internal:</strong> Jika faskes Anda memiliki fasilitas laboratorium/radiologi sendiri. Pasien akan dikenakan tarif tindakan, alat, & BMHP internal di kasir.
+              <strong>Pelaksanaan Internal:</strong> Jika faskes memiliki fasilitas sendiri. Pasien akan dikenakan tarif tindakan, alat, & BMHP internal di kasir.
             </div>
             <div class="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-950">
-              <strong>🏥 Rujukan Eksternal (Rp 0):</strong> Jika faskes belum memadai dan pasien dirujuk ke faskes luar (RSUD/Labkesda). Pasien <strong>tidak dikenakan biaya (Rp 0)</strong> di faskes ini dan surat pengantar rujukan dapat dicetak.
+              <strong>Rujukan Eksternal (Rp 0):</strong> Jika faskes belum memadai dan pasien dirujuk ke faskes luar (RSUD/Labkesda). Pasien <strong>tidak dikenakan biaya (Rp 0)</strong> di faskes ini dan surat pengantar rujukan dapat dicetak.
             </div>
           </div>
         `,
         showDenyButton: true,
         showCancelButton: true,
-        confirmButtonText: '🏢 Dikerjakan Internal',
-        denyButtonText: '🏥 Rujuk Eksternal (Rp 0)',
+        confirmButtonText: 'Dikerjakan Internal',
+        denyButtonText: 'Rujuk Eksternal (Rp 0)',
         cancelButtonText: 'Batal',
         confirmButtonColor: '#4f46e5',
         denyButtonColor: '#059669',
@@ -220,140 +337,189 @@ export default function TabPlan({
       return;
     }
 
-    // Smart Preset Alkes & BMHP berdasarkan jenis tindakan terintegrasi database
+    // 1. Prioritas: Ambil dari Paket Template Master ICD-9 jika sudah dikonfigurasi di Master Data
     let presetAlkes: AlkesTindakanItem[] = [];
     let presetBmhpRaw: BmhpTindakanItem[] = [];
 
-    // Helper resolusi item BMHP langsung ke ID database master
-    const resolveBmhp = (kode: string, fallback: BmhpTindakanItem): BmhpTindakanItem => {
-      const match = availableBmhp.find((b: any) => 
-        (b.kodeObat && b.kodeObat === kode) ||
-        (b.namaObat && b.namaObat.toLowerCase().includes(fallback.namaItem.toLowerCase().slice(0, 12)))
-      );
-      if (match) {
-        const harga = Number(match.harga) || fallback.hargaSatuan;
-        return {
-          obatId: match.id,
-          namaItem: match.namaObat,
-          sediaan: match.sediaan || fallback.sediaan,
-          jumlah: fallback.jumlah,
-          hargaSatuan: harga,
-          subTotal: harga * fallback.jumlah,
-        };
-      }
-      return fallback;
-    };
+    if (Array.isArray(item.templateAlkes) && item.templateAlkes.length > 0) {
+      presetAlkes = item.templateAlkes.map((a: any) => ({
+        asetId: a.asetId,
+        namaAset: a.namaAset,
+        kodeAset: a.kodeAset,
+        tarifPemakaian: (a.tarifPemakaian !== undefined && a.tarifPemakaian !== null) ? Number(a.tarifPemakaian) : 0,
+      }));
+    }
 
-    if (namaLower.includes('jahit') || namaLower.includes('suture') || namaLower.includes('hecting') || namaLower.includes('luka')) {
-      const minorSet = availableAlkes.find(a => a.namaAset.toLowerCase().includes('minor') || a.namaAset.toLowerCase().includes('jahit'));
-      if (minorSet) {
-        presetAlkes.push({
-          asetId: minorSet.id,
-          namaAset: minorSet.namaAset,
-          kodeAset: minorSet.kodeAset,
-          tarifPemakaian: (minorSet.tarifPemakaian !== undefined && minorSet.tarifPemakaian !== null) ? Number(minorSet.tarifPemakaian) : 15000,
-        });
-      }
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-SPU-3CC', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000, subTotal: 3000 }),
-        resolveBmhp('BMHP-LID-2', { obatId: 'BMHP-LID-2', namaItem: 'Lidocaine HCl 2% Ampul', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 5000, subTotal: 5000 }),
-        resolveBmhp('BMHP-BNG-SLK', { obatId: 'BMHP-BNG-SLK', namaItem: 'Benang Jahit Silk 3-0 with Needle', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 12000, subTotal: 12000 }),
-        resolveBmhp('BMHP-KSA-STR', { obatId: 'BMHP-KSA-STR', namaItem: 'Kasa Steril 16x16', sediaan: 'Lembar', jumlah: 2, hargaSatuan: 2000, subTotal: 4000 }),
-        resolveBmhp('BMHP-PVI-60ML', { obatId: 'BMHP-PVI-60ML', namaItem: 'Povidone Iodine 10%', sediaan: 'Botol', jumlah: 1, hargaSatuan: 8000, subTotal: 8000 }),
-      ];
-    } else if (namaLower.includes('nebul') || namaLower.includes('inhalasi')) {
-      const nebMachine = availableAlkes.find(a => a.namaAset.toLowerCase().includes('nebul'));
-      if (nebMachine) {
-        presetAlkes.push({
-          asetId: nebMachine.id,
-          namaAset: nebMachine.namaAset,
-          kodeAset: nebMachine.kodeAset,
-          tarifPemakaian: (nebMachine.tarifPemakaian !== undefined && nebMachine.tarifPemakaian !== null) ? Number(nebMachine.tarifPemakaian) : 20000,
-        });
-      }
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-MSK-NEB', { obatId: 'BMHP-MSK-NEB', namaItem: 'Masker Nebulizer Dewasa Kit', sediaan: 'Set', jumlah: 1, hargaSatuan: 15000, subTotal: 15000 }),
-      ];
-    } else if (namaLower.includes('ekg') || namaLower.includes('elektrokardiograf')) {
-      const ekgMachine = availableAlkes.find(a => a.namaAset.toLowerCase().includes('ekg'));
-      if (ekgMachine) {
-        presetAlkes.push({
-          asetId: ekgMachine.id,
-          namaAset: ekgMachine.namaAset,
-          kodeAset: ekgMachine.kodeAset,
-          tarifPemakaian: (ekgMachine.tarifPemakaian !== undefined && ekgMachine.tarifPemakaian !== null) ? Number(ekgMachine.tarifPemakaian) : 30000,
-        });
-      }
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-KTS-EKG', { obatId: 'BMHP-KTS-EKG', namaItem: 'Kertas Thermal EKG & Gel', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000, subTotal: 10000 }),
-      ];
-    } else if (namaLower.includes('infus') || namaLower.includes('38.93') || namaLower.includes('intravena')) {
-      const infMachine = availableAlkes.find(a => a.namaAset.toLowerCase().includes('infusion pump'));
-      if (infMachine) {
-        presetAlkes.push({
-          asetId: infMachine.id,
-          namaAset: infMachine.namaAset,
-          kodeAset: infMachine.kodeAset,
-          tarifPemakaian: Number(infMachine.tarifPemakaian) || 25000,
-        });
-      }
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-INF-SET', { obatId: 'BMHP-INF-SET', namaItem: 'Infus Set Dewasa Makro', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000, subTotal: 10000 }),
-        resolveBmhp('BMHP-ABO-20G', { obatId: 'BMHP-ABO-20G', namaItem: 'Abocath / IV Catheter 20G', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 8000, subTotal: 8000 }),
-        resolveBmhp('BMHP-CRL-500', { obatId: 'BMHP-CRL-500', namaItem: 'Cairan Ringer Lactate 500ml', sediaan: 'Kolf', jumlah: 1, hargaSatuan: 12000, subTotal: 12000 }),
-        resolveBmhp('BMHP-PLS-MED', { obatId: 'BMHP-PLS-MED', namaItem: 'Plester Hipafix Medis', sediaan: 'Roll', jumlah: 1, hargaSatuan: 12000, subTotal: 12000 }),
-        resolveBmhp('BMHP-ALK-SWB', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 2, hargaSatuan: 1000, subTotal: 2000 }),
-      ];
-    } else if (namaLower.includes('gigi') || namaLower.includes('dental') || namaLower.includes('cabut') || namaLower.includes('tambal') || namaLower.includes('scaler')) {
-      const dentalChair = availableAlkes.find(a => a.namaAset.toLowerCase().includes('dental chair'));
-      if (dentalChair) {
-        presetAlkes.push({
-          asetId: dentalChair.id,
-          namaAset: dentalChair.namaAset,
-          kodeAset: dentalChair.kodeAset,
-          tarifPemakaian: Number(dentalChair.tarifPemakaian) || 25000,
-        });
-      }
-      if (namaLower.includes('scaler') || namaLower.includes('karang')) {
-        const scaler = availableAlkes.find(a => a.namaAset.toLowerCase().includes('scaler'));
-        if (scaler) {
+    if (Array.isArray(item.templateBmhp) && item.templateBmhp.length > 0) {
+      presetBmhpRaw = item.templateBmhp.map((b: any) => {
+        const qty = Number(b.jumlah) || 1;
+        const harga = Number(b.hargaSatuan) || 0;
+        return {
+          obatId: b.obatId,
+          namaItem: b.namaItem,
+          sediaan: b.sediaan || 'Pcs',
+          jumlah: qty,
+          hargaSatuan: harga,
+          subTotal: harga * qty,
+        };
+      });
+    }
+
+    // 2. Fallback smart preset jika belum dikonfigurasi secara kustom di Master Data
+    if (presetAlkes.length === 0 && presetBmhpRaw.length === 0) {
+      // Helper resolusi item BMHP langsung ke ID database master
+      const resolveBmhp = (kode: string, fallback: BmhpTindakanItem): BmhpTindakanItem => {
+        const match = availableBmhp.find((b: any) => 
+          (b.kodeObat && b.kodeObat === kode) ||
+          (b.namaObat && b.namaObat.toLowerCase().includes(fallback.namaItem.toLowerCase().slice(0, 12)))
+        );
+        if (match) {
+          const harga = Number(match.harga) || fallback.hargaSatuan;
+          return {
+            obatId: match.id,
+            namaItem: match.namaObat,
+            sediaan: match.sediaan || fallback.sediaan,
+            jumlah: fallback.jumlah,
+            hargaSatuan: harga,
+            subTotal: harga * fallback.jumlah,
+          };
+        }
+        return fallback;
+      };
+
+      if (namaLower.includes('jahit') || namaLower.includes('suture') || namaLower.includes('hecting') || namaLower.includes('luka')) {
+        const minorSet = availableAlkes.find(a => a.namaAset.toLowerCase().includes('minor') || a.namaAset.toLowerCase().includes('jahit'));
+        if (minorSet) {
           presetAlkes.push({
-            asetId: scaler.id,
-            namaAset: scaler.namaAset,
-            kodeAset: scaler.kodeAset,
-            tarifPemakaian: Number(scaler.tarifPemakaian) || 20000,
+            asetId: minorSet.id,
+            namaAset: minorSet.namaAset,
+            kodeAset: minorSet.kodeAset,
+            tarifPemakaian: (minorSet.tarifPemakaian !== undefined && minorSet.tarifPemakaian !== null) ? Number(minorSet.tarifPemakaian) : 15000,
           });
         }
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-SPU-3CC', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000, subTotal: 3000 }),
+          resolveBmhp('BMHP-LID-2', { obatId: 'BMHP-LID-2', namaItem: 'Lidocaine HCl 2% Ampul', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 5000, subTotal: 5000 }),
+          resolveBmhp('BMHP-BNG-SLK', { obatId: 'BMHP-BNG-SLK', namaItem: 'Benang Jahit Silk 3-0 with Needle', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 12000, subTotal: 12000 }),
+          resolveBmhp('BMHP-KSA-STR', { obatId: 'BMHP-KSA-STR', namaItem: 'Kasa Steril 16x16', sediaan: 'Lembar', jumlah: 2, hargaSatuan: 2000, subTotal: 4000 }),
+          resolveBmhp('BMHP-PVI-60ML', { obatId: 'BMHP-PVI-60ML', namaItem: 'Povidone Iodine 10%', sediaan: 'Botol', jumlah: 1, hargaSatuan: 8000, subTotal: 8000 }),
+        ];
+      } else if (namaLower.includes('nebul') || namaLower.includes('inhalasi')) {
+        const nebMachine = availableAlkes.find(a => a.namaAset.toLowerCase().includes('nebul'));
+        if (nebMachine) {
+          presetAlkes.push({
+            asetId: nebMachine.id,
+            namaAset: nebMachine.namaAset,
+            kodeAset: nebMachine.kodeAset,
+            tarifPemakaian: (nebMachine.tarifPemakaian !== undefined && nebMachine.tarifPemakaian !== null) ? Number(nebMachine.tarifPemakaian) : 20000,
+          });
+        }
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-MSK-NEB', { obatId: 'BMHP-MSK-NEB', namaItem: 'Masker Nebulizer Dewasa Kit', sediaan: 'Set', jumlah: 1, hargaSatuan: 15000, subTotal: 15000 }),
+        ];
+      } else if (namaLower.includes('ekg') || namaLower.includes('elektrokardiograf')) {
+        const ekgMachine = availableAlkes.find(a => a.namaAset.toLowerCase().includes('ekg'));
+        if (ekgMachine) {
+          presetAlkes.push({
+            asetId: ekgMachine.id,
+            namaAset: ekgMachine.namaAset,
+            kodeAset: ekgMachine.kodeAset,
+            tarifPemakaian: (ekgMachine.tarifPemakaian !== undefined && ekgMachine.tarifPemakaian !== null) ? Number(ekgMachine.tarifPemakaian) : 30000,
+          });
+        }
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-KTS-EKG', { obatId: 'BMHP-KTS-EKG', namaItem: 'Kertas Thermal EKG & Gel', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000, subTotal: 10000 }),
+        ];
+      } else if (namaLower.includes('infus') || namaLower.includes('38.93') || namaLower.includes('intravena')) {
+        const infMachine = availableAlkes.find(a => a.namaAset.toLowerCase().includes('infusion pump'));
+        if (infMachine) {
+          presetAlkes.push({
+            asetId: infMachine.id,
+            namaAset: infMachine.namaAset,
+            kodeAset: infMachine.kodeAset,
+            tarifPemakaian: Number(infMachine.tarifPemakaian) || 25000,
+          });
+        }
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-INF-SET', { obatId: 'BMHP-INF-SET', namaItem: 'Infus Set Dewasa Makro', sediaan: 'Set', jumlah: 1, hargaSatuan: 10000, subTotal: 10000 }),
+          resolveBmhp('BMHP-ABO-20G', { obatId: 'BMHP-ABO-20G', namaItem: 'Abocath / IV Catheter 20G', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 8000, subTotal: 8000 }),
+          resolveBmhp('BMHP-CRL-500', { obatId: 'BMHP-CRL-500', namaItem: 'Cairan Ringer Lactate 500ml', sediaan: 'Kolf', jumlah: 1, hargaSatuan: 12000, subTotal: 12000 }),
+          resolveBmhp('BMHP-PLS-MED', { obatId: 'BMHP-PLS-MED', namaItem: 'Plester Hipafix Medis', sediaan: 'Roll', jumlah: 1, hargaSatuan: 12000, subTotal: 12000 }),
+          resolveBmhp('BMHP-ALK-SWB', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 2, hargaSatuan: 1000, subTotal: 2000 }),
+        ];
+      } else if (namaLower.includes('gigi') || namaLower.includes('dental') || namaLower.includes('cabut') || namaLower.includes('tambal') || namaLower.includes('scaler')) {
+        const dentalChair = availableAlkes.find(a => a.namaAset.toLowerCase().includes('dental chair'));
+        if (dentalChair) {
+          presetAlkes.push({
+            asetId: dentalChair.id,
+            namaAset: dentalChair.namaAset,
+            kodeAset: dentalChair.kodeAset,
+            tarifPemakaian: Number(dentalChair.tarifPemakaian) || 25000,
+          });
+        }
+        if (namaLower.includes('scaler') || namaLower.includes('karang')) {
+          const scaler = availableAlkes.find(a => a.namaAset.toLowerCase().includes('scaler'));
+          if (scaler) {
+            presetAlkes.push({
+              asetId: scaler.id,
+              namaAset: scaler.namaAset,
+              kodeAset: scaler.kodeAset,
+              tarifPemakaian: Number(scaler.tarifPemakaian) || 20000,
+            });
+          }
+        }
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-LID-ADR', { obatId: 'BMHP-LID-ADR', namaItem: 'Pehacain Dental Ampul', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 7500, subTotal: 7500 }),
+          resolveBmhp('BMHP-NDL-27G', { obatId: 'BMHP-NDL-27G', namaItem: 'Jarum Dental 27G', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 2000, subTotal: 2000 }),
+          resolveBmhp('BMHP-DNT-COT', { obatId: 'BMHP-DNT-COT', namaItem: 'Cotton Roll Gigi Steril', sediaan: 'Pcs', jumlah: 2, hargaSatuan: 1000, subTotal: 2000 }),
+        ];
+      } else if (namaLower.includes('iud') || namaLower.includes('implan') || namaLower.includes('anc') || namaLower.includes('kb')) {
+        const doppler = availableAlkes.find(a => a.namaAset.toLowerCase().includes('doppler'));
+        if (doppler) {
+          presetAlkes.push({
+            asetId: doppler.id,
+            namaAset: doppler.namaAset,
+            kodeAset: doppler.kodeAset,
+            tarifPemakaian: Number(doppler.tarifPemakaian) || 15000,
+          });
+        }
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-GLV-ST-70', { obatId: 'BMHP-GLV-ST-70', namaItem: 'Handscoon Steril No 7.0', sediaan: 'Pasang', jumlah: 1, hargaSatuan: 7000, subTotal: 7000 }),
+          resolveBmhp('BMHP-KSA-STR', { obatId: 'BMHP-KSA-STR', namaItem: 'Kasa Steril 16x16', sediaan: 'Lembar', jumlah: 2, hargaSatuan: 2000, subTotal: 4000 }),
+        ];
+      } else if (namaLower.includes('injeksi') || namaLower.includes('suntik')) {
+        presetBmhpRaw = [
+          resolveBmhp('BMHP-SPU-3CC', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000, subTotal: 3000 }),
+          resolveBmhp('BMHP-ALK-SWB', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 1, hargaSatuan: 1000, subTotal: 1000 }),
+        ];
       }
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-LID-ADR', { obatId: 'BMHP-LID-ADR', namaItem: 'Pehacain Dental Ampul', sediaan: 'Ampul', jumlah: 1, hargaSatuan: 7500, subTotal: 7500 }),
-        resolveBmhp('BMHP-NDL-27G', { obatId: 'BMHP-NDL-27G', namaItem: 'Jarum Dental 27G', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 2000, subTotal: 2000 }),
-        resolveBmhp('BMHP-DNT-COT', { obatId: 'BMHP-DNT-COT', namaItem: 'Cotton Roll Gigi Steril', sediaan: 'Pcs', jumlah: 2, hargaSatuan: 1000, subTotal: 2000 }),
-      ];
-    } else if (namaLower.includes('iud') || namaLower.includes('implan') || namaLower.includes('anc') || namaLower.includes('kb')) {
-      const doppler = availableAlkes.find(a => a.namaAset.toLowerCase().includes('doppler'));
-      if (doppler) {
-        presetAlkes.push({
-          asetId: doppler.id,
-          namaAset: doppler.namaAset,
-          kodeAset: doppler.kodeAset,
-          tarifPemakaian: Number(doppler.tarifPemakaian) || 15000,
-        });
-      }
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-GLV-ST-70', { obatId: 'BMHP-GLV-ST-70', namaItem: 'Handscoon Steril No 7.0', sediaan: 'Pasang', jumlah: 1, hargaSatuan: 7000, subTotal: 7000 }),
-        resolveBmhp('BMHP-KSA-STR', { obatId: 'BMHP-KSA-STR', namaItem: 'Kasa Steril 16x16', sediaan: 'Lembar', jumlah: 2, hargaSatuan: 2000, subTotal: 4000 }),
-      ];
-    } else if (namaLower.includes('injeksi') || namaLower.includes('suntik')) {
-      presetBmhpRaw = [
-        resolveBmhp('BMHP-SPU-3CC', { obatId: 'BMHP-SPU-3CC', namaItem: 'Spuit 3cc Disposable', sediaan: 'Pcs', jumlah: 1, hargaSatuan: 3000, subTotal: 3000 }),
-        resolveBmhp('BMHP-ALK-SWB', { obatId: 'BMHP-ALK-SWB', namaItem: 'Alcohol Swab Antiseptik', sediaan: 'Sachet', jumlah: 1, hargaSatuan: 1000, subTotal: 1000 }),
-      ];
     }
 
     addProcedureItem(item, presetAlkes, presetBmhpRaw);
     setIsIcd9DropdownOpen(false);
     setSearchTerm('');
+
+    // Rekomendasi penunjang diagnostik terhubung dari template master
+    if (Array.isArray(item.templatePenunjang) && item.templatePenunjang.length > 0) {
+      const penunjangList = item.templatePenunjang.map((p: any) => `• [${p.jenis}] <strong>${p.nama}</strong>${p.catatan ? ` <em>(${p.catatan})</em>` : ''}`).join('<br/>');
+      Swal.fire({
+        icon: 'info',
+        title: 'Rekomendasi Penunjang Terintegrasi',
+        html: `
+          <div class="text-left text-xs text-slate-700 space-y-2">
+            <p>Prosedur <strong>${item.nama_prosedur}</strong> memiliki rekomendasi pemeriksaan diagnostik terhubung:</p>
+            <div class="p-2.5 bg-purple-50 border border-purple-200 text-purple-900 leading-relaxed">
+              ${penunjangList}
+            </div>
+            <p class="text-slate-500 text-[11px]">Silakan buka modal <strong>Order Lab</strong> atau <strong>Order Radiologi</strong> di samping jika ingin melakukan order pemeriksaan di atas.</p>
+          </div>
+        `,
+        timer: 4500,
+        showConfirmButton: true,
+        confirmButtonText: 'Mengerti',
+        confirmButtonColor: '#0d9488'
+      });
+    }
   };
 
   const addProcedureItem = (
@@ -372,6 +538,8 @@ export default function TabPlan({
         pelaksana: tipePelaksanaan === 'EKSTERNAL' ? 'Rujukan Luar' : 'Dokter',
         catatan: '',
         tipePelaksanaan,
+        tarifTindakan: Number(item.tarifTindakan) || 0,
+        templatePenunjang: item.templatePenunjang || [],
         faskesRujukan: tipePelaksanaan === 'EKSTERNAL' ? 'RSUD Kabupaten / Lab Rujukan Rekanan' : '',
         alasanRujukan: '',
         alkesDetails: tipePelaksanaan === 'EKSTERNAL' ? [] : alkes,
@@ -482,42 +650,6 @@ export default function TabPlan({
     }, 0);
   }, [selectedProsedur]);
 
-  // Handle Simpan Surat Rujukan Penunjang Luar
-  const handleSimpanRujukanPenunjang = () => {
-    if (!rujukanPenunjangForm.pemeriksaanDiminta) {
-      Swal.fire('Input Kurang', 'Harap isi nama pemeriksaan yang diminta ke faskes rujukan.', 'warning');
-      return;
-    }
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Surat Rujukan Penunjang Dibuat!',
-      html: `
-        <div class="text-left text-xs text-gray-700 space-y-1">
-          <p><strong>Pemeriksaan:</strong> ${rujukanPenunjangForm.pemeriksaanDiminta}</p>
-          <p><strong>Faskes Tujuan:</strong> ${rujukanPenunjangForm.faskesTujuan}</p>
-          <p class="mt-2 text-indigo-700">Surat pengantar telah tercatat di RME. Pasien dapat membawa surat pengantar ini ke fasilitas penunjang eksternal.</p>
-        </div>
-      `,
-      confirmButtonText: 'Cetak Surat Pengantar',
-      showCancelButton: true,
-      cancelButtonText: 'Tutup',
-      confirmButtonColor: '#4f46e5',
-    }).then((result) => {
-      // Append ke instruksi medis
-      const catatanRujuk = `[RUJUKAN PENUNJANG ${rujukanPenunjangForm.jenisPenunjang}]: Permintaan ${rujukanPenunjangForm.pemeriksaanDiminta} ke ${rujukanPenunjangForm.faskesTujuan}. Alasan: ${rujukanPenunjangForm.alasanKlinis || '-'}`;
-      setSoapData({
-        ...soapData,
-        instruksiMedis: soapData.instruksiMedis ? `${soapData.instruksiMedis}\n${catatanRujuk}` : catatanRujuk
-      });
-      setIsRujukanPenunjangOpen(false);
-
-      if (result.isConfirmed) {
-        window.print();
-      }
-    });
-  };
-
   return (
     <div className="p-6 sm:p-8 space-y-8 bg-slate-50/50">
       
@@ -617,8 +749,9 @@ export default function TabPlan({
           {selectedProsedur.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               {selectedProsedur.some(p => p.tipePelaksanaan === 'EKSTERNAL') && (
-                <div className="bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-bold text-emerald-800 flex items-center gap-1">
-                  <span>🏥 {selectedProsedur.filter(p => p.tipePelaksanaan === 'EKSTERNAL').length} Rujukan Eksternal (Bebas Biaya Rp 0)</span>
+                <div className="bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-bold text-emerald-800 flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>{selectedProsedur.filter(p => p.tipePelaksanaan === 'EKSTERNAL').length} Rujukan Eksternal (Bebas Biaya Rp 0)</span>
                 </div>
               )}
               <div className="bg-indigo-50 border border-indigo-200 px-3.5 py-1.5 flex items-center gap-2">
@@ -805,8 +938,9 @@ export default function TabPlan({
                           {proc.nama_prosedur}
                         </h5>
                         {proc.tipePelaksanaan === 'EKSTERNAL' && (
-                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/80 px-1.5 py-0.2 border border-emerald-300">
-                            🏥 Prosedur Rujukan Eksternal
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/80 px-1.5 py-0.2 border border-emerald-300 inline-flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3 text-emerald-700" />
+                            <span>Prosedur Rujukan Eksternal</span>
                           </span>
                         )}
                       </div>
@@ -818,24 +952,26 @@ export default function TabPlan({
                         <button
                           type="button"
                           onClick={() => handleToggleTipePelaksanaan(pIdx, 'INTERNAL')}
-                          className={`px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                          className={`px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1.5 ${
                             proc.tipePelaksanaan !== 'EKSTERNAL'
                               ? 'bg-white text-indigo-700 shadow-2xs'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          🏢 Internal
+                          <Building2 className="w-3.5 h-3.5" />
+                          <span>Internal</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => handleToggleTipePelaksanaan(pIdx, 'EKSTERNAL')}
-                          className={`px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                          className={`px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1.5 ${
                             proc.tipePelaksanaan === 'EKSTERNAL'
                               ? 'bg-emerald-700 text-white shadow-2xs'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          🏥 Rujuk Luar (Rp 0)
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          <span>Rujuk Luar (Rp 0)</span>
                         </button>
                       </div>
 
@@ -905,14 +1041,8 @@ export default function TabPlan({
                           type="button"
                           onClick={() => {
                             const isLab = (proc.kode_icd9 || '').startsWith('90.') || (proc.kode_icd9 || '').startsWith('91.');
-                            setRujukanPenunjangForm({
-                              jenisPenunjang: isLab ? 'LABORATORIUM' : 'RADIOLOGI',
-                              pemeriksaanDiminta: `${proc.kode_icd9} - ${proc.nama_prosedur}`,
-                              faskesTujuan: proc.faskesRujukan || 'RSUD Kabupaten / Lab Rujukan Rekanan',
-                              alasanKlinis: proc.alasanRujukan || soapData.diagnosisKlinis || '',
-                              catatanTambahan: proc.catatan || '',
-                            });
-                            setIsRujukanPenunjangOpen(true);
+                            setCetakDefaultTab(isLab ? 'LAB' : 'RADIOLOGI');
+                            setIsCetakPengantarModalOpen(true);
                           }}
                           className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 shrink-0 transition"
                         >
@@ -1148,6 +1278,171 @@ export default function TabPlan({
           </p>
         </div>
 
+        {/* ─── PENGATURAN RUJUKAN KELUAR FASKES / STATUS DETEKSI RUJUKAN OTOMATIS ─── */}
+        {hasAnyRujukan ? (
+          <div className="bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-amber-50/70 border-2 border-indigo-300 shadow-sm p-4 sm:p-5 animate-in fade-in duration-200">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-indigo-200 pb-3 mb-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 bg-indigo-600 text-white shadow-sm shrink-0">
+                  <ExternalLink className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-black text-indigo-950 uppercase tracking-wide">
+                      Rujukan Keluar Faskes Terdeteksi Otomatis
+                    </h4>
+                    <span className="text-[10px] font-bold bg-emerald-600 text-white px-2 py-0.5 shadow-2xs">
+                      Order Siap Dicetak
+                    </span>
+                  </div>
+                  <p className="text-xs text-indigo-900/80 mt-0.5">
+                    Pemeriksaan eksternal otomatis terdeteksi dari order yang Anda pilih. Surat pengantar rujukan resmi ter-generate otomatis lengkap dengan daftar pemeriksaan tanpa perlu input manual.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCetakDefaultTab(hasExternalLab ? 'LAB' : 'RADIOLOGI');
+                    setIsCetakPengantarModalOpen(true);
+                  }}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md flex items-center gap-2 transition-all active:scale-95"
+                  title="Buka Lembar Cetak Surat Pengantar Rujukan Resmi Lengkap"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Cetak Surat Pengantar Rujukan Lengkap</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Rincian Order yang Terdeteksi */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+              {/* 1. Radiologi Eksternal */}
+              {hasExternalRadiologi && (
+                <div className="bg-white p-3 border border-purple-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-900 flex items-center gap-1.5">
+                      <Radio className="w-3.5 h-3.5 text-purple-600" />
+                      Radiologi LOINC ({orderRadiologiList?.[0]?.details?.length || 0} Foto)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCetakDefaultTab('RADIOLOGI');
+                        setIsCetakPengantarModalOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-purple-700 hover:underline flex items-center gap-0.5"
+                    >
+                      <Printer className="w-3 h-3" /> Cetak
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-600 truncate">
+                    Tujuan: <strong className="text-slate-900">{orderRadiologiList?.[0]?.faskesTujuan || 'RSUD Kabupaten'}</strong>
+                  </p>
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-1">
+                    {orderRadiologiList?.[0]?.details?.map((d: any, idx: number) => (
+                      <span key={idx} className="px-1.5 py-0.5 bg-purple-50 text-purple-900 text-[10px] font-bold border border-purple-200">
+                        {d.namaPemeriksaan} ({d.kodeLoinc})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Laboratorium Eksternal */}
+              {hasExternalLab && (
+                <div className="bg-white p-3 border border-amber-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                      <TestTubes className="w-3.5 h-3.5 text-amber-600" />
+                      Laboratorium Eksternal ({externalLabItems.length} Uji)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCetakDefaultTab('LAB');
+                        setIsCetakPengantarModalOpen(true);
+                      }}
+                      className="text-[10px] font-bold text-amber-800 hover:underline flex items-center gap-0.5"
+                    >
+                      <Printer className="w-3 h-3" /> Cetak
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-600 truncate">
+                    Tujuan: <strong className="text-slate-900">{orderLabData?.faskesTujuan || 'UPT Labkesda Kabupaten'}</strong>
+                  </p>
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-1">
+                    {externalLabItems.map((d: any, idx: number) => (
+                      <span key={idx} className="px-1.5 py-0.5 bg-amber-50 text-amber-900 text-[10px] font-bold border border-amber-200">
+                        {d.parameter}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Prosedur Eksternal */}
+              {hasExternalProc && (
+                <div className="bg-white p-3 border border-emerald-200 shadow-2xs space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-emerald-950 flex items-center gap-1.5">
+                      <ExternalLink className="w-3.5 h-3.5 text-emerald-600" />
+                      Tindakan ICD-9 Rujuk ({externalProcedures.length} Prosedur)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto pt-1">
+                    {externalProcedures.map((p: any, idx: number) => (
+                      <span key={idx} className="px-1.5 py-0.5 bg-emerald-50 text-emerald-900 text-[10px] font-bold border border-emerald-200">
+                        {p.kode_icd9} - {p.nama_prosedur}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Jika belum ada order rujukan dipilih, tampilkan panduan ringkas rujukan keluar faskes */
+          <div className="bg-slate-50 border border-slate-200 p-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 bg-white border border-slate-200 text-indigo-700 shrink-0 shadow-2xs">
+                  <ExternalLink className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                    Pengaturan Rujukan Keluar Faskes / Pemeriksaan Penunjang
+                  </h4>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    Pilih pemeriksaan laboratorium atau radiologi eksternal pada kartu order di bawah. Sistem akan <strong>otomatis mendeteksi</strong> rincian order yang dipilih dan langsung menyediakan tombol cetak surat pengantar rujukan resmi berdasar order tersebut.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsOrderLabModalOpen(true)}
+                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <TestTubes className="w-3.5 h-3.5 text-amber-700" />
+                  <span>+ Order Lab</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsOrderRadiologiModalOpen(true)}
+                  className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-300 font-bold text-xs flex items-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <Radio className="w-3.5 h-3.5 text-purple-700" />
+                  <span>+ Order Radiologi</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* KARTU 1: LABORATORIUM PUSKESMAS & RUJUKAN */}
           <div className="border border-slate-200 p-5 bg-white flex flex-col justify-between space-y-4 shadow-2xs hover:border-slate-300">
@@ -1178,8 +1473,15 @@ export default function TabPlan({
                   <p className="text-xs text-slate-600 font-semibold">Parameter Uji Telah Dipesan:</p>
                   <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                     {orderLabData.details.map((d: any, idx: number) => (
-                      <span key={idx} className="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-800 text-[11px] font-bold">
-                        {d.parameter}
+                      <span key={idx} className={`px-2 py-0.5 border text-[11px] font-bold inline-flex items-center gap-1 ${
+                        d.isRujukanLuar
+                          ? 'bg-amber-50 text-amber-900 border-amber-300'
+                          : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                      }`}>
+                        <span>{d.parameter}</span>
+                        <span className="text-[9px] font-normal opacity-75">
+                          ({d.isRujukanLuar ? 'Rujuk' : 'Internal'})
+                        </span>
                       </span>
                     ))}
                   </div>
@@ -1197,14 +1499,46 @@ export default function TabPlan({
             </div>
 
             <div className="space-y-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsOrderLabModalOpen(true)}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-colors"
-              >
-                <TestTubes className="w-4 h-4" />
-                {orderLabData ? 'Ubah / Tambah Permintaan Lab' : 'Buka Formulir Permintaan Lab'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsOrderLabModalOpen(true)}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-colors"
+                >
+                  <TestTubes className="w-4 h-4" />
+                  {orderLabData ? 'Ubah / Tambah Permintaan Lab' : 'Buka Formulir Permintaan Lab'}
+                </button>
+                {orderLabData && (
+                  <button
+                    type="button"
+                    onClick={handleResetOrderLab}
+                    disabled={isDeletingLab}
+                    title="Batalkan dan hapus seluruh permintaan lab untuk kunjungan ini"
+                    className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs border border-red-200 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    {isDeletingLab ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    )}
+                    <span>Batalkan Order</span>
+                  </button>
+                )}
+              </div>
+
+              {hasExternalLab && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCetakDefaultTab('LAB');
+                    setIsCetakPengantarModalOpen(true);
+                  }}
+                  className="w-full py-2 bg-white hover:bg-slate-50 text-amber-900 font-bold text-xs border border-amber-300 flex items-center justify-center gap-2 transition-colors shadow-2xs"
+                >
+                  <Printer className="w-3.5 h-3.5 text-amber-700" />
+                  Cetak Surat Pengantar Rujukan Lab ({externalLabItems.length} Parameter)
+                </button>
+              )}
 
               {onOpenHasilLabModal && (
                 <button
@@ -1228,10 +1562,19 @@ export default function TabPlan({
                   Pemeriksaan Radiologi (LOINC)
                 </span>
                 {orderRadiologiList && orderRadiologiList.length > 0 ? (
-                  <span className="text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                    ACSN: {orderRadiologiList[0]?.acsn}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 flex items-center gap-1 border ${
+                      orderRadiologiList[0]?.isRujukanLuar
+                        ? 'bg-purple-50 text-purple-800 border-purple-300'
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    }`}>
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                      {orderRadiologiList[0]?.isRujukanLuar ? 'Rujukan RS' : 'Internal Faskes'}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-200 px-2 py-0.5">
+                      {orderRadiologiList[0]?.acsn}
+                    </span>
+                  </div>
                 ) : (
                   <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5">
                     Belum Ada Order
@@ -1255,7 +1598,16 @@ export default function TabPlan({
                     {orderRadiologiList[0]?.details?.map((d: any, idx: number) => (
                       <div key={idx} className="flex items-center justify-between px-2.5 py-1 bg-slate-50 border border-slate-200 text-[11px]">
                         <span className="font-bold text-slate-900">{d.namaPemeriksaan}</span>
-                        <span className="font-mono text-[10px] text-slate-600">{d.kodeLoinc}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.2 border ${
+                            orderRadiologiList[0]?.isRujukanLuar
+                              ? 'bg-purple-50 text-purple-800 border-purple-200'
+                              : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          }`}>
+                            {orderRadiologiList[0]?.isRujukanLuar ? 'Rujukan RS' : 'Internal'}
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-600">{d.kodeLoinc}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1273,137 +1625,60 @@ export default function TabPlan({
             </div>
 
             <div className="space-y-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsOrderRadiologiModalOpen(true)}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-colors"
-              >
-                <Radio className="w-4 h-4" />
-                {orderRadiologiList && orderRadiologiList.length > 0 ? 'Tambah / Ubah Order Radiologi' : 'Pilih Pemeriksaan & Order Radiologi'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsOrderRadiologiModalOpen(true)}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Radio className="w-4 h-4" />
+                  {orderRadiologiList && orderRadiologiList.length > 0 ? 'Tambah / Ubah Order Radiologi' : 'Pilih Pemeriksaan & Order Radiologi'}
+                </button>
+                {orderRadiologiList && orderRadiologiList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleResetOrderRadiologi}
+                    disabled={isDeletingRadiologi}
+                    title="Batalkan dan hapus seluruh permintaan radiologi untuk kunjungan ini"
+                    className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs border border-red-200 flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                  >
+                    {isDeletingRadiologi ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    )}
+                    <span>Batalkan Order</span>
+                  </button>
+                )}
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setIsRujukanPenunjangOpen(true)}
-                className="w-full py-2 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-300 flex items-center justify-center gap-2 transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5 text-slate-600" />
-                Surat Pengantar Rujukan Luar (Manual)
-              </button>
+              {orderRadiologiList && orderRadiologiList.length > 0 && hasExternalRadiologi && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCetakDefaultTab('RADIOLOGI');
+                    setIsCetakPengantarModalOpen(true);
+                  }}
+                  className="w-full py-2 bg-white hover:bg-slate-50 text-purple-800 font-bold text-xs border border-purple-300 flex items-center justify-center gap-2 transition-colors shadow-2xs"
+                >
+                  <Printer className="w-3.5 h-3.5 text-purple-700" />
+                  Cetak Surat Pengantar Radiologi ({orderRadiologiList[0]?.details?.length || 0} Foto)
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* ─── MODAL SURAT RUJUKAN PENUNJANG EKSTERNAL ─── */}
-      {isRujukanPenunjangOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white max-w-2xl w-full border border-slate-300 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Radio className="w-5 h-5 text-slate-300" />
-                <div>
-                  <h4 className="text-sm font-black uppercase tracking-wider">
-                    Surat Pengantar Pemeriksaan Penunjang Luar
-                  </h4>
-                  <p className="text-[11px] text-slate-300">
-                    Pasien: {selectedKunjungan?.pasien?.namaLengkap} ({selectedKunjungan?.pasien?.noRM})
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsRujukanPenunjangOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Form */}
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Jenis Pemeriksaan Penunjang *
-                  </label>
-                  <select
-                    value={rujukanPenunjangForm.jenisPenunjang}
-                    onChange={(e) => setRujukanPenunjangForm({ ...rujukanPenunjangForm, jenisPenunjang: e.target.value })}
-                    className="w-full p-2.5 bg-white border border-slate-300 text-xs font-bold text-slate-800"
-                  >
-                    <option value="RADIOLOGI">Radiologi (Rontgen, USG, CT-Scan)</option>
-                    <option value="LABORATORIUM">Laboratorium Lanjutan (Kimia Darah, Hormon, PCR)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Faskes Rujukan Tujuan *
-                  </label>
-                  <input
-                    type="text"
-                    value={rujukanPenunjangForm.faskesTujuan}
-                    onChange={(e) => setRujukanPenunjangForm({ ...rujukanPenunjangForm, faskesTujuan: e.target.value })}
-                    placeholder="Contoh: Instalasi Radiologi RSUD Cibinong"
-                    className="w-full p-2.5 bg-white border border-slate-300 text-xs text-slate-900"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Pemeriksaan Spesifik yang Diminta *
-                </label>
-                <input
-                  type="text"
-                  value={rujukanPenunjangForm.pemeriksaanDiminta}
-                  onChange={(e) => setRujukanPenunjangForm({ ...rujukanPenunjangForm, pemeriksaanDiminta: e.target.value })}
-                  placeholder="Contoh: Foto Thorax PA Posisi Tegak (Curiga KP / Pneumonia), atau Profil Lipid Lengkap"
-                  className="w-full p-2.5 bg-white border border-slate-300 text-xs text-slate-900 font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Alasan Klinis / Diagnosa Kerja
-                </label>
-                <textarea
-                  rows={2}
-                  value={rujukanPenunjangForm.alasanKlinis}
-                  onChange={(e) => setRujukanPenunjangForm({ ...rujukanPenunjangForm, alasanKlinis: e.target.value })}
-                  placeholder="Contoh: Batuk berdahak > 2 minggu, ronkhi basah basal paru kanan, evaluasi kavitas/infiltrat..."
-                  className="w-full p-2.5 bg-white border border-slate-300 text-xs text-slate-900"
-                />
-              </div>
-
-              <div className="bg-slate-50 border border-slate-200 p-3 text-[11px] text-slate-700">
-                <strong>Catatan Alur:</strong> Pasien tetap berstatus rawat jalan di Puskesmas. Pasien hanya membawa surat pengantar ini ke fasilitas penunjang luar untuk dilakukan pemeriksaan dan membawa kembali hasilnya ke dokter pemeriksa.
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-end gap-2.5">
-              <button
-                type="button"
-                onClick={() => setIsRujukanPenunjangOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleSimpanRujukanPenunjang}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5"
-              >
-                <Printer className="w-4 h-4" />
-                Simpan & Cetak Pengantar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ─── MODAL CETAK SURAT PENGANTAR RUJUKAN RESMI (TERINTEGRASI ORDER) ─── */}
+      <CetakPengantarPenunjangModal
+        isOpen={isCetakPengantarModalOpen}
+        onClose={() => setIsCetakPengantarModalOpen(false)}
+        kunjunganData={selectedKunjungan}
+        orderLabData={orderLabData}
+        orderRadiologiData={orderRadiologiList && orderRadiologiList.length > 0 ? orderRadiologiList[0] : null}
+        defaultTab={cetakDefaultTab}
+      />
 
       {/* ─── MODAL ORDER LABORATORIUM ─── */}
       <OrderLabModal

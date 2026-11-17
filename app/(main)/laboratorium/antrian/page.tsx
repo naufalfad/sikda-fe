@@ -20,7 +20,6 @@ import {
   Check
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { isInternalLabTest } from '@/app/(main)/dokter/rawat-jalan/rawatJalan.constants';
 import SuratRujukanSpesimenModal from '@/components/laboratorium/SuratRujukanSpesimenModal';
 import LabResultModal from '@/app/(main)/dokter/rawat-jalan/components/LabResultModal';
 
@@ -30,8 +29,8 @@ export default function LaboratoriumDashboard() {
   const [hasilData, setHasilData] = useState<Record<string, { hasil: string, satuan: string, nilaiRujukan: string, kritis: boolean }>>({});
   const [isSaving, setIsSaving] = useState(false);
 
-  // Filter & Search states
-  const [filterType, setFilterType] = useState<'SEMUA' | 'INTERNAL' | 'RUJUKAN'>('SEMUA');
+  // Filter & Search states (Default ke INTERNAL agar antrean uji lab internal faskes rapi)
+  const [filterType, setFilterType] = useState<'INTERNAL' | 'RUJUKAN' | 'SEMUA'>('INTERNAL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Modals
@@ -39,8 +38,11 @@ export default function LaboratoriumDashboard() {
   const [isPratinjauHasilOpen, setIsPratinjauHasilOpen] = useState(false);
 
   useEffect(() => {
-    fetchAntrian();
-  }, [fetchAntrian]);
+    fetchAntrian({
+      tipe: filterType,
+      search: searchQuery || undefined
+    });
+  }, [fetchAntrian, filterType]);
 
   // Sync state dengan selectedOrder
   useEffect(() => {
@@ -64,8 +66,8 @@ export default function LaboratoriumDashboard() {
   const getOrderClassification = (order: any) => {
     const details = order.details || [];
     if (details.length === 0) return { type: 'INTERNAL', label: 'Internal', color: 'emerald' };
-    const hasExternal = details.some((d: any) => !isInternalLabTest(d.parameter));
-    const hasInternal = details.some((d: any) => isInternalLabTest(d.parameter));
+    const hasExternal = details.some((d: any) => d.isRujukanLuar === true);
+    const hasInternal = details.some((d: any) => !d.isRujukanLuar);
 
     if (hasExternal && hasInternal) {
       return { type: 'CAMPURAN', label: 'Internal + Rujukan', color: 'indigo' };
@@ -76,21 +78,9 @@ export default function LaboratoriumDashboard() {
     return { type: 'INTERNAL', label: 'Internal Faskes', color: 'emerald' };
   };
 
-  // Filtered antrian list
+  // Filtered antrian list berdasarkan query search
   const filteredAntrian = useMemo(() => {
     return antrian.filter((order) => {
-      // 1. Tipe Filter
-      if (filterType === 'INTERNAL') {
-        const details = order.details || [];
-        const hasExternal = details.some((d: any) => !isInternalLabTest(d.parameter));
-        if (hasExternal) return false;
-      } else if (filterType === 'RUJUKAN') {
-        const details = order.details || [];
-        const hasExternal = details.some((d: any) => !isInternalLabTest(d.parameter));
-        if (!hasExternal) return false;
-      }
-
-      // 2. Query Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const nama = order.pasien?.namaLengkap?.toLowerCase() || '';
@@ -98,18 +88,17 @@ export default function LaboratoriumDashboard() {
         const dokter = order.dokter?.namaLengkap?.toLowerCase() || '';
         return nama.includes(q) || noRM.includes(q) || dokter.includes(q);
       }
-
       return true;
     });
-  }, [antrian, filterType, searchQuery]);
+  }, [antrian, searchQuery]);
 
   // Metrics count
   const countInternalOnly = useMemo(() => {
-    return antrian.filter(o => (o.details || []).every((d: any) => isInternalLabTest(d.parameter))).length;
+    return antrian.filter(o => (o.details || []).every((d: any) => !d.isRujukanLuar)).length;
   }, [antrian]);
 
   const countHasExternal = useMemo(() => {
-    return antrian.filter(o => (o.details || []).some((d: any) => !isInternalLabTest(d.parameter))).length;
+    return antrian.filter(o => (o.details || []).some((d: any) => d.isRujukanLuar === true)).length;
   }, [antrian]);
 
   const handleKirimHasil = async () => {
@@ -147,10 +136,10 @@ export default function LaboratoriumDashboard() {
   // Selected Order Analysis
   const selectedClassification = selectedOrder ? getOrderClassification(selectedOrder) : null;
   const selectedExternalTests = selectedOrder 
-    ? (selectedOrder.details || []).filter((d: any) => !isInternalLabTest(d.parameter)) 
+    ? (selectedOrder.details || []).filter((d: any) => d.isRujukanLuar === true) 
     : [];
   const selectedInternalTests = selectedOrder 
-    ? (selectedOrder.details || []).filter((d: any) => isInternalLabTest(d.parameter)) 
+    ? (selectedOrder.details || []).filter((d: any) => !d.isRujukanLuar) 
     : [];
 
   // Order with updated results for preview
@@ -231,16 +220,6 @@ export default function LaboratoriumDashboard() {
           {/* Filter Tabs */}
           <div className="mt-3 grid grid-cols-3 gap-1 bg-indigo-100/70 p-0.5 border border-indigo-200">
             <button
-              onClick={() => setFilterType('SEMUA')}
-              className={`py-1 text-[11px] font-bold transition-all text-center ${
-                filterType === 'SEMUA' 
-                  ? 'bg-white text-indigo-900 shadow-xs' 
-                  : 'text-indigo-700 hover:text-indigo-900'
-              }`}
-            >
-              Semua ({antrian.length})
-            </button>
-            <button
               onClick={() => setFilterType('INTERNAL')}
               className={`py-1 text-[11px] font-bold transition-all text-center ${
                 filterType === 'INTERNAL' 
@@ -249,7 +228,7 @@ export default function LaboratoriumDashboard() {
               }`}
               title="Pemeriksaan internal laboratorium Puskesmas"
             >
-              Internal ({countInternalOnly})
+              Internal Faskes
             </button>
             <button
               onClick={() => setFilterType('RUJUKAN')}
@@ -260,7 +239,17 @@ export default function LaboratoriumDashboard() {
               }`}
               title="Pemeriksaan rujukan spesimen eksternal (Labkesda/RS)"
             >
-              Rujukan ({countHasExternal})
+              Rujukan Luar
+            </button>
+            <button
+              onClick={() => setFilterType('SEMUA')}
+              className={`py-1 text-[11px] font-bold transition-all text-center ${
+                filterType === 'SEMUA' 
+                  ? 'bg-white text-indigo-900 shadow-xs' 
+                  : 'text-indigo-700 hover:text-indigo-900'
+              }`}
+            >
+              Semua ({antrian.length})
             </button>
           </div>
         </div>
@@ -317,7 +306,7 @@ export default function LaboratoriumDashboard() {
                     <div className="text-[11px] text-gray-500 space-y-0.5 mt-1">
                       <p className="truncate">Dokter: {order.dokter?.namaLengkap || 'Dokter Poli'}</p>
                       <div className="flex items-center justify-between text-[10px]">
-                        <span>Total: {order.details.length} Tes</span>
+                        <span>Total: {order.details.length} {filterType === 'RUJUKAN' ? 'Tes Rujukan' : 'Tes Internal'}</span>
                         <span className="font-bold text-amber-700 bg-amber-50 px-1 border border-amber-200 uppercase">
                           {order.status === 'MENUNGGU_SAMPEL' ? 'Menunggu Sampel' : 'Diproses'}
                         </span>
@@ -374,7 +363,7 @@ export default function LaboratoriumDashboard() {
 
               {/* Action Buttons Header */}
               <div className="flex items-center gap-2 flex-wrap">
-                {selectedExternalTests.length > 0 && (
+                {filterType === 'RUJUKAN' && (
                   <button
                     type="button"
                     onClick={() => setIsSuratRujukanOpen(true)}
@@ -402,8 +391,8 @@ export default function LaboratoriumDashboard() {
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-50">
               <div className="max-w-5xl mx-auto space-y-5 pb-20">
                 
-                {/* Notice Spesimen Rujukan Luar */}
-                {selectedExternalTests.length > 0 && (
+                {/* Notice Spesimen Rujukan Luar (Hanya di Tab Rujukan Luar) */}
+                {filterType === 'RUJUKAN' && (
                   <div className="bg-sky-50 border-2 border-sky-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
                     <div className="flex items-start sm:items-center gap-3">
                       <div className="w-9 h-9 bg-sky-500 text-white flex items-center justify-center font-bold shrink-0">
@@ -411,10 +400,10 @@ export default function LaboratoriumDashboard() {
                       </div>
                       <div>
                         <h4 className="font-extrabold text-sky-950 text-xs uppercase tracking-tight">
-                          Terdapat {selectedExternalTests.length} Pemeriksaan yang Dirujuk ke Labkesda / RSUD
+                          Daftar Pemeriksaan yang Dirujuk ke Labkesda / RSUD
                         </h4>
                         <p className="text-[11px] text-sky-800 mt-0.5 leading-relaxed">
-                          Spesimen dikirim ke laboratorium rujukan luar. Pasien boleh dipulangkan hari ini oleh dokter dengan terapi simtomatik; hasil lab dari faskes rujukan dapat diinputkan menyusul ketika lembar hasil diterima.
+                          Spesimen/pasien dirujuk ke faskes rujukan luar. Ketika berkas hasil fisik dari Labkesda/RS diterima kembali, inputkan nilai hasilnya pada tabel di bawah untuk disimpan ke Rekam Medis Elektronik (RME).
                         </p>
                       </div>
                     </div>
@@ -446,16 +435,22 @@ export default function LaboratoriumDashboard() {
                     <div className="flex items-center gap-2">
                       <ClipboardList className="w-4 h-4 text-indigo-600" />
                       <h3 className="font-bold text-xs uppercase tracking-wider text-gray-800">
-                        Input Hasil Analisis Laboratorium ({selectedOrder.details.length} Parameter)
+                        {filterType === 'RUJUKAN' 
+                          ? `Pencatatan Hasil Uji dari Faskes Rujukan (${selectedOrder.details.length} Parameter)` 
+                          : `Input Hasil Uji Laboratorium Internal (${selectedOrder.details.length} Parameter)`}
                       </h3>
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                      <span className="text-emerald-700 font-bold flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> {selectedInternalTests.length} Internal
-                      </span>
-                      <span>•</span>
-                      <span className="text-slate-700 font-bold flex items-center gap-1">
-                        <ExternalLink className="w-3 h-3 text-slate-500" /> {selectedExternalTests.length} Rujukan Luar
+                      <span className={`font-bold flex items-center gap-1 ${filterType === 'RUJUKAN' ? 'text-sky-700' : 'text-emerald-700'}`}>
+                        {filterType === 'RUJUKAN' ? (
+                          <>
+                            <ExternalLink className="w-3.5 h-3.5 text-sky-600" /> {selectedOrder.details.length} Rujukan Luar
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" /> {selectedOrder.details.length} Internal Faskes
+                          </>
+                        )}
                       </span>
                     </div>
                   </div>
@@ -465,7 +460,9 @@ export default function LaboratoriumDashboard() {
                       <table className="w-full text-xs text-left">
                         <thead className="bg-slate-100 text-gray-700 font-bold border-y border-gray-200">
                           <tr>
-                            <th className="px-3 py-2.5 min-w-[220px]">Pemeriksaan & Jenis Layanan</th>
+                            <th className="px-3 py-2.5 min-w-[220px]">
+                              {filterType === 'RUJUKAN' ? 'Pemeriksaan Rujukan Luar' : 'Pemeriksaan Internal Faskes'}
+                            </th>
                             <th className="px-3 py-2.5 min-w-[160px]">Nilai Hasil</th>
                             <th className="px-3 py-2.5 min-w-[120px]">Satuan</th>
                             <th className="px-3 py-2.5 min-w-[150px]">Nilai Rujukan Normal</th>
@@ -474,7 +471,7 @@ export default function LaboratoriumDashboard() {
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {selectedOrder.details.map((detail: any) => {
-                            const isInternal = isInternalLabTest(detail.parameter);
+                            const isInternal = !detail.isRujukanLuar;
 
                             return (
                               <tr key={detail.id} className="hover:bg-slate-50/70 transition-colors">
@@ -486,15 +483,16 @@ export default function LaboratoriumDashboard() {
                                         ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                                         : 'bg-sky-50 text-sky-800 border-sky-300'
                                     }`}>
-                                      {isInternal ? 'Internal' : 'Rujukan Luar'}
+                                      {isInternal ? 'Internal Faskes' : 'Rujukan Luar'}
                                     </span>
                                   </div>
                                   {!isInternal && (
-                                    <span className="block text-[10px] text-sky-700 mt-0.5 italic">
-                                      Dirujuk ke Labkesda/RS. Hasil dapat diinput saat lembar rujukan diterima.
+                                    <span className="block text-[10px] text-sky-700 mt-0.5 font-medium">
+                                      Tujuan: {detail.faskesTujuan || 'Labkesda / RSUD Terdekat'}
                                     </span>
                                   )}
                                 </td>
+                                
                                 <td className="px-3 py-2.5">
                                   <input
                                     type="text"
@@ -504,7 +502,7 @@ export default function LaboratoriumDashboard() {
                                       [detail.id]: { ...prev[detail.id], hasil: e.target.value }
                                     }))}
                                     className="w-full px-2.5 py-1.5 border border-gray-300 rounded-none focus:ring-1 focus:ring-indigo-500 bg-white text-xs"
-                                    placeholder={isInternal ? "Ketik hasil uji..." : "Menunggu hasil rujukan..."}
+                                    placeholder={filterType === 'RUJUKAN' ? "Ketik hasil lembar RS..." : "Ketik hasil uji internal..."}
                                   />
                                 </td>
                                 <td className="px-3 py-2.5">
@@ -582,7 +580,9 @@ export default function LaboratoriumDashboard() {
                   ) : (
                     <Save className="w-4 h-4 mr-2" />
                   )}
-                  Simpan & Terbitkan Hasil ke RME Dokter
+                  {filterType === 'RUJUKAN'
+                    ? 'Simpan Hasil Rujukan Lab Luar ke RME Dokter'
+                    : 'Simpan Hasil Uji Internal ke RME Dokter'}
                 </button>
               </div>
             </div>

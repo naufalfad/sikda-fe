@@ -41,9 +41,11 @@ import {
   Compass,
   Award,
   Video,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import VirtualAssistantWidget from '@/components/landing/VirtualAssistantWidget';
+import { jadwalNakesService, PublicDoctorDirectoryItem } from '@/services/jadwalNakes.service';
 
 interface BannerVideoItem {
   id: string;
@@ -162,7 +164,8 @@ export default function ClevelandLandingPage() {
 
   const activeVideo = BANNER_VIDEOS[currentVideoIdx];
 
-  const doctorsList = [
+  // Fallback doctors list if backend is initializing or has no data
+  const FALLBACK_DOCTORS = [
     {
       name: 'dr. Andi Pratama',
       poli: 'Poli Umum',
@@ -171,6 +174,7 @@ export default function ClevelandLandingPage() {
       daysText: 'Senin - Rabu',
       hours: '08:00 - 14:00',
       status: 'Aktif Praktik',
+      statusBadge: 'success',
       avatar: 'AP'
     },
     {
@@ -181,6 +185,7 @@ export default function ClevelandLandingPage() {
       daysText: 'Kamis - Sabtu',
       hours: '08:00 - 14:00',
       status: 'Aktif Praktik',
+      statusBadge: 'success',
       avatar: 'BS'
     },
     {
@@ -191,6 +196,7 @@ export default function ClevelandLandingPage() {
       daysText: 'Senin, Rabu, Jumat',
       hours: '08:30 - 13:00',
       status: 'Aktif Praktik',
+      statusBadge: 'success',
       avatar: 'CW'
     },
     {
@@ -201,6 +207,7 @@ export default function ClevelandLandingPage() {
       daysText: 'Selasa & Kamis',
       hours: '09:00 - 13:30',
       status: 'Konsultan Anak',
+      statusBadge: 'success',
       avatar: 'DA'
     },
     {
@@ -211,6 +218,7 @@ export default function ClevelandLandingPage() {
       daysText: 'Setiap Hari',
       hours: 'Shift Pagi / Malam',
       status: 'Siaga 24 Jam',
+      statusBadge: 'success',
       avatar: 'EP'
     },
     {
@@ -221,18 +229,50 @@ export default function ClevelandLandingPage() {
       daysText: 'Senin, Selasa, Kamis',
       hours: '08:00 - 12:30',
       status: 'Aktif Praktik',
+      statusBadge: 'success',
       avatar: 'SR'
     }
   ];
 
+  // Real Doctor Schedule Data from Backend
+  const [doctorsList, setDoctorsList] = useState<any[]>([]);
+  const [isLoadingDoctors, setIsLoadingDoctors] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchDoctors = async () => {
+      setIsLoadingDoctors(true);
+      try {
+        const data = await jadwalNakesService.getPublicDoctorDirectory();
+        if (isMounted) {
+          if (Array.isArray(data) && data.length > 0) {
+            setDoctorsList(data);
+          } else {
+            setDoctorsList(FALLBACK_DOCTORS);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load public doctor directory:', err);
+        if (isMounted) setDoctorsList(FALLBACK_DOCTORS);
+      } finally {
+        if (isMounted) setIsLoadingDoctors(false);
+      }
+    };
+
+    fetchDoctors();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const filteredDoctors = doctorsList.filter((doc) => {
     const matchPoli = selectedPoliFilter === 'ALL' || doc.poli === selectedPoliFilter;
-    const matchDay = selectedDayFilter === 'ALL' || doc.days.includes(selectedDayFilter);
+    const matchDay = selectedDayFilter === 'ALL' || (Array.isArray(doc.days) && doc.days.includes(selectedDayFilter));
     const matchSearch =
       searchQuery === '' ||
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.poli.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.faskes.toLowerCase().includes(searchQuery.toLowerCase());
+      doc.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.poli?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      doc.faskes?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchPoli && matchDay && matchSearch;
   });
 
@@ -744,63 +784,83 @@ export default function ClevelandLandingPage() {
           </div>
 
           {/* Doctor Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredDoctors.map((doc, idx) => (
-              <div
-                key={idx}
-                className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-900 text-amber-300 font-black text-sm flex items-center justify-center shrink-0 border-2 border-slate-800">
-                      {doc.avatar}
+          {isLoadingDoctors ? (
+            <div className="bg-white rounded-2xl p-16 text-center border border-slate-200 shadow-xs">
+              <Loader2 className="w-10 h-10 animate-spin text-emerald-600 mx-auto mb-3" />
+              <h4 className="font-bold text-slate-800 text-base">Memuat Jadwal Praktik Dokter Resmi</h4>
+              <p className="text-slate-500 text-xs mt-1">Mengambil ketersediaan dokter dan jadwal dinas langsung dari sistem fasilitas kesehatan...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredDoctors.map((doc, idx) => (
+                <div
+                  key={doc.id || idx}
+                  className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-full bg-slate-900 text-amber-300 font-black text-sm flex items-center justify-center shrink-0 border-2 border-slate-800 shadow-xs">
+                        {doc.avatar}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-950 text-base leading-tight truncate">
+                          {doc.name}
+                        </h3>
+                        <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mt-1">
+                          {doc.poli}
+                        </span>
+                        <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{doc.faskes}</span>
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-slate-950 text-base leading-tight">
-                        {doc.name}
-                      </h3>
-                      <span className="inline-block text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mt-1">
-                        {doc.poli}
-                      </span>
-                      <p className="text-slate-500 text-xs mt-1 flex items-center gap-1">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{doc.faskes}</span>
-                      </p>
+
+                    <div className="bg-slate-50 rounded-xl p-3 text-xs space-y-1.5 border border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Hari Praktik:</span>
+                        <span className="font-bold text-slate-800">{doc.daysText}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Jam Layanan:</span>
+                        <span className="font-bold text-slate-800">{doc.hours}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Status Praktik:</span>
+                        <span className={`font-bold flex items-center gap-1.5 ${
+                          doc.statusBadge === 'warning' 
+                            ? 'text-amber-600' 
+                            : doc.statusBadge === 'neutral'
+                            ? 'text-slate-500'
+                            : 'text-emerald-600'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${
+                            doc.statusBadge === 'warning'
+                              ? 'bg-amber-500'
+                              : doc.statusBadge === 'neutral'
+                              ? 'bg-slate-400'
+                              : 'bg-emerald-500 animate-pulse'
+                          }`}></span>
+                          {doc.status}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-xl p-3 text-xs space-y-1.5 border border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Hari Praktik:</span>
-                      <span className="font-bold text-slate-800">{doc.daysText}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Jam Layanan:</span>
-                      <span className="font-bold text-slate-800">{doc.hours}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Status Praktik:</span>
-                      <span className="font-bold text-emerald-600 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                        {doc.status}
-                      </span>
-                    </div>
+                  <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <Link
+                      href={doc.id ? `/booking?dokterId=${doc.id}&poliId=${doc.poliklinikId || ''}&faskesId=${doc.faskesId || ''}` : '/booking'}
+                      className="w-full py-2.5 bg-slate-900 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl text-center transition-colors shadow-xs"
+                    >
+                      Daftar ke Dokter Ini
+                    </Link>
                   </div>
                 </div>
+              ))}
+            </div>
+          )}
 
-                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <Link
-                    href="/booking"
-                    className="w-full py-2.5 bg-slate-900 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl text-center transition-colors shadow-xs"
-                  >
-                    Daftar ke Dokter Ini
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredDoctors.length === 0 && (
+          {!isLoadingDoctors && filteredDoctors.length === 0 && (
             <div className="bg-white rounded-2xl p-12 text-center border border-slate-200">
               <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
               <h4 className="font-bold text-slate-700 text-base">Tidak ada dokter yang cocok</h4>

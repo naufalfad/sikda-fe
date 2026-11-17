@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Users, FileText, CheckCircle, Trash2, Edit, RefreshCw, Baby, X, AlertTriangle, Info } from 'lucide-react';
 import { usePasienStore } from '@/store/pasien.store';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 export default function MasterPasienAdminPage() {
   const { pasiens, isLoading, fetchPasiens, deletePasien, syncPasienIHS } = usePasienStore();
@@ -21,28 +22,51 @@ export default function MasterPasienAdminPage() {
   }, [fetchPasiens]);
 
   const handleDelete = async (id: string | number, nama: string) => {
-    if (window.confirm(`Apakah Anda yakin ingin menghapus data pasien ${nama}?`)) {
+    const confirm = await Swal.fire({
+      title: 'Hapus Data Pasien?',
+      text: `Apakah Anda yakin ingin menghapus data pasien ${nama}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal',
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b'
+    });
+
+    if (confirm.isConfirmed) {
       try {
         await deletePasien(id);
-        alert('Data pasien berhasil dihapus');
+        Swal.fire({
+          icon: 'success',
+          title: 'Terhapus',
+          text: 'Data pasien berhasil dihapus',
+          timer: 1400,
+          showConfirmButton: false
+        });
       } catch (error) {
-        alert('Gagal menghapus data pasien (mungkin ada data kunjungan yang terikat)');
+        Swal.fire('Gagal Menghapus', 'Gagal menghapus data pasien (mungkin ada data kunjungan yang terikat)', 'error');
       }
     }
   };
 
   const handleSyncIHS = async (id: string | number, nik: string | null) => {
     if (!nik) {
-      alert('NIK pasien kosong, tidak bisa sinkronisasi dengan SATUSEHAT');
+      Swal.fire('NIK Kosong', 'NIK pasien kosong, tidak bisa sinkronisasi dengan SATUSEHAT', 'warning');
       return;
     }
     
     setSyncingId(id);
     try {
       await syncPasienIHS(nik);
-      alert('Berhasil sinkronisasi IHS Number dengan SATUSEHAT');
+      Swal.fire({
+        icon: 'success',
+        title: 'Sinkronisasi Berhasil',
+        text: 'Berhasil sinkronisasi IHS Number dengan SATUSEHAT',
+        timer: 1600,
+        showConfirmButton: false
+      });
     } catch (error: any) {
-      alert(error.message || 'Gagal sinkronisasi dengan SATUSEHAT');
+      Swal.fire('Gagal Sinkronisasi', error.message || 'Gagal sinkronisasi dengan SATUSEHAT', 'error');
     } finally {
       setSyncingId(null);
     }

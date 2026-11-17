@@ -30,6 +30,10 @@ export interface ResepData {
     tanggalLahir: string;
     jenisKelamin: string;
     noIHS?: string | null;
+    penjamin?: {
+      jenisPenjamin: string;
+      noBpjs?: string | null;
+    } | null;
   };
   dokter: {
     namaLengkap: string;
@@ -45,8 +49,14 @@ export interface ResepData {
       namaPoli: string;
     };
     tagihan?: {
+      id?: string;
       statusTagihan: string;
-    };
+      totalBiaya?: number;
+      pembayaran?: {
+        jumlahBayar?: number;
+        metodePembayaran?: string;
+      } | null;
+    } | null;
   };
   details: ResepDetail[];
 }
